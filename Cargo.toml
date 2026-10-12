@@ -1,0 +1,28 @@
+[workspace]
+resolver = "3"
+members = ["crates/yozora-bar", "crates/yz-pointer"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/ArunPrakashG/yozora"
+
+[workspace.dependencies]
+# GPUI from Zed main at a pinned revision. crates.io gpui predates layer-shell and popups.
+# Bump on purpose: the Wayland platform code changes often.
+gpui = { git = "https://github.com/zed-industries/zed", rev = "26363aabdb31a0c016728634202e1ad5067033aa" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "26363aabdb31a0c016728634202e1ad5067033aa", features = ["wayland"] }
+anyhow = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Zed's workspace patches these, and GPUI relies on the patched versions.
+[patch.crates-io]
+async-task = { git = "https://github.com/zed-industries/async-task.git", rev = "015845a19fc31752c02367567d3b8900a406f9da" }
+async-process = { git = "https://github.com/zed-industries/async-process.git", rev = "0b6d6713570af61806e1e5cb40e0f757cb93fd9d" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+debug = "line-tables-only"
