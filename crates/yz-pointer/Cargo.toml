@@ -1,0 +1,11 @@
+[package]
+name = "yz-pointer"
+version = "0.0.0"
+description = "Dev tool: clicks the pointer through wlr-virtual-pointer, for scripted bar tests"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+wayland-client = "0.31"
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }

@@ -1,0 +1,5 @@
+[toolchain]
+# Matches the pinned Zed revision.
+channel = "1.98.1"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

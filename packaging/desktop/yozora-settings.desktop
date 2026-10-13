@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Yozora Settings
+GenericName=Desktop Settings
+Comment=Theme, bar and app settings for Yozora
+Exec=yozora-settings
+Icon=yozora-settings
+Terminal=false
+Categories=Settings;DesktopSettings;GTK;
+Keywords=yozora;bar;panel;theme;appearance;hyprland;
+StartupWMClass=yozora-settings
+StartupNotify=false

@@ -1,7 +1,9 @@
 # Yozora architecture
 
-Status: proposal, 2026-10-13. Nothing here is built yet. Items marked **(verify)** are
-assumptions that the Phase 1 spike checks before we depend on them.
+Status: built, 2026-10-13. Yozora Bar and Yozora Settings follow this design. Where the build
+differs from the original proposal, this document says what was built, and
+[What the build changed](#what-the-build-changed) lists the differences. The Phase 1 findings
+are in the [spike report](spike-report.md).
 
 The product brief is [`brief.md`](../brief.md). The approved visual design (desktop prototype,
 motion system, surfaces, variants, settings, design language) lives on a Claude Design canvas;
@@ -80,23 +82,32 @@ help    = "Icons stay 16 px at every height."
 
 ```
 crates/
-  yozora-bar/          bin, Phase 1
-    src/main.rs          CLI: run, msg, check; logging; single instance
-    src/app.rs           monitor manager: a BarWindow per output, follows hotplug
-    src/bar/             zones, item chrome, hover and press states
-    src/popover/         popover host: open, close, spring, lazy content
-    src/modules/         clock, workspaces, window, media, network, sound, devices,
-                         notifications, tray, control_center, launcher, custom
-    src/services/        hyprland, pulse, networkmanager, upower, bluez, mpris, sni, mako, portal
-    src/ipc.rs           control socket
-  yozora-config/       schema, defaults, validation, file watching    (split out when Settings starts)
-  yozora-ui/           theme tokens, Spring, glass surface, controls  (split out when Settings starts)
-  yozora-settings/     bin, Phase 3
+  yozora-bar/          bin
+    src/main.rs          run, single instance, crash log, `check`
+    src/cli.rs           argument parsing and `msg`
+    src/app.rs           a bar per monitor, reconciled on hotplug and config changes; IPC
+    src/bar.rs           zones, item chrome, the workspace indicator, benchmarks
+    src/popover.rs       popover windows: open, spring, close
+    src/modules/         one file per module, each with its bar item and popover
+    src/services/        hyprland, audio (pactl), network, power, bluetooth, media, tray,
+                         notifications (mako), custom; each with a fake
+  yozora-settings/     bin
+    src/app.rs           window, file and manifest watching, status polling, portal theme
+    src/apps.rs          discovered apps and whether they're running
+    src/doc.rs           one config file being edited
+    src/view.rs          sidebar, header, page, TOML preview, footer
+    src/pages/           appearance, motion, bar, modules, monitors, about, and generic
+  yozora-config/       bar.toml and theme.toml types, loading with warnings, editing, watching,
+                       manifests and settings schemas
+  yozora-ipc/          the one-line JSON control socket
+  yozora-ui/           theme tokens, icons, springs, frame timing, controls, text input
+  yz-pointer/          virtual-pointer clicks and drags for scripted UI tests
+packaging/             manifests, PKGBUILD, systemd unit, Hyprland snippets, desktop files
+scripts/               click.sh, drag.sh, bench.sh
 docs/
 ```
 
-Platform adapters stay inside `yozora-bar` until a second app needs them, then move to
-`yozora-platform`. The control-socket protocol moves to `yozora-ipc` at the same point.
+Platform adapters live in `yozora-bar/src/services` until a second app needs them.
 
 ## Inside the bar: services, models, views
 
@@ -127,13 +138,13 @@ Backends are traits with one real and one fake implementation each:
 | Area | First backend | Notes |
 |---|---|---|
 | Workspaces, windows, monitors | Hyprland socket2 events, socket1 `j/` commands | Our own thin client; the `hyprland` crate tends to lag IPC changes |
-| Audio | PulseAudio protocol via pipewire-pulse | Client library chosen in the spike |
-| Network | NetworkManager over D-Bus (`zbus`) | Secured new networks may hand off to a secret agent at first **(verify)** |
+| Audio | `pactl subscribe` for changes, `pactl -f json` for state | Works with PulseAudio and pipewire-pulse |
+| Network | NetworkManager over D-Bus (`zbus`) | A new secured network asks the session's NetworkManager secret agent for its password; the bar has no password prompt of its own |
 | Power | UPower, power-profiles-daemon | Peripheral batteries come from UPower devices too |
 | Bluetooth | BlueZ `ObjectManager` | Not testable on the dev machine: fake backend plus python-dbusmock |
 | Media | MPRIS | Position is extrapolated locally and only ticks while a popover shows it |
 | Tray | StatusNotifierItem host (plus watcher if none runs), DBusMenu | Menus render as our own popovers |
-| Notifications | mako's D-Bus interface (the one `makoctl` uses) | Whether mako signals new notifications is **(verify)**; otherwise refresh on open |
+| Notifications | mako's D-Bus interface (the one `makoctl` uses) | Re-reads history when mako emits a signal. mako can't clear history, so cleared entries are hidden by the bar and remembered in `$XDG_STATE_HOME/yozora/` |
 | Theme follow | xdg-desktop-portal `color-scheme` | Drives the Automatic theme |
 
 ## Modules
@@ -240,39 +251,45 @@ one JSON object per line, request and reply.
 Targets come from the brief. The dev machine has no 120 Hz display, so budgets are measured at
 144 Hz (6.94 ms) on DP-1 and at 75 Hz on HDMI-A-1 at the same time.
 
-- Frame times are recorded in a histogram, read through `msg stats`. Presentation timestamps
-  are used if GPUI exposes them **(verify)**, otherwise frame-callback times.
-- A benchmark script measures idle CPU and wakeups over 60 s, resident memory (anonymous and
-  total separately), startup time, and frame times while it drives popover open/close and
-  workspace switches through the socket and `hyprctl`.
-- Baseline is ironbar on the same machine: about 31 MB anonymous, 130 MB total RSS, 0.2% CPU.
+- Frame times are the intervals between renders, measured inside `render`, because GPUI
+  doesn't expose presentation timestamps. Each animation logs a summary when it settles, and
+  `msg stats` returns the latest per monitor.
+- `scripts/bench.sh` measures idle CPU, wakeups and memory (anonymous and total separately)
+  for the bar and ironbar, then drives the workspace indicator and the popover on every
+  monitor with `msg bench`. Results are in [benchmarks.md](benchmarks.md).
+- Baseline is ironbar on the same machine.
 - Only release builds count for performance claims.
 
 ## Testing
 
-- Service parsers: unit tests against recorded fixtures (Hyprland event lines, D-Bus property
-  dumps, `upower --dump` output).
-- `yozora-bar --fake`: the whole UI on scripted fake backends, for development, screenshots and
-  hardware the dev machine lacks (battery, Bluetooth).
-- D-Bus integration tests against python-dbusmock.
-- CI: build, `clippy`, tests. None of these need a Wayland session.
+- **Unit tests** (`cargo test --workspace`) cover config loading and warnings, editing that
+  keeps formatting, manifests and schemas, the control socket, service parsers, module
+  placement, springs and custom-module restarts. None need a Wayland session.
+- **Fakes.** `yozora-bar --fake` runs the whole UI on in-process backends, for development,
+  screenshots and hardware the dev machine lacks (battery, Bluetooth).
+- **Scripted UI checks.** `scripts/click.sh` and `scripts/drag.sh` drive the real windows through
+  `yz-pointer`. Each refuses to act unless `hyprctl cursorpos` confirms the cursor is where it
+  should be.
+- CI (`.github/workflows/ci.yml`) checks formatting, runs clippy with warnings as errors, and
+  runs the tests.
+- **Not yet:** D-Bus integration tests against python-dbusmock.
 
 ## Where the design meets reality
 
 1. **All blur is the compositor's.** A Wayland client cannot read the pixels behind it. Yozora
-   paints tint, hairline, highlight and shadow; a Hyprland layer rule on the `yozora-bar`
-   namespace does the blur. The Settings switch becomes "Blur behind the bar (Hyprland)", and
-   when it is off the tint gets more opaque. Whether Hyprland 0.56 also blurs a layer surface's
-   popups is **(verify)**. If not, popovers become their own overlay layer surfaces.
-2. **Popover scale-in.** GPUI animates opacity and position; a scale transform for a whole
-   element subtree is **(verify)**. Fallback: translate, fade and clip reveal, which reads almost
-   the same at a 6% scale.
+   paints tint, hairline, highlight and shadow; a Hyprland layer rule on the `yozora-`
+   namespaces does the blur. The Settings switch is "Blur behind the bar", and when it is off
+   the tint gets more opaque. The spike saw `blur_popups` blur the popover. A later check on a
+   busy desktop was inconclusive, so treat popover blur as unconfirmed.
+2. **Popover scale-in.** GPUI has no scale transform for an element subtree. Popovers fade in
+   with an 8 px drop instead, and their rows rise with a stagger.
 3. **Automatic theme** follows the portal's `color-scheme` instead of sunset. Sunset switching is
    left to tools like darkman, which set that value.
 4. **Calendar events** need a source (Evolution Data Server, CalDAV or khal). Out of scope until
    one is chosen.
-5. **Memory.** The 20 to 30 MB stretch goal is at risk because the Vulkan driver alone maps a lot
-   on NVIDIA. Anonymous and total RSS are reported separately.
+5. **Memory.** The bar's anonymous memory is within the 20 to 30 MB stretch goal (23 MB idle,
+   about 30 MB after heavy use). Total RSS is about 110 MB, because the NVIDIA Vulkan driver
+   maps around 55 MB of shared libraries. Anonymous and total RSS are reported separately.
 
 ## Phase 1 spike: go or no-go for GPUI
 
@@ -289,6 +306,43 @@ Pin a Zed `main` revision (crates.io `gpui` 0.2.2 predates layer-shell and popup
 If popups are the blocker, try popovers as overlay layer surfaces, then a minimal GPUI patch
 sent upstream, before considering another renderer.
 
+## What the build changed
+
+- **Audio goes through `pactl`**, subscribing to its event stream, rather than a PulseAudio
+  client library. It's one small, well-tested dependency the system already has.
+- **Popovers grab only when opened by a click.** A popover opened with `msg toggle` doesn't
+  grab, and closes when Hyprland's focused window changes. A grabbed popover is dismissed by
+  the compositor, so it closes without the animation, and the dismissing click is consumed.
+- **The popover opens with a fade and an 8 px drop, rows rising with a stagger.** GPUI has no
+  transform for a whole element tree, so there is no scale-in.
+- **Blur rules are added at runtime.** The bar sends the layer rules through `hyprctl eval` on
+  start, so blur works without editing the Hyprland config. They are lost on a Hyprland reload,
+  so [`packaging/hyprland/`](../packaging/hyprland/) ships them for the config too.
+- **GPUI quits when the last window closes**, by default on Linux. The bar sets
+  `QuitMode::Explicit`, because it must survive having no monitor to show on, and reopening
+  its bars for a style change. Settings keeps the default, so closing its window quits it.
+- **Every Yozora window sets `inactive_frame_interval: None`.** GPUI otherwise caps windows
+  without keyboard focus at 30 fps, and a bar never has focus.
+- **Settings polls app status every 2 s** over each app's socket, and rescans manifests every
+  6 s as well as watching the manifest directories.
+- **The dark mode tile in the control center lasts for the session.** It overrides the theme in
+  memory. Settings → Appearance changes `theme.toml`.
+- **Apps hide the GL stack when a Vulkan driver is installed.** GPUI asks wgpu for Vulkan and
+  GL together, and asking for GL makes glvnd load every EGL vendor: NVIDIA's EGL plus Mesa's
+  libLLVM and Gallium, about 40 MB of RSS that's never used. Each app sets
+  `__EGL_VENDOR_LIBRARY_FILENAMES=/dev/null` before any thread starts and removes it again for
+  the commands it runs (`yozora_ui::gpu`). If the first window still can't open, the app
+  restarts itself with `YOZORA_GL=1`, which leaves GL alone. Tested by hiding the Vulkan
+  driver: the bar restarts, but on the test machine GL alone can't drive the surface either,
+  with or without this change, so the GL path itself is untested. A GPUI change that tries
+  Vulkan first would do this more cleanly.
+- **Raster images are shrunk to twice their drawn size** before GPUI sees them
+  (`services::icons::fit`). GPUI keeps images decoded at full size, so a 512 px tray icon
+  cost 1 MB. The copies are cached in `~/.cache/yozora/thumbs`.
+- **Apps fix glibc's mmap threshold at 128 KiB** (`yozora_ui::malloc`). By default it rises to
+  the size of each big block freed, so render buffers end up kept in the heap. Fixing it saves
+  about 4 MB of anonymous memory, with no change in frame timing.
+
 ## Decisions
 
 | Date | Decision |
@@ -303,3 +357,7 @@ sent upstream, before considering another renderer.
 | 2026-10-13 | Ecosystem apps are discovered through installed manifests |
 | 2026-10-13 | No dynamic loading of Rust modules |
 | 2026-10-13 | Theme, accent, glass and motion are shared across apps in `theme.toml` |
+| 2026-10-13 | Phase 1 verdict: GPUI is a go ([spike report](spike-report.md)) |
+| 2026-10-13 | Audio through `pactl subscribe` instead of a client library |
+| 2026-10-13 | Popovers grab only when opened by a click |
+| 2026-10-13 | Custom modules speak plain text or JSON lines with `text` |

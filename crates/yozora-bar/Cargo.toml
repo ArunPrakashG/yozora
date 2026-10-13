@@ -1,0 +1,25 @@
+[package]
+name = "yozora-bar"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A top panel for Hyprland"
+
+[dependencies]
+gpui.workspace = true
+gpui_platform.workspace = true
+anyhow.workspace = true
+async-channel.workspace = true
+async-io.workspace = true
+chrono.workspace = true
+futures-lite.workspace = true
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+yozora-config.workspace = true
+yozora-ipc.workspace = true
+yozora-ui.workspace = true
+zbus.workspace = true

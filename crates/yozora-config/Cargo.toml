@@ -1,0 +1,19 @@
+[package]
+name = "yozora-config"
+version = "0.1.0"
+description = "Config files, app manifests and settings schemas for Yozora apps"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+async-io.workspace = true
+futures-lite.workspace = true
+inotify.workspace = true
+serde.workspace = true
+serde_ignored.workspace = true
+toml.workspace = true
+toml_edit.workspace = true
+tracing.workspace = true
