@@ -83,7 +83,7 @@ fn spawn_worker(name: String, config: CustomConfig, tx: async_channel::Sender<(S
                 Some(secs) => {
                     let every = Duration::from_secs(secs.max(1));
                     while !stop.load(Ordering::Relaxed) {
-                        let out = match Command::new("sh").arg("-c").arg(&config.exec).stdin(Stdio::null()).output() {
+                        let out = match yozora_ui::gpu::child(&mut Command::new("sh")).arg("-c").arg(&config.exec).stdin(Stdio::null()).output() {
                             Ok(o) => {
                                 let text = String::from_utf8_lossy(&o.stdout);
                                 let mut out = parse_line(text.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or(""));
@@ -110,7 +110,7 @@ fn spawn_worker(name: String, config: CustomConfig, tx: async_channel::Sender<(S
                     let mut backoff = Duration::from_secs(1);
                     while !stop.load(Ordering::Relaxed) {
                         let started = std::time::Instant::now();
-                        let spawned = Command::new("sh")
+                        let spawned = yozora_ui::gpu::child(&mut Command::new("sh"))
                             .arg("-c")
                             .arg(&config.exec)
                             .stdin(Stdio::null())

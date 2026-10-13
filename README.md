@@ -133,10 +133,14 @@ each system service the enabled modules need.
 - **The calendar has no events.** No calendar backend is chosen yet.
 - **The control center's dark mode tile lasts for the session.** To change the theme for good,
   use Settings → Appearance.
-- **Startup takes about 2 s to the first frame** on the test machine (NVIDIA, Vulkan), mostly in
-  GPU setup.
-- **NVIDIA and Vulkan dominate memory.** About 120 to 180 MB total RSS, most of it the driver's
-  shared mappings. See [docs/benchmarks.md](docs/benchmarks.md).
+- **The first start after installing takes about 2 s to the first frame** on the test machine
+  (NVIDIA, Vulkan), while the files load from disk. Later starts take 0.2 to 0.3 s.
+- **The Vulkan driver dominates memory.** The bar's own memory is about 24 MB, but total RSS is
+  about 110 MB on NVIDIA, mostly the driver's shared libraries. See
+  [docs/benchmarks.md](docs/benchmarks.md).
+- **Yozora apps skip OpenGL when a Vulkan driver is installed**, which saves about 40 MB. If
+  Vulkan doesn't work, an app restarts itself with GL allowed. Set `YOZORA_GL=1` to always
+  allow GL.
 - **The log shows `ERROR gpui::window: window not found` each time a popover closes.** It's
   harmless: Wayland sends one last event for a window GPUI has already dropped.
 - **Tested on one machine:** Hyprland 0.56.2, a GTX 1650 Super, a 144 Hz and a 75 Hz rotated

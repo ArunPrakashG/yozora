@@ -279,7 +279,7 @@ pub fn run_shell(command: &str) {
         return;
     }
     tracing::info!("running: {command}");
-    let spawned = std::process::Command::new("sh")
+    let spawned = yozora_ui::gpu::child(&mut std::process::Command::new("sh"))
         .arg("-c")
         .arg(command)
         .stdin(std::process::Stdio::null())

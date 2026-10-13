@@ -51,6 +51,9 @@ pub struct Shell {
     /// The control center's dark mode tile, until the next restart or config reload.
     dark_override: Option<bool>,
     pub started: Instant,
+    /// Whether a bar window has ever opened, so a failure to open the first one can fall back
+    /// to GL.
+    opened_any: bool,
 }
 
 impl Global for Shell {}
@@ -84,7 +87,7 @@ pub fn start(cx: &mut App, dir: PathBuf, loaded: yozora_config::Loaded<BarSettin
     }
     cx.set_global(Config { settings: Arc::new(loaded.value), warnings: loaded.warnings, dir: dir.clone() });
     cx.set_global(Services { fakes, ..Default::default() });
-    cx.set_global(Shell { bars: Vec::new(), system_dark: true, dark_override: None, started: Instant::now() });
+    cx.set_global(Shell { bars: Vec::new(), system_dark: true, dark_override: None, started: Instant::now(), opened_any: false });
     apply_theme(cx);
     ensure_services(cx);
     apply_layer_rules(cx);
@@ -219,8 +222,19 @@ pub fn reconcile(cx: &mut App) {
                 tracing::info!("opened bar on {monitor}");
                 bars.push(BarWindow { monitor, display, handle });
             }
+            Err(e) if yozora_ui::gpu::gl_hidden() && !cx.global::<Shell>().opened_any => {
+                // Most likely Vulkan doesn't work here; GL may.
+                tracing::error!("could not open bar on {monitor}: {e:#}; restarting with GL");
+                cx.global_mut::<Shell>().bars = bars;
+                let e = yozora_ui::gpu::restart_with_gl();
+                tracing::error!("restarting: {e}");
+                return;
+            }
             Err(e) => tracing::error!("could not open bar on {monitor}: {e:#}"),
         }
+    }
+    if !bars.is_empty() {
+        cx.global_mut::<Shell>().opened_any = true;
     }
     cx.global_mut::<Shell>().bars = bars;
 }

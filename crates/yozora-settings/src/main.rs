@@ -81,6 +81,9 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    // Before any thread starts: it changes the environment.
+    yozora_ui::gpu::prefer_vulkan();
+    yozora_ui::malloc::tune();
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_env("YOZORA_LOG").unwrap_or_else(|_| EnvFilter::new("info")))
         .init();

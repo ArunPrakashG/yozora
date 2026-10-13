@@ -102,7 +102,7 @@ pub fn probe(manifest: &AppManifest) -> Status {
 pub fn start(manifest: &AppManifest) -> anyhow::Result<()> {
     use std::os::unix::process::CommandExt;
     let mut command = std::process::Command::new(&manifest.binary);
-    command
+    yozora_ui::gpu::child(&mut command)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -119,7 +119,7 @@ pub fn start(manifest: &AppManifest) -> anyhow::Result<()> {
 pub fn open(target: &str) {
     let target = target.to_string();
     std::thread::spawn(move || {
-        if let Err(e) = std::process::Command::new("xdg-open")
+        if let Err(e) = yozora_ui::gpu::child(&mut std::process::Command::new("xdg-open"))
             .arg(&target)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())

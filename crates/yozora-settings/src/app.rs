@@ -39,21 +39,27 @@ pub fn start(cx: &mut App, opts: Options, ipc: async_channel::Receiver<Incoming>
     let config_dir = opts.config_dir.clone();
     let extra_apps = opts.extra_apps.clone();
     let bounds = Bounds::centered(None, size(px(1180.), px(800.)), cx);
-    let window = cx
-        .open_window(
-            WindowOptions {
-                window_bounds: Some(WindowBounds::Windowed(bounds)),
-                app_id: Some("yozora-settings".into()),
-                titlebar: Some(gpui::TitlebarOptions { title: Some("Yozora Settings".into()), ..Default::default() }),
-                window_background: WindowBackgroundAppearance::Transparent,
-                window_decorations: Some(WindowDecorations::Server),
-                window_min_size: Some(size(px(860.), px(560.))),
-                inactive_frame_interval: None,
-                ..Default::default()
-            },
-            |window, cx| cx.new(|cx| SettingsView::new(opts, window, cx)),
-        )
-        .expect("opening the settings window");
+    let window = match cx.open_window(
+        WindowOptions {
+            window_bounds: Some(WindowBounds::Windowed(bounds)),
+            app_id: Some("yozora-settings".into()),
+            titlebar: Some(gpui::TitlebarOptions { title: Some("Yozora Settings".into()), ..Default::default() }),
+            window_background: WindowBackgroundAppearance::Transparent,
+            window_decorations: Some(WindowDecorations::Server),
+            window_min_size: Some(size(px(860.), px(560.))),
+            inactive_frame_interval: None,
+            ..Default::default()
+        },
+        |window, cx| cx.new(|cx| SettingsView::new(opts, window, cx)),
+    ) {
+        Ok(w) => w,
+        Err(e) if yozora_ui::gpu::gl_hidden() => {
+            // Most likely Vulkan doesn't work here; GL may.
+            tracing::error!("could not open the window: {e:#}; restarting with GL");
+            panic!("restarting with GL: {}", yozora_ui::gpu::restart_with_gl());
+        }
+        Err(e) => panic!("opening the settings window: {e:#}"),
+    };
     let view = window.update(cx, |_, _, cx| cx.entity().downgrade()).expect("reading the view");
 
     // Settings only lives while its window is open.

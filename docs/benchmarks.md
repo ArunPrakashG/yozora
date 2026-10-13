@@ -18,20 +18,59 @@ average between 3.7 and 7.4. Treat outliers in the frame timing with that in min
 
 | | Yozora Bar | ironbar |
 |---|---|---|
-| CPU | 0.20 to 0.27% | 0.23 to 0.33% |
-| Wakeups | 255 to 261/s | 272/s |
-| Anonymous RSS | 37.2 to 37.4 MB | 25.5 to 28.5 MB |
-| Total RSS | 165 to 167 MB | 102 to 103 MB |
+| CPU | 0.20 to 0.27% | 0.23 to 0.67% |
+| Wakeups | 253 to 261/s | 272 to 277/s |
+| Anonymous RSS | 24.3 MB | 25.4 to 28.5 MB |
+| Total RSS | 119 MB | 102 to 103 MB |
 
-Ranges are two runs. Nearly all wakeups in both bars come from NVIDIA's Vulkan driver threads,
-as the spike found; the bar's own threads wake a few times a second.
+CPU and wakeups are ranges over three runs. Memory is from the latest run, after the memory
+changes below. Nearly all wakeups in both bars come from NVIDIA's Vulkan driver threads, as the
+spike found. The bar's own threads wake a few times a second.
 
-Yozora's anonymous memory is about 9 to 12 MB above ironbar's, for two bar windows with a full
-set of modules. Most of the extra total RSS is the Vulkan driver and the text stack, mapped from
-shared libraries.
+The bar's anonymous memory, its own data for two bar windows with a full set of modules, is now
+at or below ironbar's. Its total RSS is still higher, because of the Vulkan driver's shared
+libraries. After heavy use (100 popover opens and 100 workspace sweeps) the anonymous memory
+levels off at 29.7 MB, as glyph and popover caches fill.
 
-Settings, open on the Bar page and left alone: 0.10% CPU (its 2 s status poll), 52.9 MB
-anonymous and 212 MB total RSS. It doesn't run unless it's open.
+Settings, open and left alone, after the same changes: 24.4 MB anonymous and 106 MB total RSS.
+It polls app status every 2 s, which costs about 0.10% CPU. It only runs while its window is
+open.
+
+## Memory
+
+Measured from `smaps_rollup` 12 s after start, the same configuration each time.
+
+| Build | Total RSS | Anonymous | File-backed |
+|---|---|---|---|
+| Before, GL allowed (`YOZORA_GL=1`) | 146.5 to 150.7 MB | 32.9 to 38.1 MB | 102 to 104 MB |
+| GL hidden | 110.8 to 111.2 MB | 27.6 to 28.6 MB | 76 MB |
+| GL hidden, mmap threshold fixed (now) | 106.1 to 106.5 MB | 23.7 MB | 76 MB |
+
+Two changes:
+
+- **The GL stack isn't loaded.** GPUI asks wgpu for Vulkan and GL together. Asking for GL makes
+  glvnd load every EGL vendor: NVIDIA's EGL and Mesa's libLLVM and Gallium. Vulkan wins, so all
+  of it is unused. The apps now hide the EGL vendors when a Vulkan driver is installed, which
+  saves about 40 MB of RSS and 10 MB of anonymous memory. Warm startup got faster too: 0.20 to
+  0.33 s to the first frame, against 0.68 to 0.87 s with GL allowed, measured back to back.
+- **glibc keeps large blocks out of the heap.** By default its mmap threshold rises to the size
+  of each big block freed, so render buffers end up kept in the heap. Fixing it at 128 KiB
+  saves about 4 MB, with no change in frame timing (see below).
+
+What's left of the total RSS, largest first:
+
+| Mapping | RSS | What it is |
+|---|---|---|
+| `libnvidia-gpucomp` | 28 MB | NVIDIA's shader compiler, loaded by the Vulkan driver |
+| `yozora-bar` | 21 MB | The binary's own code |
+| Heap | 17 MB | The bar's data |
+| `libnvidia-glcore` | 13 MB | Needed by NVIDIA's Vulkan driver |
+| `/dev/nvidiactl` | 12 MB | Driver mappings |
+| `Inter.ttc` | 5 MB | The UI font, mapped from disk |
+
+The NVIDIA libraries and the binary are shared, file-backed pages. The kernel can drop them
+under memory pressure, and other processes using the same driver share them. Limiting glibc to
+fewer malloc arenas made no measurable difference.
 
 ## Startup
 
@@ -39,11 +78,11 @@ Time from process start to the first frame on each monitor:
 
 | | DP-1 | HDMI-A-1 |
 |---|---|---|
-| Warm (four runs) | 268 to 404 ms | 319 to 365 ms |
-| First run of a new binary | 2.0 s | 2.1 s |
+| Warm (five runs) | 202 to 333 ms | 200 to 299 ms |
+| First run of a new binary | 1.9 to 2.0 s | 1.9 to 2.1 s |
 
-The warm figure includes connecting to every service and Vulkan setup (about 200 ms on this
-GPU). The first run after a build is slow because nothing is in the page cache yet.
+The warm figure includes connecting to every service and Vulkan setup. The first run after a
+build is slow because nothing is in the page cache yet.
 
 ## Frame timing
 
@@ -61,6 +100,16 @@ control center 20 times. A frame is late when its interval is over 1.5× the ref
 | | | 2 | 1839 | 13.32 | 13.33 | 16.16 | 18.93 | 0 |
 | | popover | 1 | 1277 | 12.97 | 13.32 | 14.08 | 23.72 | 1 (0.08%) |
 | | | 2 | 1244 | 13.51 | 13.29 | 17.91 | 326.29 | 6 (0.48%) |
+
+Runs 1 and 2 are from before the memory changes. Run 3, after them, with the load average
+above 9:
+
+| Monitor | Animation | Frames | Mean | p50 | p99 | Max | Late |
+|---|---|---|---|---|---|---|---|
+| DP-1 | workspaces | 3509 | 6.96 | 6.96 | 7.28 | 14.13 | 3 |
+| | popover | 2400 | 6.88 | 6.95 | 7.55 | 8.30 | 0 |
+| HDMI-A-1 | workspaces | 1839 | 13.33 | 13.33 | 14.19 | 16.96 | 0 |
+| | popover | 1276 | 12.98 | 13.32 | 14.07 | 34.29 | 1 |
 
 Times are in milliseconds. The median frame lands on the refresh interval on both monitors, so
 the bar keeps up at 144 Hz, above the 120 Hz target. Late frames are under half a percent. The

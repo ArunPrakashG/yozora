@@ -2,8 +2,10 @@
 
 pub mod controls;
 pub mod frame_stats;
+pub mod gpu;
 pub mod icons;
 pub mod input;
+pub mod malloc;
 pub mod spring;
 pub mod theme;
 
