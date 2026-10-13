@@ -1,7 +1,7 @@
 //! `custom/<name>` modules: the output of a user command.
 //!
 //! With `interval`, the command runs every that many seconds and its last line is shown.
-//! Without it, the command is started once and each line it prints replaces the text, for
+//! Without it, the command is kept running and each line it prints replaces the text, for
 //! scripts that watch something themselves. A line may be plain text or JSON like
 //! `{"text": "…", "tooltip": "…"}`.
 
@@ -105,28 +105,47 @@ fn spawn_worker(name: String, config: CustomConfig, tx: async_channel::Sender<(S
                     }
                 }
                 None => {
-                    let spawned = Command::new("sh")
-                        .arg("-c")
-                        .arg(&config.exec)
-                        .stdin(Stdio::null())
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::null())
-                        .spawn();
-                    let mut c = match spawned {
-                        Ok(c) => c,
-                        Err(e) => {
-                            send(Output { error: Some(e.to_string()), ..Default::default() });
-                            return;
-                        }
-                    };
-                    let stdout = c.stdout.take();
-                    *child.lock().unwrap_or_else(|e| e.into_inner()) = Some(c);
-                    if let Some(stdout) = stdout {
-                        for line in BufReader::new(stdout).lines() {
-                            let Ok(line) = line else { break };
-                            if stop.load(Ordering::Relaxed) || !send(parse_line(&line)) {
+                    // A stream that ends is started again, waiting longer each time it fails
+                    // quickly, so a broken script doesn't spin.
+                    let mut backoff = Duration::from_secs(1);
+                    while !stop.load(Ordering::Relaxed) {
+                        let started = std::time::Instant::now();
+                        let spawned = Command::new("sh")
+                            .arg("-c")
+                            .arg(&config.exec)
+                            .stdin(Stdio::null())
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::null())
+                            .spawn();
+                        let mut c = match spawned {
+                            Ok(c) => c,
+                            Err(e) => {
+                                send(Output { error: Some(e.to_string()), ..Default::default() });
                                 return;
                             }
+                        };
+                        let stdout = c.stdout.take();
+                        *child.lock().unwrap_or_else(|e| e.into_inner()) = Some(c);
+                        if let Some(stdout) = stdout {
+                            for line in BufReader::new(stdout).lines() {
+                                let Ok(line) = line else { break };
+                                if stop.load(Ordering::Relaxed) || !send(parse_line(&line)) {
+                                    return;
+                                }
+                            }
+                        }
+                        if let Some(mut c) = child.lock().unwrap_or_else(|e| e.into_inner()).take() {
+                            let _ = c.wait();
+                        }
+                        backoff = if started.elapsed() > Duration::from_secs(30) {
+                            Duration::from_secs(1)
+                        } else {
+                            (backoff * 2).min(Duration::from_secs(30))
+                        };
+                        let mut slept = Duration::ZERO;
+                        while slept < backoff && !stop.load(Ordering::Relaxed) {
+                            std::thread::sleep(Duration::from_millis(200));
+                            slept += Duration::from_millis(200);
                         }
                     }
                 }
@@ -192,5 +211,25 @@ mod tests {
         assert_eq!(super::parse_line("  hello ").text, "hello");
         let j = super::parse_line(r#"{"text":"3 updates","tooltip":"pacman"}"#);
         assert_eq!((j.text.as_str(), j.tooltip.as_str()), ("3 updates", "pacman"));
+    }
+
+    #[test]
+    fn restarts_a_stream_that_exits() {
+        let (tx, rx) = async_channel::unbounded();
+        let config = super::CustomConfig { exec: "echo tick".into(), ..Default::default() };
+        let worker = super::spawn_worker("t".into(), config, tx);
+        // Once at start, then again after the backoff.
+        for _ in 0..2 {
+            let (name, out) = async_io::block_on(async {
+                futures_lite::future::or(async { rx.recv().await.ok() }, async {
+                    async_io::Timer::after(std::time::Duration::from_secs(5)).await;
+                    None
+                })
+                .await
+            })
+            .expect("the stream should print again after it exits");
+            assert_eq!((name.as_str(), out.text.as_str()), ("t", "tick"));
+        }
+        worker.stop();
     }
 }

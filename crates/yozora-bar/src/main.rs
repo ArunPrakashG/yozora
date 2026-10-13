@@ -113,15 +113,14 @@ fn check(config: Option<PathBuf>) -> ExitCode {
         line("Bluetooth", bluetooth::check().await, &mut problems);
         line("Media", media::check().await, &mut problems);
         let notif = notifications::check().await;
-        if let Ok(s) = &notif {
-            if !s.contains(notifications::DND_MODE) {
-                println!(
-                    "  {:<14} note: mako has no `{}` mode, so Do Not Disturb has no effect.\n  {:<14} Add this to ~/.config/mako/config:\n  {:<14}   [mode={}]\n  {:<14}   invisible=1",
-                    "", notifications::DND_MODE, "", "", notifications::DND_MODE, ""
-                );
-            }
-        }
+        let missing_dnd = notif.as_ref().is_ok_and(|s| !s.contains(notifications::DND_MODE));
         line("Notifications", notif, &mut problems);
+        if missing_dnd {
+            println!(
+                "  {:<14} note: mako has no `{}` mode, so Do Not Disturb has no effect.\n  {:<14} Add this to ~/.config/mako/config:\n  {:<14}   [mode={}]\n  {:<14}   invisible=1",
+                "", notifications::DND_MODE, "", "", notifications::DND_MODE, ""
+            );
+        }
         line("Tray", tray::check().await, &mut problems);
     });
 
