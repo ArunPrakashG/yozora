@@ -3,6 +3,7 @@
 pub mod controls;
 pub mod frame_stats;
 pub mod icons;
+pub mod input;
 pub mod spring;
 pub mod theme;
 

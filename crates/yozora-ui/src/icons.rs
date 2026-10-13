@@ -66,6 +66,18 @@ pub enum Icon {
     Calendar,
     App,
     Warning,
+    Bar,
+    Motion,
+    Modules,
+    Info,
+    Search,
+    File,
+    Grip,
+    Plus,
+    Reset,
+    External,
+    Code,
+    Window,
 }
 
 const ALL: &[Icon] = &[
@@ -122,6 +134,18 @@ const ALL: &[Icon] = &[
     Icon::Calendar,
     Icon::App,
     Icon::Warning,
+    Icon::Bar,
+    Icon::Motion,
+    Icon::Modules,
+    Icon::Info,
+    Icon::Search,
+    Icon::File,
+    Icon::Grip,
+    Icon::Plus,
+    Icon::Reset,
+    Icon::External,
+    Icon::Code,
+    Icon::Window,
 ];
 
 const ARC3: &str = r#"<path d="M2.5 9.2a14 14 0 0 1 19 0"/>"#;
@@ -186,6 +210,18 @@ impl Icon {
             Icon::Calendar => "calendar",
             Icon::App => "app",
             Icon::Warning => "warning",
+            Icon::Bar => "bar",
+            Icon::Motion => "motion",
+            Icon::Modules => "modules",
+            Icon::Info => "info",
+            Icon::Search => "search",
+            Icon::File => "file",
+            Icon::Grip => "grip",
+            Icon::Plus => "plus",
+            Icon::Reset => "reset",
+            Icon::External => "external",
+            Icon::Code => "code",
+            Icon::Window => "window",
         }
     }
 
@@ -336,6 +372,18 @@ impl Icon {
             }
             Icon::App => r#"<rect x="4" y="4" width="16" height="16" rx="4"/>"#,
             Icon::Warning => r#"<path d="M12 4l9 15.5H3z"/><path d="M12 10v4M12 17h.01"/>"#,
+            Icon::Bar => r#"<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/>"#,
+            Icon::Motion => r#"<path d="M3 16c2.5 0 3-9 6-9s3 11 6 11 3.5-6 6-6"/>"#,
+            Icon::Modules => r#"<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>"#,
+            Icon::Info => r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><circle class="f" cx="12" cy="8" r="1.1"/>"#,
+            Icon::Search => r#"<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>"#,
+            Icon::File => r#"<path d="M7 3.5h7l4.5 4.5v12.5H7z"/><path d="M14 3.5V8h4.5"/>"#,
+            Icon::Grip => r#"<circle class="f" cx="9.5" cy="6" r="1.5"/><circle class="f" cx="14.5" cy="6" r="1.5"/><circle class="f" cx="9.5" cy="12" r="1.5"/><circle class="f" cx="14.5" cy="12" r="1.5"/><circle class="f" cx="9.5" cy="18" r="1.5"/><circle class="f" cx="14.5" cy="18" r="1.5"/>"#,
+            Icon::Plus => r#"<path d="M12 5v14M5 12h14"/>"#,
+            Icon::Reset => r#"<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/>"#,
+            Icon::External => r#"<path d="M13.5 4.5H19.5V10.5M19.5 4.5L11 13M17 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 4 18.5v-10A1.5 1.5 0 0 1 5.5 7H10"/>"#,
+            Icon::Code => r#"<path d="M8.5 7.5L4 12l4.5 4.5M15.5 7.5L20 12l-4.5 4.5"/>"#,
+            Icon::Window => r#"<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 8.5h17M6.5 6.5h.01M9 6.5h.01"/>"#,
         };
         Cow::Borrowed(s)
     }

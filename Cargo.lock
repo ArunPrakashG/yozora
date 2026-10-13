@@ -6268,6 +6268,24 @@ dependencies = [
 [[package]]
 name = "yozora-settings"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "async-io",
+ "futures-lite",
+ "gpui",
+ "gpui_platform",
+ "serde",
+ "serde_json",
+ "toml 0.8.23",
+ "toml_edit 0.22.27",
+ "tracing",
+ "tracing-subscriber",
+ "yozora-config",
+ "yozora-ipc",
+ "yozora-ui",
+ "zbus",
+]
 
 [[package]]
 name = "yozora-ui"
@@ -6276,6 +6294,7 @@ dependencies = [
  "anyhow",
  "gpui",
  "tracing",
+ "unicode-segmentation",
  "yozora-config",
 ]
 

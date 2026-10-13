@@ -2,6 +2,8 @@
 //!
 //! - `yz-pointer move X Y`: moves the cursor to layout coordinates X, Y.
 //! - `yz-pointer click [hold-ms]`: clicks the left button where the cursor is (default 40 ms).
+//! - `yz-pointer drag X Y [steps]`: presses where the cursor is, moves to X, Y in steps, and
+//!   releases there.
 //!
 //! Scripts should move, check `hyprctl cursorpos`, and only then click, so a click never lands
 //! somewhere unexpected.
@@ -74,13 +76,46 @@ fn main() {
             pointer.frame();
             sync(&mut queue);
         }
+        Some("drag") => {
+            let arg = |i: usize| -> Option<i32> { args.get(i).and_then(|a| a.parse().ok()) };
+            let (Some(x), Some(y)) = (arg(1), arg(2)) else {
+                eprintln!("usage: yz-pointer drag X Y [steps]");
+                std::process::exit(2);
+            };
+            let steps = arg(3).unwrap_or(20).max(1);
+            let (from_x, from_y) = cursor().expect("hyprctl cursorpos");
+            pointer.button(time(), BTN_LEFT, ButtonState::Pressed);
+            pointer.frame();
+            sync(&mut queue);
+            for i in 1..=steps {
+                let t = i as f32 / steps as f32;
+                let px = from_x + ((x - from_x) as f32 * t).round() as i32 - LAYOUT_ORIGIN.0;
+                let py = from_y + ((y - from_y) as f32 * t).round() as i32 - LAYOUT_ORIGIN.1;
+                pointer.motion_absolute(time(), px as u32, py as u32, LAYOUT_EXTENT.0, LAYOUT_EXTENT.1);
+                pointer.frame();
+                sync(&mut queue);
+                thread::sleep(Duration::from_millis(16));
+            }
+            thread::sleep(Duration::from_millis(80));
+            pointer.button(time(), BTN_LEFT, ButtonState::Released);
+            pointer.frame();
+            sync(&mut queue);
+        }
         _ => {
-            eprintln!("usage: yz-pointer move X Y | yz-pointer click [hold-ms]");
+            eprintln!("usage: yz-pointer move X Y | yz-pointer click [hold-ms] | yz-pointer drag X Y [steps]");
             std::process::exit(2);
         }
     }
     pointer.destroy();
     sync(&mut queue);
+}
+
+/// The cursor position, from Hyprland.
+fn cursor() -> Option<(i32, i32)> {
+    let out = std::process::Command::new("hyprctl").arg("cursorpos").output().ok()?;
+    let text = String::from_utf8(out.stdout).ok()?;
+    let (x, y) = text.trim().split_once(',')?;
+    Some((x.trim().parse().ok()?, y.trim().parse().ok()?))
 }
 
 fn sync(queue: &mut EventQueue<State>) {

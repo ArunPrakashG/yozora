@@ -1,0 +1,96 @@
+# Settings schema for Yozora Bar. Settings has built-in pages for the bar's style, modules and
+# monitors; the fields here make up its "Options" page.
+
+[[section]]
+title = "Clock"
+
+[[section.field]]
+key     = "clock.format"
+kind    = "string"
+label   = "Format"
+help    = "strftime format. Two spaces split date and time into separate parts."
+default = "%a %-d %b  %H:%M"
+
+[[section.field]]
+key     = "clock.week_numbers"
+kind    = "bool"
+label   = "Week numbers"
+help    = "Show ISO week numbers in the calendar."
+default = true
+
+[[section]]
+title = "Workspaces"
+
+[[section.field]]
+key     = "workspaces.count"
+kind    = "int"
+label   = "Always shown"
+help    = "Workspaces 1 to this are shown even when empty."
+default = 5
+min     = 0
+max     = 20
+
+[[section.field]]
+key     = "workspaces.per_monitor"
+kind    = "bool"
+label   = "Only this monitor's"
+help    = "Each bar shows only the workspaces on its own monitor."
+default = false
+
+[[section]]
+title = "Titles"
+
+[[section.field]]
+key     = "window.max_length"
+kind    = "int"
+label   = "Window title length"
+help    = "Longest window title, in characters."
+default = 60
+min     = 10
+max     = 200
+step    = 5
+
+[[section.field]]
+key     = "media.max_length"
+kind    = "int"
+label   = "Track title length"
+help    = "Longest track and artist text, in characters."
+default = 36
+min     = 10
+max     = 120
+step    = 2
+
+[[section]]
+title       = "Session"
+description = "Commands behind the menu and the control center. Run through sh -c."
+
+[[section.field]]
+key     = "session.lock"
+kind    = "string"
+label   = "Lock"
+default = "loginctl lock-session"
+
+[[section.field]]
+key     = "session.logout"
+kind    = "string"
+label   = "Log out"
+default = "uwsm stop || loginctl terminate-session \"$XDG_SESSION_ID\""
+
+[[section.field]]
+key     = "session.reboot"
+kind    = "string"
+label   = "Restart"
+default = "systemctl reboot"
+
+[[section.field]]
+key     = "session.poweroff"
+kind    = "string"
+label   = "Shut down"
+default = "systemctl poweroff"
+
+[[section.field]]
+key     = "session.settings"
+kind    = "string"
+label   = "Settings"
+help    = "What the menu's Settings entry runs."
+default = "yozora-settings"

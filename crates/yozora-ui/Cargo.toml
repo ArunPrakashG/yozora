@@ -11,4 +11,5 @@ publish = false
 anyhow.workspace = true
 gpui.workspace = true
 tracing.workspace = true
+unicode-segmentation = "1"
 yozora-config.workspace = true

@@ -1,0 +1,9 @@
+# Installed to /usr/share/yozora/apps/bar.toml. Yozora Settings finds the bar through this file.
+id          = "bar"
+name        = "Yozora Bar"
+binary      = "yozora-bar"
+icon        = "yozora-bar"
+description = "A top panel for Hyprland: workspaces, status, popovers."
+config      = "bar.toml"
+settings    = "bar.settings.toml"
+socket      = "bar.sock"

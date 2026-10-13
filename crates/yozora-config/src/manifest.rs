@@ -61,6 +61,8 @@ pub fn discover_in(dirs: &[PathBuf]) -> Vec<AppManifest> {
             .filter_map(Result::ok)
             .map(|e| e.path())
             .filter(|p| p.extension().is_some_and(|e| e == "toml"))
+            // Settings schemas sit next to manifests.
+            .filter(|p| !p.to_string_lossy().ends_with(".settings.toml"))
             .collect();
         paths.sort();
         for path in paths {
@@ -110,6 +112,7 @@ mod tests {
         )
         .unwrap();
         std::fs::write(system.join("broken.toml"), "id = 3").unwrap();
+        std::fs::write(system.join("launch.settings.toml"), "[[section]]\ntitle = \"x\"\n").unwrap();
 
         let apps = discover_in(&[user, system.clone()]);
         assert_eq!(apps.len(), 2);
