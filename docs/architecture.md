@@ -26,7 +26,8 @@ of truth.
 |---|---|---|
 | `yozora-bar` | GPUI app, one layer-shell window per monitor, popovers as `xdg_popup` | Session-long, autostarted |
 | `yozora-settings` | GPUI app, one normal window | Only while open |
-| Future: Launch, Notify, Studio, … | One binary each | Their own |
+| `yozora-notify` | GPUI app and D-Bus server (`org.freedesktop.Notifications`); one layer-shell window for the toasts, only while there are any | Session-long, autostarted |
+| Future: Launch, Lock, Studio, … | One binary each | Their own |
 
 `yozora-bar` is a single process for all monitors. Services (Hyprland, PulseAudio, D-Bus) are
 shared by every bar window, so a second monitor costs one more window, not more connections.
@@ -91,16 +92,21 @@ crates/
     src/modules/         one file per module, each with its bar item and popover
     src/services/        hyprland, audio (pactl), network, power, bluetooth, media, tray,
                          notifications (mako), custom; each with a fake
+  yozora-notify/       bin
+    src/server.rs        the freedesktop interface, the bar's dev.yozora.Notify1, commands
+    src/store.rs         notifications, history on disk, Do Not Disturb
+    src/toasts.rs        the toast window: stack, springs, timers, inline reply
+    src/hypr.rs          which monitor toasts open on; the blur rule
   yozora-settings/     bin
     src/app.rs           window, file and manifest watching, status polling, portal theme
     src/apps.rs          discovered apps and whether they're running
     src/doc.rs           one config file being edited
     src/view.rs          sidebar, header, page, TOML preview, footer
     src/pages/           appearance, motion, bar, modules, monitors, about, and generic
-  yozora-config/       bar.toml and theme.toml types, loading with warnings, editing, watching,
+  yozora-config/       bar.toml, notify.toml and theme.toml types, loading with warnings, editing, watching,
                        manifests and settings schemas
   yozora-ipc/          the one-line JSON control socket
-  yozora-ui/           theme tokens, icons, springs, frame timing, controls, text input
+  yozora-ui/           theme tokens, icons, icon theme lookup, springs, frame timing, controls, text input
   yz-pointer/          virtual-pointer clicks and drags for scripted UI tests
 packaging/             manifests, PKGBUILD, systemd unit, Hyprland snippets, desktop files
 scripts/               click.sh, drag.sh, bench.sh
@@ -144,7 +150,7 @@ Backends are traits with one real and one fake implementation each:
 | Bluetooth | BlueZ `ObjectManager` | Not testable on the dev machine: fake backend plus python-dbusmock |
 | Media | MPRIS | Position is extrapolated locally and only ticks while a popover shows it |
 | Tray | StatusNotifierItem host (plus watcher if none runs), DBusMenu | Menus render as our own popovers |
-| Notifications | mako's D-Bus interface (the one `makoctl` uses) | Re-reads history when mako emits a signal. mako can't clear history, so cleared entries are hidden by the bar and remembered in `$XDG_STATE_HOME/yozora/` |
+| Notifications | yozora-notify's `dev.yozora.Notify1` (history, Do Not Disturb, actions, a `Changed` signal); otherwise mako's D-Bus interface (the one `makoctl` uses) | The bar checks which server owns `org.freedesktop.Notifications` and switches when it changes. mako can't clear history, so with mako cleared entries are hidden by the bar and remembered in `$XDG_STATE_HOME/yozora/` |
 | Theme follow | xdg-desktop-portal `color-scheme` | Drives the Automatic theme |
 
 ## Modules
@@ -206,6 +212,7 @@ Files live in `~/.config/yozora/`:
 |---|---|---|
 | `theme.toml` | shared by every Yozora app | theme, accent, glass, motion |
 | `bar.toml` | `yozora-bar` | bar style, height, reserve space, modules per zone, per-monitor sections; may override `[theme]` keys for the bar only |
+| `notify.toml` | `yozora-notify` | toast timeout, how many at once, monitor, history limit |
 | `<id>.toml` | each future app | its own settings |
 
 Precedence: built-in defaults, then `theme.toml`, then the app's own file.
@@ -358,6 +365,7 @@ sent upstream, before considering another renderer.
 | 2026-10-13 | No dynamic loading of Rust modules |
 | 2026-10-13 | Theme, accent, glass and motion are shared across apps in `theme.toml` |
 | 2026-10-13 | Phase 1 verdict: GPUI is a go ([spike report](spike-report.md)) |
+| 2026-10-13 | Our own notification server, yozora-notify, replaces mako; the bar still works with mako |
 | 2026-10-13 | Audio through `pactl subscribe` instead of a client library |
 | 2026-10-13 | Popovers grab only when opened by a click |
 | 2026-10-13 | Custom modules speak plain text or JSON lines with `text` |

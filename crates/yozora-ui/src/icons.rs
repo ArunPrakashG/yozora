@@ -540,6 +540,32 @@ pub fn battery_path(percent: f32, charging: bool) -> SharedString {
     }
 }
 
+/// A built-in icon for an app with no icon of its own, like a notification from a script,
+/// guessed from its name or desktop entry.
+pub fn guess_app_icon(app: &str, desktop_entry: &str) -> Icon {
+    let name = format!("{app} {desktop_entry}").to_lowercase();
+    let has = |words: &[&str]| words.iter().any(|w| name.contains(w));
+    if has(&["terminal", "kitty", "alacritty", "foot", "wezterm", "ghostty", "konsole"]) {
+        Icon::Terminal
+    } else if has(&["firefox", "chrom", "browser", "brave", "zen", "vivaldi", "epiphany"]) {
+        Icon::Globe
+    } else if has(&["update", "pacman", "paru", "yay", "package", "pamac", "flatpak"]) {
+        Icon::Package
+    } else if has(&["sync", "nextcloud", "dropbox", "drive", "cloud"]) {
+        Icon::Sync
+    } else if has(&["spotify", "music", "player", "mpv", "vlc"]) {
+        Icon::Music
+    } else if has(&["bluetooth", "blueman"]) {
+        Icon::Bluetooth
+    } else if has(&["network", "nm-applet"]) {
+        Icon::Wifi
+    } else if has(&["battery", "power", "upower"]) {
+        Icon::Battery
+    } else {
+        Icon::Bell
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -554,5 +580,18 @@ mod tests {
         }
         assert!(Assets.load("icons/battery-level-40.svg").unwrap().is_some());
         assert!(Assets.load("icons/nope.svg").unwrap().is_none());
+    }
+}
+
+#[cfg(test)]
+mod guess_tests {
+    use super::*;
+
+    #[test]
+    fn guesses_app_icons() {
+        assert_eq!(guess_app_icon("Terminal", ""), Icon::Terminal);
+        assert_eq!(guess_app_icon("", "org.mozilla.firefox"), Icon::Globe);
+        assert_eq!(guess_app_icon("Syncthing", ""), Icon::Sync);
+        assert_eq!(guess_app_icon("notify-send", ""), Icon::Bell);
     }
 }

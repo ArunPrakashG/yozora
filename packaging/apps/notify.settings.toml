@@ -1,0 +1,50 @@
+# Settings schema for Yozora Notify, rendered as its page in Yozora Settings.
+
+[[section]]
+title = "Toasts"
+
+[[section.field]]
+key     = "toasts.timeout_ms"
+kind    = "int"
+label   = "Time on screen"
+help    = "Milliseconds before a toast goes to the center, unless the app asks for another time. Critical toasts stay until dismissed."
+default = 5000
+min     = 1000
+max     = 120000
+step    = 500
+
+[[section.field]]
+key     = "toasts.max_visible"
+kind    = "int"
+label   = "At most on screen"
+help    = "More than this and the oldest goes to the center."
+default = 4
+min     = 1
+max     = 8
+
+[[section.field]]
+key     = "toasts.monitor"
+kind    = "string"
+label   = "Monitor"
+help    = "`focused`, or a connector name such as DP-1."
+default = "focused"
+
+[[section.field]]
+key     = "toasts.show_low"
+kind    = "bool"
+label   = "Show low-urgency toasts"
+help    = "Low-urgency notifications always go to the center; this also shows them as toasts."
+default = false
+
+[[section]]
+title = "History"
+
+[[section.field]]
+key     = "history.limit"
+kind    = "int"
+label   = "Keep"
+help    = "Notifications kept in the center. The oldest go first."
+default = 200
+min     = 0
+max     = 2000
+step    = 50

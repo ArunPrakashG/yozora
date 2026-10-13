@@ -8,6 +8,7 @@ changes as soon as a file is saved.
 |---|---|---|
 | `theme.toml` | every Yozora app | theme, accent, glass, font, motion |
 | `bar.toml` | Yozora Bar | the bar, its modules and monitors |
+| `notify.toml` | Yozora Notify | toasts and notification history |
 
 Settings edits these same files, keeping your comments and formatting. If a file has a syntax
 error, apps keep running with the last good configuration and Settings shows the error instead
@@ -101,7 +102,7 @@ Put module names in `left`, `center` or `right`, in the order you want them.
 | `sound` | Output and input volume and devices, through PulseAudio (pipewire-pulse works) |
 | `devices` | Bluetooth devices and their batteries, through BlueZ |
 | `battery` | UPower battery and the power profile |
-| `notifications` | mako's history and Do Not Disturb |
+| `notifications` | Notification history, grouped by app, and Do Not Disturb. From yozora-notify, or mako if that's what runs |
 | `clock` | Date and time, with a calendar |
 | `control-center` | Quick settings |
 | `custom/<name>` | A command you define, below |
@@ -164,6 +165,45 @@ A `[theme]` table in `bar.toml` overrides `theme.toml` for the bar only:
 ```toml
 [theme]
 accent = "dawn"
+```
+
+## notify.toml
+
+```toml
+version = 1
+
+[toasts]
+timeout_ms  = 5000       # how long a toast stays, 1000–120000, unless the app asks for another time
+max_visible = 4          # 1–8; past this, the oldest goes to the center
+monitor     = "focused"  # focused, or a connector name such as "DP-1"
+show_low    = false      # also show low-urgency notifications as toasts
+
+[history]
+limit = 200              # notifications kept in the center, up to 2000
+```
+
+Critical notifications stay until you dismiss them, and still show during Do Not Disturb.
+Everything else waits in the center while Do Not Disturb is on. Opening the center sends the
+toasts on screen to it. Like `bar.toml`, `notify.toml` can have a `[theme]` table.
+
+History is kept in `$XDG_STATE_HOME/yozora/notify.json`, and images apps send in
+`~/.cache/yozora/notify/`.
+
+`yozora-notify` has its own commands:
+
+| Command | Does |
+|---|---|
+| `yozora-notify [--replace] [--config DIR]` | Runs the server |
+| `dnd [on\|off\|toggle]` | Do Not Disturb |
+| `status` | Do Not Disturb, unread and count, as JSON |
+| `list` | The center, as JSON |
+| `clear` | Empties the center |
+| `quit` | Stops the server |
+
+For example, to toggle Do Not Disturb from a key:
+
+```lua
+hl.bind("SUPER + D", hl.dsp.exec_cmd("yozora-notify dnd"))
 ```
 
 ## The control socket

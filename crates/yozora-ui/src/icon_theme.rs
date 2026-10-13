@@ -1,4 +1,4 @@
-//! Freedesktop icon theme lookup, for tray items and application icons.
+//! Freedesktop icon theme lookup, for tray items, notifications and application icons.
 //!
 //! Each theme is indexed once on first use: a walk over its directories that keeps the best
 //! file per icon name (scalable first, then the PNG closest to 32 px). Lookups after that are

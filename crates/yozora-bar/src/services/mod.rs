@@ -9,7 +9,6 @@ pub mod bluetooth;
 pub mod custom;
 pub mod dbus;
 pub mod hyprland;
-pub mod icons;
 pub mod media;
 pub mod network;
 pub mod notifications;
@@ -20,6 +19,8 @@ use std::{collections::BTreeSet, time::Duration};
 
 use async_channel::{Receiver, Sender};
 use gpui::{App, AppContext, Entity, Global};
+/// Icon theme lookup, shared with the other Yozora apps.
+pub use yozora_ui::icon_theme as icons;
 
 /// A service's latest snapshot plus the channel for commands to its backend.
 pub struct Service<S, C> {

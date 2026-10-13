@@ -3,6 +3,7 @@
 pub mod controls;
 pub mod frame_stats;
 pub mod gpu;
+pub mod icon_theme;
 pub mod icons;
 pub mod input;
 pub mod malloc;

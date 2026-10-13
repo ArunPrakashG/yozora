@@ -8,6 +8,7 @@ pub mod bar;
 pub mod edit;
 pub mod load;
 pub mod manifest;
+pub mod notify;
 pub mod paths;
 pub mod schema;
 pub mod theme;

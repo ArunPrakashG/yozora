@@ -6,6 +6,7 @@ members = [
     "crates/yozora-ipc",
     "crates/yozora-bar",
     "crates/yozora-settings",
+    "crates/yozora-notify",
     "crates/yz-pointer",
 ]
 
