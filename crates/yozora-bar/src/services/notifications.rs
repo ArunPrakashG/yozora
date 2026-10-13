@@ -156,8 +156,8 @@ fn icon_path(icon: &str, desktop_entry: &str, app: &str) -> Option<PathBuf> {
             icons::find(icon.strip_prefix("file://").unwrap_or(icon), &[])
                 .or_else(|| icons::app_icon(desktop_entry))
                 .or_else(|| icons::app_icon(app))
-                // Drawn at 22 px.
-                .map(|p| icons::fit(&p, 48))
+                // Drawn at 22 px; symbolic icons are drawn as masks, which GPUI keeps sharp itself.
+                .map(|p| if icons::is_symbolic(&p) { p } else { icons::fit(&p, 44) })
         })
         .clone()
 }
@@ -273,7 +273,7 @@ fn run_fake(link: Link<State, Cmd>) {
         items: vec![
             n(4, "Terminal", "Build finished", "yozora-bar · release profile · 0 warnings", 120),
             n(3, "Firefox", "Download complete", "hyprland-0.56.2.tar.gz", 720),
-            n(2, "System", "Updates available", "14 packages can be upgraded", 3600),
+            n(2, "Software Update", "Updates available", "14 packages can be upgraded", 3600),
             n(1, "Syncthing", "Folder up to date", "Projects/yozora", 3 * 3600),
         ],
         dnd: false,

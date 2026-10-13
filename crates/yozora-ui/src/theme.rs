@@ -60,14 +60,17 @@ impl Theme {
             (false, Accent::Nebula) => (0x6A4FDBFF, 0x6A4FDB24),
             (false, Accent::Dawn) => (0xAD5A0DFF, 0xAD5A0D24),
         };
-        // Bar and popover tint alpha per glass level, from the design.
+        // Bar and popover tint alpha per glass level. The bar's are the design's. Popovers sit
+        // over windows rather than the wallpaper, and Hyprland's blur is often lighter than the
+        // design's 40 px, so theirs are higher: at the design's values, text behind a popover
+        // stayed readable through it.
         let (bar_a, pop_a) = match (dark, config.glass) {
-            (true, Glass::Clear) => (0x52, 0x80),
-            (true, Glass::Balanced) => (0x8C, 0xB3),
-            (true, Glass::Frosted) => (0xC7, 0xE0),
-            (false, Glass::Clear) => (0x61, 0x8F),
-            (false, Glass::Balanced) => (0x99, 0xC2),
-            (false, Glass::Frosted) => (0xD6, 0xEB),
+            (true, Glass::Clear) => (0x52, 0xA6),
+            (true, Glass::Balanced) => (0x8C, 0xD4),
+            (true, Glass::Frosted) => (0xC7, 0xEB),
+            (false, Glass::Clear) => (0x61, 0xB3),
+            (false, Glass::Balanced) => (0x99, 0xDB),
+            (false, Glass::Frosted) => (0xD6, 0xF0),
         };
         // Without compositor blur, translucent tint just looks dirty; go nearly opaque.
         let (bar_a, pop_a) = if opaque_bar {

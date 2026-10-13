@@ -29,6 +29,10 @@ const MENU: &str = "com.canonical.dbusmenu";
 
 #[derive(Clone)]
 pub enum Icon {
+    /// One of the bar's own icons, for tray items whose icon names a common thing.
+    Builtin(yozora_ui::Icon),
+    /// A single-color SVG, drawn tinted like the bar's own icons.
+    Symbolic(PathBuf),
     File(PathBuf),
     Pixmap(Arc<RenderImage>),
 }
@@ -101,6 +105,28 @@ fn split(key: &str) -> (String, String) {
     }
 }
 
+/// The bar's own icon for a theme icon name that means the same thing, so that tray items
+/// like nm-applet and fcitx match the modules beside them. Theme icons for these vary a lot:
+/// hicolor's wired icon, for one, is drawn at 35% opacity.
+fn builtin(name: &str) -> Option<yozora_ui::Icon> {
+    use yozora_ui::Icon as I;
+    let name = name.strip_suffix("-symbolic").unwrap_or(name);
+    let icon = match name {
+        "nm-no-connection" | "network-offline" | "nm-device-wired-unavailable" => I::NetworkOff,
+        n if n.starts_with("nm-device-wired") || n.starts_with("network-wired") => I::Ethernet,
+        n if n.starts_with("nm-vpn") || n.starts_with("network-vpn") => I::Vpn,
+        "network-wireless-offline" | "network-wireless-disconnected" | "nm-signal-00" => I::WifiOff,
+        "nm-signal-25" | "network-wireless-signal-weak" | "network-wireless-signal-none" => I::Wifi1,
+        "nm-signal-50" | "network-wireless-signal-ok" => I::Wifi2,
+        n if n.starts_with("nm-signal") || n.starts_with("network-wireless") => I::Wifi,
+        "input-keyboard" | "fcitx" | "fcitx-kbd" | "input-keyboard-us" => I::Keyboard,
+        "bluetooth" | "bluetooth-active" | "blueman" | "blueman-tray" | "blueman-active" => I::Bluetooth,
+        "bluetooth-disabled" | "blueman-disabled" => I::BluetoothOff,
+        _ => return None,
+    };
+    Some(icon)
+}
+
 /// ARGB32 pixmaps in network byte order, to the BGRA frames GPUI draws.
 fn pixmap(props: &Props) -> Option<Arc<RenderImage>> {
     let list: Vec<(i32, i32, Vec<u8>)> = dbus::get(props, "IconPixmap")?;
@@ -113,7 +139,12 @@ fn pixmap(props: &Props) -> Option<Arc<RenderImage>> {
         let (a, r, g, b) = (px[0], px[1], px[2], px[3]);
         bgra.extend_from_slice(&[b, g, r, a]);
     }
-    let buffer = image::RgbaImage::from_raw(w as u32, h as u32, bgra)?;
+    let mut buffer = image::RgbaImage::from_raw(w as u32, h as u32, bgra)?;
+    if w > 32 || h > 32 {
+        // The GPU would shrink it with a plain bilinear sample, which aliases past 2x.
+        let (w, h) = ((w * 32 / w.max(h)).max(1) as u32, (h * 32 / w.max(h)).max(1) as u32);
+        buffer = image::imageops::resize(&buffer, w, h, image::imageops::FilterType::Lanczos3);
+    }
     Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])))
 }
 
@@ -131,8 +162,13 @@ async fn item(conn: &Connection, key: &str) -> anyhow::Result<Item> {
     let name = dbus::string(&p, name_key);
     let name = if name.is_empty() { dbus::string(&p, "IconName") } else { name };
     // Drawn at 16 px; 32 covers a 2x monitor.
-    let icon = super::icons::find(&name, &extra)
-        .map(|p| Icon::File(super::icons::fit(&p, 32)))
+    let icon = builtin(&name)
+        .map(Icon::Builtin)
+        .or_else(|| {
+            super::icons::find_symbolic(&name, &extra).map(|p| {
+                if super::icons::is_symbolic(&p) { Icon::Symbolic(p) } else { Icon::File(super::icons::fit(&p, 32)) }
+            })
+        })
         .or_else(|| pixmap(&p).map(Icon::Pixmap));
     let title =
         dbus::get::<String>(&p, "Title").filter(|t| !t.is_empty()).or_else(|| dbus::get(&p, "Id")).unwrap_or_default();
@@ -383,5 +419,15 @@ mod tests {
             super::split("org.kde.StatusNotifierItem-3-1"),
             ("org.kde.StatusNotifierItem-3-1".into(), "/StatusNotifierItem".into())
         );
+    }
+
+    #[test]
+    fn common_icon_names_use_builtin_icons() {
+        use yozora_ui::Icon;
+        assert_eq!(super::builtin("nm-device-wired"), Some(Icon::Ethernet));
+        assert_eq!(super::builtin("nm-device-wired-unavailable"), Some(Icon::NetworkOff));
+        assert_eq!(super::builtin("nm-signal-50"), Some(Icon::Wifi2));
+        assert_eq!(super::builtin("input-keyboard-symbolic"), Some(Icon::Keyboard));
+        assert_eq!(super::builtin("vicinae"), None);
     }
 }

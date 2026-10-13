@@ -4,12 +4,12 @@ use gpui::{
     AnyElement, App, Context, Div, FontWeight, InteractiveElement, IntoElement, ParentElement,
     StatefulInteractiveElement, Styled, div, img, prelude::*, px,
 };
-use yozora_ui::{Icon, Theme, controls, icon, icon_sized};
+use yozora_ui::{Icon, IconElement, Theme, controls, icon, icon_sized};
 
 use crate::{
     bar::bi,
     popover::Popover,
-    services::{Services, notifications::Cmd},
+    services::{Services, icons, notifications::Cmd},
 };
 
 pub fn item(theme: &Theme, cx: &App) -> Option<Div> {
@@ -90,6 +90,7 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
     for (i, n) in state.items.iter().take(30).enumerate() {
         let id = n.id;
         let glyph = n.icon_path.clone();
+        let fallback = fallback_icon(&n.app, &n.desktop_entry);
         let urgent = n.urgency >= 2;
         let when = n.seen.filter(|s| *s > 0).map(super::ago);
         rows.push(
@@ -117,8 +118,13 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
                         .bg(theme.fill_3)
                         .overflow_hidden()
                         .child(match glyph {
+                            Some(path) if icons::is_symbolic(&path) => {
+                                IconElement::from_path(path.to_string_lossy().into_owned(), 18.)
+                                    .text_color(theme.ink)
+                                    .into_any_element()
+                            }
                             Some(path) => img(path).size(px(22.)).into_any_element(),
-                            None => icon(Icon::Bell).into_any_element(),
+                            None => icon_sized(fallback, 17.).text_color(theme.ink_2).into_any_element(),
                         }),
                 )
                 .child(
@@ -181,4 +187,42 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
         .into_any_element(),
     );
     rows
+}
+
+/// A built-in icon for a notification with no icon of its own, guessed from the app's name.
+fn fallback_icon(app: &str, desktop_entry: &str) -> Icon {
+    let name = format!("{app} {desktop_entry}").to_lowercase();
+    let has = |words: &[&str]| words.iter().any(|w| name.contains(w));
+    if has(&["terminal", "kitty", "alacritty", "foot", "wezterm", "ghostty", "konsole"]) {
+        Icon::Terminal
+    } else if has(&["firefox", "chrom", "browser", "brave", "zen", "vivaldi", "epiphany"]) {
+        Icon::Globe
+    } else if has(&["update", "pacman", "paru", "yay", "package", "pamac", "flatpak"]) {
+        Icon::Package
+    } else if has(&["sync", "nextcloud", "dropbox", "drive", "cloud"]) {
+        Icon::Sync
+    } else if has(&["spotify", "music", "player", "mpv", "vlc"]) {
+        Icon::Music
+    } else if has(&["bluetooth", "blueman"]) {
+        Icon::Bluetooth
+    } else if has(&["network", "nm-applet"]) {
+        Icon::Wifi
+    } else if has(&["battery", "power", "upower"]) {
+        Icon::Battery
+    } else {
+        Icon::Bell
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use yozora_ui::Icon;
+
+    #[test]
+    fn guesses_fallback_icons() {
+        assert_eq!(super::fallback_icon("Terminal", ""), Icon::Terminal);
+        assert_eq!(super::fallback_icon("", "org.mozilla.firefox"), Icon::Globe);
+        assert_eq!(super::fallback_icon("Syncthing", ""), Icon::Sync);
+        assert_eq!(super::fallback_icon("notify-send", ""), Icon::Bell);
+    }
 }
