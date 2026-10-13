@@ -4,6 +4,12 @@
 clear workaround. Two findings change the plan: popover dismissal (below) and the rotated-monitor
 bug, which we should report upstream.
 
+> **Since the spike.** The full bar and Settings are built on these findings. Popovers now grab
+> only when opened by a click (finding 3): a grabbed popover still closes instantly when the
+> compositor dismisses it. The 30 fps cap (finding 1) is turned off for every window. The bar also had to
+> opt out of GPUI quitting when its last window closes. Current measurements are in
+> [benchmarks.md](benchmarks.md), and the known limitations are in the [README](../README.md).
+
 Tested 2026-10-13 on Hyprland 0.56.2 with a GTX 1650 Super on the proprietary 615 driver
 (Vulkan). The monitors were DP-1 at 1920×1080 and 143.86 Hz, and HDMI-A-1 at 2560×1080 and
 75 Hz, rotated 270°. GPUI is pinned to Zed rev `26363aab` and built with Rust 1.98.1, in a
