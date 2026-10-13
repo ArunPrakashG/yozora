@@ -4,7 +4,7 @@ use gpui::{
     AnyElement, Context, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
     StatefulInteractiveElement, Styled, div, img, prelude::*, px,
 };
-use yozora_ui::{Icon, Theme, controls, icon, icon_sized};
+use yozora_ui::{Icon, IconElement, Theme, controls, icon, icon_sized};
 
 use super::Pop;
 use crate::{
@@ -32,6 +32,10 @@ pub fn render(bar: &mut Bar, theme: &Theme, cx: &mut Context<Bar>) -> Option<Any
         let key = item.key.clone();
         let active = bar.popover_open(&Pop::Tray(key.clone()), cx);
         let glyph = match &item.icon {
+            Some(tray::Icon::Builtin(glyph)) => icon(*glyph).text_color(theme.ink).into_any_element(),
+            Some(tray::Icon::Symbolic(path)) => IconElement::from_path(path.to_string_lossy().into_owned(), 16.)
+                .text_color(theme.ink)
+                .into_any_element(),
             Some(tray::Icon::File(path)) => img(path.clone()).size(px(16.)).flex_none().into_any_element(),
             Some(tray::Icon::Pixmap(image)) => img(image.clone()).size(px(16.)).flex_none().into_any_element(),
             None => icon(Icon::App).into_any_element(),

@@ -247,7 +247,7 @@ impl Icon {
                 return format!(r#"<g opacity=".28">{ARC3}{ARC2}</g>{ARC1}<path d="M4 3.5l16 17"/>"#).into();
             }
             Icon::Ethernet => {
-                r#"<rect x="4" y="3.5" width="16" height="12" rx="2.4"/><path d="M8 15.5v2.5h8v-2.5M12 18v2.5M8.5 8h.01M12 8h.01M15.5 8h.01"/>"#
+                r#"<path d="M5.5 5h13a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H16v2.5a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V16H5.5A1.5 1.5 0 0 1 4 14.5v-8A1.5 1.5 0 0 1 5.5 5z"/><path d="M8.5 8.5v2.5M12 8.5v2.5M15.5 8.5v2.5"/>"#
             }
             Icon::NetworkOff => {
                 r#"<path d="M4 9.5a12 12 0 0 1 3-2M10.5 6.2a12 12 0 0 1 9.5 3.3M7.3 13a7 7 0 0 1 3-1.6M15.2 11.7a7 7 0 0 1 1.5 1.3"/><circle class="f" cx="12" cy="18.5" r="1.3"/><path d="M4 3.5l16 17"/>"#

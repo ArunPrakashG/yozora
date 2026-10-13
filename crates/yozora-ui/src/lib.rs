@@ -9,5 +9,5 @@ pub mod malloc;
 pub mod spring;
 pub mod theme;
 
-pub use icons::{Assets, Icon, icon, icon_sized};
+pub use icons::{Assets, Icon, IconElement, icon, icon_sized};
 pub use theme::Theme;

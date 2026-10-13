@@ -172,6 +172,26 @@ pub fn find(name: &str, extra: &[PathBuf]) -> Option<PathBuf> {
     pixmaps.get(name).map(|(_, p)| p.clone())
 }
 
+/// The `-symbolic` variant of an icon if the theme has one, else the icon itself.
+///
+/// Symbolic icons are single-color line art like the bar's own, so they're drawn tinted
+/// ([`is_symbolic`]) instead of in the theme's colors.
+pub fn find_symbolic(name: &str, extra: &[PathBuf]) -> Option<PathBuf> {
+    if !name.is_empty() && !name.starts_with('/') && !name.ends_with("-symbolic") {
+        let symbolic = find(&format!("{name}-symbolic"), extra).filter(|p| is_symbolic(p));
+        if symbolic.is_some() {
+            return symbolic;
+        }
+    }
+    find(name, extra)
+}
+
+/// Whether `path` is a symbolic SVG, which should be drawn as a mask in the text color.
+pub fn is_symbolic(path: &Path) -> bool {
+    path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg"))
+        && path.file_stem().and_then(|s| s.to_str()).is_some_and(|s| s.ends_with("-symbolic"))
+}
+
 /// The icon for an application, from its desktop entry or by guessing from its id.
 pub fn app_icon(id: &str) -> Option<PathBuf> {
     if id.is_empty() {
@@ -196,22 +216,22 @@ pub fn app_icon(id: &str) -> Option<PathBuf> {
     find(id, &[]).or_else(|| find(&lower, &[]))
 }
 
-/// A copy of a raster image no larger than `max` px on its longer side, or the image itself
-/// if it's already small enough or isn't raster.
+/// A copy of an image sized for drawing at `max` px on its longer side, or the image itself if
+/// it's raster and already small enough. Pass twice the drawn size so it stays sharp on 2x
+/// monitors.
 ///
 /// GPUI keeps an image decoded at its full size, and uploads it to the GPU at that size, no
 /// matter how small it's drawn. Some apps ship only a 512 px icon, which is 1 MB for a 16 px
-/// tray icon; album art can be 4 MB. Copies are cached in `~/.cache/yozora/thumbs`, keyed by
-/// the path, size and modification time of the original.
+/// tray icon; album art can be 4 MB. GPUI also rasterizes an SVG image once, at the size the
+/// file declares, so a 48 px SVG drawn at 16 px is shrunk on the GPU and comes out soft; SVGs
+/// are rasterized here at `max` instead. Copies are cached in `~/.cache/yozora/thumbs`, keyed
+/// by the path, size and modification time of the original.
 pub fn fit(path: &Path, max: u32) -> PathBuf {
     shrink(path, max, &thumbs_dir()).unwrap_or_else(|| path.to_path_buf())
 }
 
 fn shrink(path: &Path, max: u32, dir: &Path) -> Option<PathBuf> {
     use std::hash::{Hash, Hasher};
-    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg")) {
-        return None;
-    }
     let meta = std::fs::metadata(path).ok()?;
     let mut h = std::collections::hash_map::DefaultHasher::new();
     (path, meta.len(), meta.modified().ok(), max).hash(&mut h);
@@ -219,18 +239,43 @@ fn shrink(path: &Path, max: u32, dir: &Path) -> Option<PathBuf> {
     if out.exists() {
         return Some(out);
     }
-    let reader = image::ImageReader::open(path).ok()?.with_guessed_format().ok()?;
-    let (w, h) = reader.into_dimensions().ok()?;
-    if w.max(h) <= max {
-        return None;
-    }
-    let image = image::ImageReader::open(path).ok()?.with_guessed_format().ok()?.decode().ok()?;
-    let small = image.resize(max, max, image::imageops::FilterType::Triangle);
+    let small = if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg")) {
+        rasterize(&std::fs::read(path).ok()?, max)?
+    } else {
+        let reader = image::ImageReader::open(path).ok()?.with_guessed_format().ok()?;
+        let (w, h) = reader.into_dimensions().ok()?;
+        if w.max(h) <= max {
+            return None;
+        }
+        let image = image::ImageReader::open(path).ok()?.with_guessed_format().ok()?.decode().ok()?;
+        image.resize(max, max, image::imageops::FilterType::Lanczos3).into_rgba8()
+    };
     std::fs::create_dir_all(dir).ok()?;
     let tmp = out.with_extension("part");
     small.save_with_format(&tmp, image::ImageFormat::Png).ok()?;
     std::fs::rename(&tmp, &out).ok()?;
     Some(out)
+}
+
+/// Renders an SVG to fit in `max` × `max` px, keeping its aspect ratio.
+fn rasterize(svg: &[u8], max: u32) -> Option<image::RgbaImage> {
+    let tree = resvg::usvg::Tree::from_data(svg, &resvg::usvg::Options::default()).ok()?;
+    let size = tree.size();
+    let scale = max as f32 / size.width().max(size.height());
+    let (w, h) = ((size.width() * scale).round().max(1.) as u32, (size.height() * scale).round().max(1.) as u32);
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(w, h)?;
+    resvg::render(&tree, resvg::tiny_skia::Transform::from_scale(scale, scale), &mut pixmap.as_mut());
+    // tiny-skia stores premultiplied alpha; PNG wants straight alpha.
+    let mut data = pixmap.take();
+    for px in data.as_chunks_mut::<4>().0 {
+        let a = px[3] as u32;
+        if a > 0 && a < 255 {
+            for c in &mut px[..3] {
+                *c = ((*c as u32 * 255 + a / 2) / a).min(255) as u8;
+            }
+        }
+    }
+    image::RgbaImage::from_raw(w, h, data)
 }
 
 fn thumbs_dir() -> PathBuf {
@@ -261,7 +306,27 @@ mod tests {
         // The second call reuses the copy.
         assert_eq!(shrink(&big, 32, &thumbs), Some(out));
         assert_eq!(shrink(&small, 32, &thumbs), None);
-        assert_eq!(shrink(&dir.join("icon.svg"), 32, &thumbs), None);
+        assert_eq!(shrink(&dir.join("missing.svg"), 32, &thumbs), None);
+
+        // SVGs are rasterized at the asked size, whatever size they declare.
+        let svg = dir.join("icon.svg");
+        std::fs::write(
+            &svg,
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="16" height="8"><rect width="16" height="8" fill="#f00" fill-opacity=".5"/></svg>"##,
+        )
+        .unwrap();
+        let out = shrink(&svg, 32, &thumbs).expect("a raster copy");
+        let png = image::open(&out).unwrap().into_rgba8();
+        assert_eq!(png.dimensions(), (32, 16));
+        let px = png.get_pixel(8, 8);
+        assert!(px[0] > 250 && px[1] == 0 && (120..=135).contains(&px[3]), "straight alpha, got {px:?}");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn symbolic_icons_are_svgs_named_symbolic() {
+        assert!(is_symbolic(Path::new("/i/nm-device-wired-symbolic.svg")));
+        assert!(!is_symbolic(Path::new("/i/nm-device-wired.svg")));
+        assert!(!is_symbolic(Path::new("/i/input-keyboard-symbolic.png")));
     }
 }
