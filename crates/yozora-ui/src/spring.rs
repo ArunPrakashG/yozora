@@ -88,6 +88,38 @@ impl Spring {
     }
 }
 
+
+/// Where a spring released at rest from 0 toward 1 is after `t` seconds. Negative `t` is 0.
+///
+/// The closed form, for animations that are a pure function of elapsed time, like staggered
+/// rows that each start a little later.
+pub fn step_response(config: SpringConfig, t: f32) -> f32 {
+    if t <= 0.0 {
+        return 0.0;
+    }
+    let w0 = config.stiffness.sqrt();
+    let zeta = config.damping / (2.0 * w0);
+    if zeta < 1.0 {
+        let wd = w0 * (1.0 - zeta * zeta).sqrt();
+        1.0 - (-zeta * w0 * t).exp() * ((wd * t).cos() + zeta * w0 / wd * (wd * t).sin())
+    } else if zeta == 1.0 {
+        1.0 - (-w0 * t).exp() * (1.0 + w0 * t)
+    } else {
+        let s = (zeta * zeta - 1.0).sqrt();
+        let (r1, r2) = (-w0 * (zeta - s), -w0 * (zeta + s));
+        1.0 - (r2 * (r1 * t).exp() - r1 * (r2 * t).exp()) / (r2 - r1)
+    }
+}
+
+/// How long until `step_response` stays within 0.1% of 1.
+pub fn settle_time(config: SpringConfig) -> std::time::Duration {
+    let mut t = 2.0f32;
+    while t > 0.0 && (1.0 - step_response(config, t)).abs() < 0.001 {
+        t -= 0.002;
+    }
+    std::time::Duration::from_secs_f32(t + 0.002)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,5 +179,18 @@ mod tests {
             spring.value() > before,
             "momentum should carry it forward briefly"
         );
+    }
+
+    #[test]
+    fn closed_form_matches_stepping() {
+        let mut spring = Spring::new(0.0, SpringConfig::POPOVER);
+        spring.set_target(1.0);
+        for _ in 0..150 {
+            spring.step(std::time::Duration::from_millis(1));
+        }
+        let closed = step_response(SpringConfig::POPOVER, 0.150);
+        assert!((spring.value() - closed).abs() < 0.01, "{} vs {closed}", spring.value());
+        let settle = settle_time(SpringConfig::POPOVER).as_millis();
+        assert!((350..700).contains(&settle), "settles in {settle} ms");
     }
 }

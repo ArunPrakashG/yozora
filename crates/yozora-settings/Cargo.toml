@@ -1,0 +1,10 @@
+[package]
+name = "yozora-settings"
+version = "0.1.0"
+description = "Settings for every installed Yozora app"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]

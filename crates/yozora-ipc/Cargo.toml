@@ -1,0 +1,17 @@
+[package]
+name = "yozora-ipc"
+version = "0.1.0"
+description = "Control sockets between Yozora apps: one JSON object per line"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+async-io.workspace = true
+futures-lite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-channel.workspace = true
+tracing.workspace = true
