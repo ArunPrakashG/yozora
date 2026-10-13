@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#1A2747"/>
+      <stop offset="1" stop-color="#070B14"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#sky)"/>
+  <rect x="4.5" y="4.5" width="119" height="119" rx="27.5" fill="none" stroke="#AAC8FF" stroke-opacity=".18"/>
+  <g transform="translate(18 16) scale(3.6)">
+    <path fill="#8BBEFF" d="M6.43 2.6A6 6 0 1 0 13.4 9.57A5 5 0 0 1 6.43 2.6Z"/>
+    <path fill="#E8F1FF" d="M13.2 0.9l.55 1.55 1.55.55-1.55.55-.55 1.55-.55-1.55-1.55-.55 1.55-.55z"/>
+  </g>
+  <g stroke-linecap="round" stroke-width="6">
+    <path d="M26 82h76" stroke="#E8F1FF" stroke-opacity=".28"/>
+    <path d="M26 82h44" stroke="#8BBEFF"/>
+    <path d="M26 102h76" stroke="#E8F1FF" stroke-opacity=".28"/>
+    <path d="M26 102h22" stroke="#8BBEFF"/>
+  </g>
+  <circle cx="70" cy="82" r="8" fill="#E8F1FF"/>
+  <circle cx="48" cy="102" r="8" fill="#E8F1FF"/>
+</svg>

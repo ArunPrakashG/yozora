@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Yozora Bar
+Comment=A top panel for Hyprland
+Exec=yozora-bar
+Icon=yozora-bar
+Terminal=false
+NoDisplay=true
+Categories=System;

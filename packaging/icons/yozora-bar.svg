@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#1A2747"/>
+      <stop offset="1" stop-color="#070B14"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#sky)"/>
+  <rect x="4.5" y="4.5" width="119" height="119" rx="27.5" fill="none" stroke="#AAC8FF" stroke-opacity=".18"/>
+  <rect x="18" y="18" width="92" height="14" rx="7" fill="#0A0E17" fill-opacity=".7" stroke="#96B9FF" stroke-opacity=".25"/>
+  <rect x="24" y="23" width="12" height="4" rx="2" fill="#8BBEFF"/>
+  <rect x="40" y="23" width="6" height="4" rx="2" fill="#E8F1FF" fill-opacity=".45"/>
+  <rect x="80" y="23" width="24" height="4" rx="2" fill="#E8F1FF" fill-opacity=".45"/>
+  <g transform="translate(26 40) scale(4.6)">
+    <path fill="#8BBEFF" d="M6.43 2.6A6 6 0 1 0 13.4 9.57A5 5 0 0 1 6.43 2.6Z"/>
+    <path fill="#E8F1FF" d="M13.2 0.9l.55 1.55 1.55.55-1.55.55-.55 1.55-.55-1.55-1.55-.55 1.55-.55z"/>
+  </g>
+</svg>
