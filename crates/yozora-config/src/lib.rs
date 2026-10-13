@@ -7,6 +7,7 @@
 pub mod bar;
 pub mod edit;
 pub mod load;
+pub mod lock;
 pub mod manifest;
 pub mod notify;
 pub mod paths;

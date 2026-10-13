@@ -22,6 +22,11 @@ hl.window_rule({
     center = true,
 })
 
+-- The lock screen runs from hypridle: in ~/.config/hypr/hypridle.conf, set
+-- `lock_cmd = yozora-lock`, `before_sleep_cmd = loginctl lock-session` and `inhibit_sleep = 3`.
+-- Then this key locks too:
+-- hl.bind("SUPER + L", hl.dsp.exec_cmd("loginctl lock-session"))
+
 -- Optional keys for the bar's popovers.
 -- hl.bind("SUPER + N", hl.dsp.exec_cmd("yozora-bar msg toggle notifications"))
 -- hl.bind("SUPER + A", hl.dsp.exec_cmd("yozora-bar msg toggle control-center"))

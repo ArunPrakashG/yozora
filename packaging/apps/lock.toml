@@ -1,0 +1,10 @@
+# Installed to /usr/share/yozora/apps/lock.toml. Yozora Settings finds the lock screen through
+# this file.
+id          = "lock"
+name        = "Yozora Lock"
+binary      = "yozora-lock"
+icon        = "yozora-lock"
+description = "The lock screen: the blurred wallpaper, a clock, and the password field."
+config      = "lock.toml"
+settings    = "lock.settings.toml"
+socket      = "lock.sock"

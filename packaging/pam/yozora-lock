@@ -1,0 +1,3 @@
+#%PAM-1.0
+# Installed to /etc/pam.d/yozora-lock. Yozora Lock checks passwords the way logging in does.
+auth include login

@@ -37,6 +37,8 @@ pub struct Theme {
     pub slider_icon: Rgba,
     pub switch_off: Rgba,
     pub danger: Rgba,
+    /// Warnings that aren't errors, like Caps Lock on the lock screen.
+    pub warn: Rgba,
     shadow: [Rgba; 2],
 }
 
@@ -109,6 +111,7 @@ impl Theme {
                 slider_icon: rgba(0x0A0E17FF),
                 switch_off: rgba(0x7F8CAA52),
                 danger: rgba(0xFF8B8BFF),
+                warn: rgba(0xFFC58BFF),
                 shadow: [rgba(0x000000B8), rgba(0x00000047)],
             }
         } else {
@@ -138,6 +141,7 @@ impl Theme {
                 slider_icon: rgba(0x0F1626FF),
                 switch_off: rgba(0x7F8CAA52),
                 danger: rgba(0xC0392BFF),
+                warn: rgba(0xAD5A0DFF),
                 shadow: [rgba(0x1E326452), rgba(0x1E32641A)],
             }
         }
