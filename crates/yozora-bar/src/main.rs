@@ -212,7 +212,9 @@ fn run(config: Option<PathBuf>, fakes: services::Fakes) -> ExitCode {
     if !fakes.0.is_empty() {
         tracing::info!("fake backends: {}", fakes.0.iter().cloned().collect::<Vec<_>>().join(", "));
     }
-    application().with_assets(yozora_ui::Assets).run(move |cx: &mut App| {
+    // A bar with no monitors to show on keeps running and waits for one, so closing the last
+    // window must not quit.
+    application().with_assets(yozora_ui::Assets).with_quit_mode(gpui::QuitMode::Explicit).run(move |cx: &mut App| {
         app::start(cx, dir, loaded, fakes);
         cx.spawn(async move |cx| {
             while let Ok(incoming) = rx.recv().await {

@@ -225,13 +225,14 @@ pub fn reconcile(cx: &mut App) {
     cx.global_mut::<Shell>().bars = bars;
 }
 
-/// Closes every bar so `reconcile` reopens them with new settings.
+/// Replaces every bar with one built from the new settings. The new bars open before the old
+/// ones close, so the screen never goes without a bar.
 fn reopen_bars(cx: &mut App) {
-    let bars = std::mem::take(&mut cx.global_mut::<Shell>().bars);
-    for bar in bars {
+    let old = std::mem::take(&mut cx.global_mut::<Shell>().bars);
+    reconcile(cx);
+    for bar in old {
         let _ = bar.handle.update(cx, |_, window, _| window.remove_window());
     }
-    reconcile(cx);
 }
 
 pub fn reload(cx: &mut App) -> anyhow::Result<Vec<Warning>> {
