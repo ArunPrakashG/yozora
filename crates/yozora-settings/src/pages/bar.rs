@@ -28,7 +28,12 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
     let config: BarConfig = view.doc(&file).parse();
     let bar = config.bar.clone();
 
-    let style_card = |id: &'static str, style: BarStyle, value: &'static str, title: &str, detail: &str, cx: &mut Context<SettingsView>| {
+    let style_card = |id: &'static str,
+                      style: BarStyle,
+                      value: &'static str,
+                      title: &str,
+                      detail: &str,
+                      cx: &mut Context<SettingsView>| {
         let file = file.clone();
         option_card(
             id,
@@ -89,11 +94,17 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                 .child(setting_row(
                     "Height",
                     Some("Icons stay 16 px at every height.".into()),
-                    div().w(px(60. * label_refs.len() as f32)).child(segmented("height", &label_refs, height_index, &theme, move |i, _, cx| {
-                        let Some(&h) = HEIGHTS.get(i) else { return };
-                        let file = height_file.clone();
-                        weak.update(cx, |this, cx| this.edit(&file, cx, |d| d.set("bar.height", h as i64))).ok();
-                    })),
+                    div().w(px(60. * label_refs.len() as f32)).child(segmented(
+                        "height",
+                        &label_refs,
+                        height_index,
+                        &theme,
+                        move |i, _, cx| {
+                            let Some(&h) = HEIGHTS.get(i) else { return };
+                            let file = height_file.clone();
+                            weak.update(cx, |this, cx| this.edit(&file, cx, |d| d.set("bar.height", h as i64))).ok();
+                        },
+                    )),
                     true,
                     &theme,
                 ))
@@ -114,9 +125,9 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                 .child(setting_row(
                     "Monitors",
                     Some(monitors.into()),
-                    link("manage-monitors", "Manage", &theme).on_click(cx.listener(move |this, _, _, cx| {
-                        this.go(Page::App(app_id.clone(), AppPage::Monitors), cx)
-                    })),
+                    link("manage-monitors", "Manage", &theme).on_click(
+                        cx.listener(move |this, _, _, cx| this.go(Page::App(app_id.clone(), AppPage::Monitors), cx)),
+                    ),
                     false,
                     &theme,
                 )),

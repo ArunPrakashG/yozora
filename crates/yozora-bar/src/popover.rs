@@ -12,9 +12,9 @@ use std::{
 
 use gpui::{
     AnyElement, AnyWindowHandle, App, Bounds, Context, Entity, FocusHandle, InteractiveElement, IntoElement,
-    KeyDownEvent, ParentElement, Pixels, Render, StatefulInteractiveElement, Styled, Subscription, WeakEntity,
-    Window, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions, canvas, div, point, popup::*,
-    prelude::*, px, size,
+    KeyDownEvent, ParentElement, Pixels, Render, StatefulInteractiveElement, Styled, Subscription, WeakEntity, Window,
+    WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions, canvas, div, point, popup::*, prelude::*, px,
+    size,
 };
 use yozora_ui::{
     Theme,
@@ -93,7 +93,10 @@ impl Popover {
             WindowOptions {
                 titlebar: None,
                 focus: true,
-                window_bounds: Some(WindowBounds::Windowed(Bounds { origin: point(px(0.), px(0.)), size: window_size })),
+                window_bounds: Some(WindowBounds::Windowed(Bounds {
+                    origin: point(px(0.), px(0.)),
+                    size: window_size,
+                })),
                 window_background: WindowBackgroundAppearance::Transparent,
                 inactive_frame_interval: None,
                 kind: WindowKind::AnchoredPopup(PopupOptions {
@@ -166,8 +169,7 @@ impl Popover {
                 }
             }));
             if !self.grab {
-                self.focused_window =
-                    hypr.read(cx).state.window.as_ref().map(|w| (w.class.clone(), w.title.clone()));
+                self.focused_window = hypr.read(cx).state.window.as_ref().map(|w| (w.class.clone(), w.title.clone()));
             }
         }
         self._subscriptions = subs;

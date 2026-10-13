@@ -1,8 +1,8 @@
 //! Modules: which bar modules show in each zone, in what order. Drag rows to move them.
 
 use gpui::{
-    AnyElement, AppContext, Context, FontWeight, InteractiveElement, IntoElement, ParentElement, Render,
-    SharedString, StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder, px,
+    AnyElement, AppContext, Context, FontWeight, InteractiveElement, IntoElement, ParentElement, Render, SharedString,
+    StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder, px,
 };
 use yozora_config::bar::{BarConfig, Zones};
 use yozora_ui::{
@@ -99,7 +99,12 @@ fn info(name: &str) -> Info {
     if let Some(custom) = name.strip_prefix("custom/") {
         return Info { label: custom.into(), detail: "Custom command".into(), icon: Icon::Terminal, home: Zone::Right };
     }
-    Info { label: name.into(), detail: "Unknown module; the bar skips it".into(), icon: Icon::Warning, home: Zone::Right }
+    Info {
+        label: name.into(),
+        detail: "Unknown module; the bar skips it".into(),
+        icon: Icon::Warning,
+        home: Zone::Right,
+    }
 }
 
 /// A module being dragged.
@@ -164,7 +169,8 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
     let zones = config.modules.clone();
 
     let preset = PRESETS.iter().position(|(l, r)| {
-        zones.center.is_empty() && zones.left.iter().map(String::as_str).eq(l.iter().copied())
+        zones.center.is_empty()
+            && zones.left.iter().map(String::as_str).eq(l.iter().copied())
             && zones.right.iter().map(String::as_str).eq(r.iter().copied())
     });
     let weak = cx.entity().downgrade();
@@ -177,11 +183,7 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
     let zone_card = |zone: Zone, cx: &mut Context<SettingsView>| {
         let mut zones_for_zone = zones.clone();
         let on: Vec<String> = zone.list(&mut zones_for_zone).clone();
-        let off: Vec<String> = known
-            .iter()
-            .filter(|n| !enabled.contains(n) && info(n).home == zone)
-            .cloned()
-            .collect();
+        let off: Vec<String> = known.iter().filter(|n| !enabled.contains(n) && info(n).home == zone).cloned().collect();
         let count = on.len();
         let rows: Vec<AnyElement> = on
             .iter()
@@ -349,13 +351,25 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                     .flex()
                     .items_center()
                     .gap(px(10.))
-                    .when(preset.is_none(), |el| el.child(div().text_size(px(12.)).text_color(theme.ink_3).child("Custom")))
-                    .child(div().w(px(270.)).child(segmented("preset", &["Minimal", "Standard", "Full"], preset.unwrap_or(1), &theme, move |i, _, cx| {
-                        let (l, r) = PRESETS[i];
-                        let zones = Zones { left: l.iter().map(|s| s.to_string()).collect(), center: Vec::new(), right: r.iter().map(|s| s.to_string()).collect() };
-                        let file = preset_file.clone();
-                        weak.update(cx, |this, cx| save_zones(this, &file, zones, cx)).ok();
-                    }))),
+                    .when(preset.is_none(), |el| {
+                        el.child(div().text_size(px(12.)).text_color(theme.ink_3).child("Custom"))
+                    })
+                    .child(div().w(px(270.)).child(segmented(
+                        "preset",
+                        &["Minimal", "Standard", "Full"],
+                        preset.unwrap_or(1),
+                        &theme,
+                        move |i, _, cx| {
+                            let (l, r) = PRESETS[i];
+                            let zones = Zones {
+                                left: l.iter().map(|s| s.to_string()).collect(),
+                                center: Vec::new(),
+                                right: r.iter().map(|s| s.to_string()).collect(),
+                            };
+                            let file = preset_file.clone();
+                            weak.update(cx, |this, cx| save_zones(this, &file, zones, cx)).ok();
+                        },
+                    ))),
                 true,
                 &theme,
             )),

@@ -7,10 +7,9 @@
 use std::{cell::Cell, rc::Rc};
 
 use gpui::{
-    AnimationExt, App, Bounds, Div, ElementId, FontWeight, InteractiveElement, IntoElement,
-    MouseButton, MouseMoveEvent, MouseUpEvent, ParentElement, Pixels, SharedString,
-    SpringAnimation, SpringConfig, SpringPlayback, Stateful, StatefulInteractiveElement, Styled,
-    Window, canvas, div, prelude::FluentBuilder, px, relative,
+    AnimationExt, App, Bounds, Div, ElementId, FontWeight, InteractiveElement, IntoElement, MouseButton,
+    MouseMoveEvent, MouseUpEvent, ParentElement, Pixels, SharedString, SpringAnimation, SpringConfig, SpringPlayback,
+    Stateful, StatefulInteractiveElement, Styled, Window, canvas, div, prelude::FluentBuilder, px, relative,
 };
 
 use crate::{
@@ -21,13 +20,11 @@ use crate::{
 /// The spring for small controls: the design's indicator spring, or a snap with reduced motion.
 pub fn indicator_spring<T: gpui::SpringTarget>(theme: &Theme, target: T) -> SpringAnimation<T> {
     let p = theme.motion.indicator;
-    SpringAnimation::new(SpringConfig::new(p.stiffness, p.damping, 1.0))
-        .to(target)
-        .playback(if theme.motion.reduced {
-            SpringPlayback::Completed
-        } else {
-            SpringPlayback::Running
-        })
+    SpringAnimation::new(SpringConfig::new(p.stiffness, p.damping, 1.0)).to(target).playback(if theme.motion.reduced {
+        SpringPlayback::Completed
+    } else {
+        SpringPlayback::Running
+    })
 }
 
 /// A 34×20 switch with a sprung knob.
@@ -56,11 +53,9 @@ pub fn switch(id: impl Into<ElementId>, on: bool, theme: &Theme) -> Stateful<Div
                     spread_radius: px(0.),
                     inset: false,
                 }])
-                .with_spring(
-                    (id, "knob"),
-                    indicator_spring(theme, if on { px(16.) } else { px(2.) }),
-                    |el, x| el.left(x),
-                ),
+                .with_spring((id, "knob"), indicator_spring(theme, if on { px(16.) } else { px(2.) }), |el, x| {
+                    el.left(x)
+                }),
         )
 }
 
@@ -104,19 +99,8 @@ pub fn tile(
                 .flex()
                 .flex_col()
                 .min_w_0()
-                .child(
-                    div()
-                        .text_size(px(13.))
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .child(title.into()),
-                )
-                .child(
-                    div()
-                        .text_size(px(11.5))
-                        .text_color(theme.ink_2)
-                        .truncate()
-                        .child(detail.into()),
-                ),
+                .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(title.into()))
+                .child(div().text_size(px(11.5)).text_color(theme.ink_2).truncate().child(detail.into())),
         )
 }
 
@@ -137,31 +121,14 @@ pub fn row(id: impl Into<ElementId>, theme: &Theme) -> Stateful<Div> {
 }
 
 /// The two-line text block inside a row.
-pub fn row_text(
-    title: impl Into<SharedString>,
-    sub: Option<SharedString>,
-    theme: &Theme,
-) -> impl IntoElement {
+pub fn row_text(title: impl Into<SharedString>, sub: Option<SharedString>, theme: &Theme) -> impl IntoElement {
     div()
         .flex()
         .flex_col()
         .flex_1()
         .min_w_0()
-        .child(
-            div()
-                .font_weight(FontWeight::MEDIUM)
-                .truncate()
-                .child(title.into()),
-        )
-        .when_some(sub, |el, sub| {
-            el.child(
-                div()
-                    .text_size(px(12.))
-                    .text_color(theme.ink_2)
-                    .truncate()
-                    .child(sub),
-            )
-        })
+        .child(div().font_weight(FontWeight::MEDIUM).truncate().child(title.into()))
+        .when_some(sub, |el, sub| el.child(div().text_size(px(12.)).text_color(theme.ink_2).truncate().child(sub)))
 }
 
 /// The 28 px rounded-square icon at the start of a row.
@@ -180,18 +147,14 @@ pub fn row_icon(glyph: Icon, on: bool, theme: &Theme) -> impl IntoElement {
 
 /// The checkmark on a selected row. It springs in.
 pub fn check(id: impl Into<ElementId>, on: bool, theme: &Theme) -> impl IntoElement {
-    div()
-        .size(px(16.))
-        .flex_none()
-        .text_color(theme.accent)
-        .child(icon(Icon::Check).with_spring(
-            id,
-            indicator_spring(theme, if on { 1.0f32 } else { 0.0 }),
-            |el, t| {
-                let t = t.clamp(0., 1.2);
-                el.opacity(t.min(1.)).size(px(16. * (0.5 + 0.5 * t)))
-            },
-        ))
+    div().size(px(16.)).flex_none().text_color(theme.accent).child(icon(Icon::Check).with_spring(
+        id,
+        indicator_spring(theme, if on { 1.0f32 } else { 0.0 }),
+        |el, t| {
+            let t = t.clamp(0., 1.2);
+            el.opacity(t.min(1.)).size(px(16. * (0.5 + 0.5 * t)))
+        },
+    ))
 }
 
 /// Uppercase section label, like "OTHER NETWORKS".
@@ -216,28 +179,16 @@ pub fn header(title: impl Into<SharedString>, trailing: impl IntoElement) -> imp
         .px(px(4.))
         .pt(px(2.))
         .pb(px(10.))
-        .child(
-            div()
-                .text_size(px(13.))
-                .font_weight(FontWeight::SEMIBOLD)
-                .child(title.into()),
-        )
+        .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(title.into()))
         .child(trailing)
 }
 
 pub fn muted(text: impl Into<SharedString>, theme: &Theme) -> Div {
-    div()
-        .text_size(px(12.5))
-        .text_color(theme.ink_2)
-        .child(text.into())
+    div().text_size(px(12.5)).text_color(theme.ink_2).child(text.into())
 }
 
 /// A quiet text button, like "Network settings…".
-pub fn link(
-    id: impl Into<ElementId>,
-    text: impl Into<SharedString>,
-    theme: &Theme,
-) -> Stateful<Div> {
+pub fn link(id: impl Into<ElementId>, text: impl Into<SharedString>, theme: &Theme) -> Stateful<Div> {
     div()
         .id(id)
         .px(px(8.))
@@ -251,11 +202,7 @@ pub fn link(
 }
 
 /// The footer row: a note on the left, an action on the right.
-pub fn footer(
-    note: impl Into<SharedString>,
-    action: impl IntoElement,
-    theme: &Theme,
-) -> impl IntoElement {
+pub fn footer(note: impl Into<SharedString>, action: impl IntoElement, theme: &Theme) -> impl IntoElement {
     div()
         .flex()
         .items_center()
@@ -263,13 +210,7 @@ pub fn footer(
         .gap(px(8.))
         .pt(px(6.))
         .px(px(2.))
-        .child(
-            div()
-                .px(px(6.))
-                .text_size(px(11.5))
-                .text_color(theme.ink_3)
-                .child(note.into()),
-        )
+        .child(div().px(px(6.)).text_size(px(11.5)).text_color(theme.ink_3).child(note.into()))
         .child(action)
 }
 
@@ -291,12 +232,7 @@ pub fn empty(lines: &[&str], theme: &Theme) -> impl IntoElement {
 }
 
 /// A round media button. `main` is the large filled play button.
-pub fn media_button(
-    id: impl Into<ElementId>,
-    glyph: Icon,
-    main: bool,
-    theme: &Theme,
-) -> Stateful<Div> {
+pub fn media_button(id: impl Into<ElementId>, glyph: Icon, main: bool, theme: &Theme) -> Stateful<Div> {
     let size = if main { 46. } else { 38. };
     div()
         .id(id)
@@ -340,19 +276,14 @@ pub fn segmented(
                 .w(relative((1. / count as f32) * 0.985))
                 .rounded(px(8.))
                 .bg(theme.fill_3)
-                .with_spring(
-                    (id.clone(), "thumb"),
-                    indicator_spring(theme, selected as f32),
-                    move |el, i| el.left(relative(0.008 + i / count as f32 * 0.985)),
-                ),
+                .with_spring((id.clone(), "thumb"), indicator_spring(theme, selected as f32), move |el, i| {
+                    el.left(relative(0.008 + i / count as f32 * 0.985))
+                }),
         )
         .children(options.iter().enumerate().map(|(i, name)| {
             let on_select = on_select.clone();
             div()
-                .id(ElementId::NamedChild(
-                    std::sync::Arc::new(id.clone()),
-                    i.to_string().into(),
-                ))
+                .id(ElementId::NamedChild(std::sync::Arc::new(id.clone()), i.to_string().into()))
                 .relative()
                 .flex_1()
                 .h(px(28.))
@@ -363,11 +294,7 @@ pub fn segmented(
                 .text_size(px(12.))
                 .font_weight(FontWeight::MEDIUM)
                 .cursor_pointer()
-                .text_color(if i == selected {
-                    theme.ink
-                } else {
-                    theme.ink_2
-                })
+                .text_color(if i == selected { theme.ink } else { theme.ink_2 })
                 .child(SharedString::from(name.to_string()))
                 .on_click(move |_, window, cx| on_select(i, window, cx))
         }))
@@ -403,8 +330,7 @@ pub fn slider(
 ) -> impl IntoElement {
     let on_change = Rc::new(on_change);
     let (bounds_state, down_state, drag_state) = (state.clone(), state.clone(), state.clone());
-    let (drag_change, down_change, scroll_change) =
-        (on_change.clone(), on_change.clone(), on_change);
+    let (drag_change, down_change, scroll_change) = (on_change.clone(), on_change.clone(), on_change);
     let value = value.clamp(0.0, 1.0);
     div()
         .id(id)
@@ -429,14 +355,7 @@ pub fn slider(
                 .bg(theme.slider_fill),
         )
         .when_some(glyph, |el, glyph| {
-            el.child(
-                div()
-                    .absolute()
-                    .left(px(6.))
-                    .top(px(5.))
-                    .text_color(theme.slider_icon)
-                    .child(icon(glyph)),
-            )
+            el.child(div().absolute().left(px(6.)).top(px(5.)).text_color(theme.slider_icon).child(icon(glyph)))
         })
         .child(
             canvas(
@@ -482,12 +401,7 @@ pub fn slider(
 }
 
 /// A small pill button, like a player chooser.
-pub fn pill(
-    id: impl Into<ElementId>,
-    text: impl Into<SharedString>,
-    on: bool,
-    theme: &Theme,
-) -> Stateful<Div> {
+pub fn pill(id: impl Into<ElementId>, text: impl Into<SharedString>, on: bool, theme: &Theme) -> Stateful<Div> {
     div()
         .id(id)
         .h(px(26.))
@@ -498,14 +412,8 @@ pub fn pill(
         .text_size(px(12.))
         .cursor_pointer()
         .border_1()
-        .when(on, |el| {
-            el.bg(theme.accent_soft)
-                .text_color(theme.ink)
-                .border_color(theme.accent)
-        })
-        .when(!on, |el| {
-            el.text_color(theme.ink_2).border_color(theme.hair_2)
-        })
+        .when(on, |el| el.bg(theme.accent_soft).text_color(theme.ink).border_color(theme.accent))
+        .when(!on, |el| el.text_color(theme.ink_2).border_color(theme.hair_2))
         .child(text.into())
 }
 

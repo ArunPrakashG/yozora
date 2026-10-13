@@ -64,16 +64,21 @@ fn tiles(theme: &Theme, cx: &App) -> AnyElement {
         };
         let available = st.adapter.is_some();
         tiles.push(
-            controls::tile("tile-bt", if on { Icon::Bluetooth } else { Icon::BluetoothOff }, "Bluetooth", detail, on, theme)
-                .when(!available, |el| el.opacity(0.6).cursor_default())
-                .on_click(move |_, _, cx| {
-                    if available {
-                        if let Some(b) = &Services::get(cx).bluetooth {
-                            b.read(cx).send(bluetooth::Cmd::SetPowered(!on));
-                        }
-                    }
-                })
-                .into_any_element(),
+            controls::tile(
+                "tile-bt",
+                if on { Icon::Bluetooth } else { Icon::BluetoothOff },
+                "Bluetooth",
+                detail,
+                on,
+                theme,
+            )
+            .when(!available, |el| el.opacity(0.6).cursor_default())
+            .on_click(move |_, _, cx| {
+                if available && let Some(b) = &Services::get(cx).bluetooth {
+                    b.read(cx).send(bluetooth::Cmd::SetPowered(!on));
+                }
+            })
+            .into_any_element(),
         );
     }
 
@@ -107,13 +112,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
     if let Some(audio) = Services::get(cx).audio.as_ref().map(|a| a.read(cx)) {
         if let Some(sink) = audio.state.sink() {
             let caption = slider_caption("Sound", sink.description.clone(), theme);
-            rows.push(
-                div()
-                    .pt(px(14.))
-                    .child(caption)
-                    .children(sound::sink_slider(p, theme, cx))
-                    .into_any_element(),
-            );
+            rows.push(div().pt(px(14.)).child(caption).children(sound::sink_slider(p, theme, cx)).into_any_element());
         }
         if let Some(source) = audio.state.source() {
             let value = if source.muted { "Muted".into() } else { format!("{}%", sound::percent(source.volume)) };
@@ -132,20 +131,21 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
     rows.push(gap().into_any_element());
 
     let footer = if p.ui.power_choices {
-        div()
-            .flex()
-            .gap(px(6.))
-            .children([SessionAction::Logout, SessionAction::Reboot, SessionAction::Poweroff].map(|action| {
+        div().flex().gap(px(6.)).children([SessionAction::Logout, SessionAction::Reboot, SessionAction::Poweroff].map(
+            |action| {
                 let glyph = match action {
                     SessionAction::Logout => Icon::Close,
                     SessionAction::Reboot => Icon::Sync,
                     _ => Icon::Power,
                 };
-                controls::footer_button(action.verb(), glyph, action.verb(), theme).on_click(cx.listener(move |p, _, _, cx| {
-                    p.ui.confirm = Some(action);
-                    cx.notify();
-                }))
-            }))
+                controls::footer_button(action.verb(), glyph, action.verb(), theme).on_click(cx.listener(
+                    move |p, _, _, cx| {
+                        p.ui.confirm = Some(action);
+                        cx.notify();
+                    },
+                ))
+            },
+        ))
     } else {
         div()
             .flex()
@@ -156,14 +156,18 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
                     p.close(cx);
                 },
             )))
-            .child(controls::footer_button("cc-lock", Icon::Lock, "Lock", theme).on_click(cx.listener(|p, _, _, cx| {
-                run_shell(&SessionAction::Lock.command(&Config::get(cx).settings.bar.session));
-                p.close(cx);
-            })))
-            .child(controls::footer_button("cc-power", Icon::Power, "Power", theme).on_click(cx.listener(|p, _, _, cx| {
-                p.ui.power_choices = true;
-                cx.notify();
-            })))
+            .child(controls::footer_button("cc-lock", Icon::Lock, "Lock", theme).on_click(cx.listener(
+                |p, _, _, cx| {
+                    run_shell(&SessionAction::Lock.command(&Config::get(cx).settings.bar.session));
+                    p.close(cx);
+                },
+            )))
+            .child(controls::footer_button("cc-power", Icon::Power, "Power", theme).on_click(cx.listener(
+                |p, _, _, cx| {
+                    p.ui.power_choices = true;
+                    cx.notify();
+                },
+            )))
     };
     rows.push(footer.into_any_element());
     rows

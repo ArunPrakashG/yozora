@@ -153,6 +153,9 @@ each system service the enabled modules need.
 cargo test --workspace
 ```
 
+CI runs the tests along with `cargo fmt --check` and clippy with warnings as errors, so run
+`cargo fmt` before pushing.
+
 ```bash
 ./target/release/yozora-bar --config /tmp/yozora-test --fake=all
 ```

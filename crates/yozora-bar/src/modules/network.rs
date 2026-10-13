@@ -10,8 +10,9 @@ use crate::{
     bar::bi,
     popover::Popover,
     services::{
-        Services, run_shell,
+        Services,
         network::{Cmd, Kind, State},
+        run_shell,
     },
 };
 
@@ -86,7 +87,11 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
                     controls::row("wifi-active", theme)
                         .bg(theme.fill)
                         .child(controls::row_icon(Icon::Wifi, true, theme))
-                        .child(controls::row_text(ap.ssid.clone(), Some(security(ap.secured, &ap.security, true).into()), theme))
+                        .child(controls::row_text(
+                            ap.ssid.clone(),
+                            Some(security(ap.secured, &ap.security, true).into()),
+                            theme,
+                        ))
                         .child(controls::check("wifi-check", true, theme))
                         .on_click(|_, _, cx| send(Cmd::Disconnect, cx))
                         .into_any_element(),

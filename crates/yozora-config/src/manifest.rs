@@ -101,9 +101,8 @@ mod tests {
         let system = root.join("system");
         std::fs::create_dir_all(&user).unwrap();
         std::fs::create_dir_all(&system).unwrap();
-        let bar = |name: &str| {
-            format!("id = \"bar\"\nname = \"{name}\"\nbinary = \"yozora-bar\"\nconfig = \"bar.toml\"\n")
-        };
+        let bar =
+            |name: &str| format!("id = \"bar\"\nname = \"{name}\"\nbinary = \"yozora-bar\"\nconfig = \"bar.toml\"\n");
         std::fs::write(user.join("bar.toml"), bar("User Bar")).unwrap();
         std::fs::write(system.join("bar.toml"), bar("System Bar")).unwrap();
         std::fs::write(

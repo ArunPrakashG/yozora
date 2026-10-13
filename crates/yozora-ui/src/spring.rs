@@ -14,15 +14,9 @@ pub struct SpringConfig {
 
 impl SpringConfig {
     /// Popovers: about 3.9% overshoot, at rest by about 490 ms.
-    pub const POPOVER: Self = Self {
-        stiffness: 380.0,
-        damping: 28.0,
-    };
+    pub const POPOVER: Self = Self { stiffness: 380.0, damping: 28.0 };
     /// Workspace indicator, switches, highlights.
-    pub const INDICATOR: Self = Self {
-        stiffness: 520.0,
-        damping: 34.0,
-    };
+    pub const INDICATOR: Self = Self { stiffness: 520.0, damping: 34.0 };
 }
 
 #[derive(Clone, Debug)]
@@ -41,12 +35,7 @@ const REST_EPSILON: f32 = 0.001;
 
 impl Spring {
     pub fn new(value: f32, config: SpringConfig) -> Self {
-        Self {
-            config,
-            value,
-            velocity: 0.0,
-            target: value,
-        }
+        Self { config, value, velocity: 0.0, target: value }
     }
 
     pub fn value(&self) -> f32 {
@@ -74,8 +63,7 @@ impl Spring {
         let mut remaining = dt.as_secs_f32().min(0.1);
         while remaining > 0.0 {
             let h = remaining.min(MAX_STEP);
-            let force = -self.config.stiffness * (self.value - self.target)
-                - self.config.damping * self.velocity;
+            let force = -self.config.stiffness * (self.value - self.target) - self.config.damping * self.velocity;
             self.velocity += force * h;
             self.value += self.velocity * h;
             remaining -= h;
@@ -87,7 +75,6 @@ impl Spring {
         self.is_settled()
     }
 }
-
 
 /// Where a spring released at rest from 0 toward 1 is after `t` seconds. Negative `t` is 0.
 ///
@@ -142,10 +129,7 @@ mod tests {
     fn popover_spring_overshoots_slightly_and_settles() {
         let (peak, elapsed) = run(SpringConfig::POPOVER);
         assert!((1.03..1.045).contains(&peak), "peak {peak}");
-        assert!(
-            elapsed < Duration::from_millis(700),
-            "settled after {elapsed:?}"
-        );
+        assert!(elapsed < Duration::from_millis(700), "settled after {elapsed:?}");
     }
 
     #[test]
@@ -175,10 +159,7 @@ mod tests {
         let before = spring.value();
         spring.set_target(0.0);
         spring.step(Duration::from_millis(5));
-        assert!(
-            spring.value() > before,
-            "momentum should carry it forward briefly"
-        );
+        assert!(spring.value() > before, "momentum should carry it forward briefly");
     }
 
     #[test]

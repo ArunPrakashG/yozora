@@ -5,7 +5,10 @@ use std::time::Duration;
 
 use futures_lite::FutureExt;
 use gpui::{App, Entity};
-use zbus::{Connection, zvariant::{OwnedObjectPath, OwnedValue, Value}};
+use zbus::{
+    Connection,
+    zvariant::{OwnedObjectPath, OwnedValue, Value},
+};
 
 use super::{
     Link, Power,
@@ -85,7 +88,11 @@ pub fn profile_label(name: &str) -> &str {
 
 /// power-profiles-daemon 0.20 moved under UPower's name; older releases use net.hadess.
 const PROFILES: &[(&str, &str, &str)] = &[
-    ("org.freedesktop.UPower.PowerProfiles", "/org/freedesktop/UPower/PowerProfiles", "org.freedesktop.UPower.PowerProfiles"),
+    (
+        "org.freedesktop.UPower.PowerProfiles",
+        "/org/freedesktop/UPower/PowerProfiles",
+        "org.freedesktop.UPower.PowerProfiles",
+    ),
     ("net.hadess.PowerProfiles", "/net/hadess/PowerProfiles", "net.hadess.PowerProfiles"),
 ];
 
@@ -144,9 +151,7 @@ async fn snapshot(conn: &Connection, profiles: Option<(&str, &str, &str)>) -> an
             let native = dbus::string(&d, "NativePath");
             let model = dbus::string(&d, "Model");
             // BlueZ-backed devices have paths like "/org/bluez/hci0/dev_AA_BB_…".
-            let address = native
-                .rsplit_once("dev_")
-                .map(|(_, a)| a.split('/').next().unwrap_or(a).replace('_', ":"));
+            let address = native.rsplit_once("dev_").map(|(_, a)| a.split('/').next().unwrap_or(a).replace('_', ":"));
             state.peripherals.push(Peripheral {
                 name: if model.is_empty() { "Device".into() } else { model },
                 kind: kind(ty),
@@ -155,15 +160,15 @@ async fn snapshot(conn: &Connection, profiles: Option<(&str, &str, &str)>) -> an
             });
         }
     }
-    if let Some((dest, path, iface)) = profiles {
-        if let Ok(p) = dbus::get_all(conn, dest, path, iface).await {
-            state.profile = dbus::get::<String>(&p, "ActiveProfile");
-            let list: Vec<std::collections::HashMap<String, OwnedValue>> = dbus::get(&p, "Profiles").unwrap_or_default();
-            let order = ["power-saver", "balanced", "performance"];
-            let mut names: Vec<String> = list.iter().map(|m| dbus::string(m, "Profile")).collect();
-            names.sort_by_key(|n| order.iter().position(|o| o == n).unwrap_or(order.len()));
-            state.profiles = names;
-        }
+    if let Some((dest, path, iface)) = profiles
+        && let Ok(p) = dbus::get_all(conn, dest, path, iface).await
+    {
+        state.profile = dbus::get::<String>(&p, "ActiveProfile");
+        let list: Vec<std::collections::HashMap<String, OwnedValue>> = dbus::get(&p, "Profiles").unwrap_or_default();
+        let order = ["power-saver", "balanced", "performance"];
+        let mut names: Vec<String> = list.iter().map(|m| dbus::string(m, "Profile")).collect();
+        names.sort_by_key(|n| order.iter().position(|o| o == n).unwrap_or(order.len()));
+        state.profiles = names;
     }
     Ok(state)
 }
@@ -190,10 +195,10 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
             Wake::Quit => return Ok(()),
             Wake::Changed => {}
             Wake::Command(Cmd::SetProfile(name)) => {
-                if let Some((dest, path, iface)) = profiles {
-                    if let Err(e) = dbus::set_prop(&conn, dest, path, iface, "ActiveProfile", Value::from(name)).await {
-                        tracing::warn!("power profile: {e:#}");
-                    }
+                if let Some((dest, path, iface)) = profiles
+                    && let Err(e) = dbus::set_prop(&conn, dest, path, iface, "ActiveProfile", Value::from(name)).await
+                {
+                    tracing::warn!("power profile: {e:#}");
                 }
             }
         }
@@ -205,8 +210,18 @@ fn run_fake(link: Link<State, Cmd>) {
     let mut state = State {
         battery: Some(Battery { percent: 64.0, charge: Charge::Discharging, seconds_left: Some(3 * 3600 + 20 * 60) }),
         peripherals: vec![
-            Peripheral { name: "Headphones".into(), kind: DeviceKind::Headphones, percent: 80.0, address: Some("fake:1".into()) },
-            Peripheral { name: "Keyboard".into(), kind: DeviceKind::Keyboard, percent: 72.0, address: Some("fake:2".into()) },
+            Peripheral {
+                name: "Headphones".into(),
+                kind: DeviceKind::Headphones,
+                percent: 80.0,
+                address: Some("fake:1".into()),
+            },
+            Peripheral {
+                name: "Keyboard".into(),
+                kind: DeviceKind::Keyboard,
+                percent: 72.0,
+                address: Some("fake:2".into()),
+            },
             Peripheral { name: "Mouse".into(), kind: DeviceKind::Mouse, percent: 45.0, address: Some("fake:3".into()) },
         ],
         profiles: vec!["power-saver".into(), "balanced".into(), "performance".into()],

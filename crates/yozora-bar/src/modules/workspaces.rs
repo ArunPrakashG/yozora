@@ -1,8 +1,8 @@
 //! Workspace buttons with a sprung indicator, and the focused window's title.
 
 use gpui::{
-    AnyElement, Context, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
-    Styled, Window, div, prelude::*, px,
+    AnyElement, Context, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString, Styled,
+    Window, div, prelude::*, px,
 };
 use yozora_ui::{Icon, Theme, icon_sized};
 
@@ -35,10 +35,11 @@ pub fn slots(bar: &Bar, cx: &gpui::App) -> Vec<i32> {
                 ids.push(w.id);
             }
         }
-        if let Some(m) = s.monitor(&bar.monitor) {
-            if m.active_workspace > 0 && !ids.contains(&m.active_workspace) {
-                ids.push(m.active_workspace);
-            }
+        if let Some(m) = s.monitor(&bar.monitor)
+            && m.active_workspace > 0
+            && !ids.contains(&m.active_workspace)
+        {
+            ids.push(m.active_workspace);
         }
     }
     ids.sort_unstable();
@@ -135,10 +136,7 @@ pub fn window_title(bar: &mut Bar, theme: &Theme, cx: &mut Context<Bar>) -> Opti
     let state = &hypr.read(cx).state;
     let max = Config::get(cx).settings.bar.window.max_length;
     let Some(w) = state.window_on(&bar.monitor) else {
-        let label = match state.monitor(&bar.monitor) {
-            Some(m) => format!("Workspace {}", m.active_workspace),
-            None => return None,
-        };
+        let label = format!("Workspace {}", state.monitor(&bar.monitor)?.active_workspace);
         return Some(div().px(px(6.)).text_color(theme.ink_2).child(label).into_any_element());
     };
     let (title, class) = split_title(&w.title, &w.class);

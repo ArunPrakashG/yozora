@@ -19,10 +19,16 @@ use crate::{
     widgets::{card, group_label, notice, text_block},
 };
 
-pub fn render(view: &mut SettingsView, app: &AppEntry, window: &mut Window, cx: &mut Context<SettingsView>) -> AnyElement {
+pub fn render(
+    view: &mut SettingsView,
+    app: &AppEntry,
+    window: &mut Window,
+    cx: &mut Context<SettingsView>,
+) -> AnyElement {
     let theme = Theme::global(cx).clone();
     if let Some(error) = &app.schema_error {
-        return notice(Icon::Warning, "This app's settings schema has an error", error.clone(), true, &theme).into_any_element();
+        return notice(Icon::Warning, "This app's settings schema has an error", error.clone(), true, &theme)
+            .into_any_element();
     }
     let Some(schema) = app.schema.clone() else {
         return div().into_any_element();
@@ -32,7 +38,15 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, window: &mut Window, cx: 
     for (si, section) in schema.section.iter().enumerate() {
         page = page.child(group_label(section.title.clone(), si == 0, &theme));
         if let Some(description) = &section.description {
-            page = page.child(div().mt(px(-4.)).mb(px(10.)).ml(px(2.)).text_size(px(12.5)).text_color(theme.ink_2).child(description.clone()));
+            page = page.child(
+                div()
+                    .mt(px(-4.))
+                    .mb(px(10.))
+                    .ml(px(2.))
+                    .text_size(px(12.5))
+                    .text_color(theme.ink_2)
+                    .child(description.clone()),
+            );
         }
         let mut rows = card(&theme);
         for (fi, field) in section.field.iter().enumerate() {
@@ -90,20 +104,21 @@ fn field_row(
                     .gap(px(6.))
                     .children(labels.into_iter().enumerate().map(|(i, label)| {
                         let (file, key, option) = (file_owned.clone(), key.clone(), options[i].clone());
-                        yozora_ui::controls::pill(id(&format!("opt{i}")), label, selected == Some(i), theme).on_click(cx.listener(
-                            move |this, _, _, cx| {
+                        yozora_ui::controls::pill(id(&format!("opt{i}")), label, selected == Some(i), theme).on_click(
+                            cx.listener(move |this, _, _, cx| {
                                 if let Some(v) = to_edit_value(&option) {
                                     this.edit(&file, cx, |d| d.set(&key, v));
                                 }
-                            },
-                        ))
+                            }),
+                        )
                     }))
                     .into_any_element()
             }
         }
         FieldKind::Int | FieldKind::Float => {
             let float = field.kind == FieldKind::Float;
-            let n = value.as_ref().and_then(|v| v.as_float().or_else(|| v.as_integer().map(|i| i as f64))).unwrap_or(0.);
+            let n =
+                value.as_ref().and_then(|v| v.as_float().or_else(|| v.as_integer().map(|i| i as f64))).unwrap_or(0.);
             let step = field.step.unwrap_or(if float { 0.1 } else { 1. });
             let (min, max) = (field.min, field.max);
             let clamp = move |v: f64| {
@@ -190,39 +205,41 @@ fn field_row(
                 .gap(px(8.))
                 .w(px(300.))
                 .when(!items.is_empty(), |el| {
-                    el.child(div().flex().flex_wrap().justify_end().gap(px(6.)).children(items.iter().enumerate().map(|(i, item)| {
-                        let (file, key, items) = (file_owned.clone(), key.clone(), items.clone());
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(4.))
-                            .h(px(26.))
-                            .pl(px(9.))
-                            .pr(px(4.))
-                            .rounded(px(8.))
-                            .bg(theme.fill_2)
-                            .font_family(theme.mono.clone())
-                            .text_size(px(11.5))
-                            .child(item.clone())
-                            .child(
-                                div()
-                                    .id(id(&format!("rm{i}")))
-                                    .size(px(18.))
-                                    .rounded(px(5.))
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .text_color(theme.ink_3)
-                                    .cursor_pointer()
-                                    .hover(|s| s.bg(theme.fill_3).text_color(theme.ink))
-                                    .child(icon_sized(Icon::Close, 11.))
-                                    .on_click(cx.listener(move |this, _, _, cx| {
-                                        let mut items = items.clone();
-                                        items.remove(i);
-                                        this.edit(&file, cx, |d| d.set(&key, string_array(&items)));
-                                    })),
-                            )
-                    })))
+                    el.child(div().flex().flex_wrap().justify_end().gap(px(6.)).children(items.iter().enumerate().map(
+                        |(i, item)| {
+                            let (file, key, items) = (file_owned.clone(), key.clone(), items.clone());
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(4.))
+                                .h(px(26.))
+                                .pl(px(9.))
+                                .pr(px(4.))
+                                .rounded(px(8.))
+                                .bg(theme.fill_2)
+                                .font_family(theme.mono.clone())
+                                .text_size(px(11.5))
+                                .child(item.clone())
+                                .child(
+                                    div()
+                                        .id(id(&format!("rm{i}")))
+                                        .size(px(18.))
+                                        .rounded(px(5.))
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .text_color(theme.ink_3)
+                                        .cursor_pointer()
+                                        .hover(|s| s.bg(theme.fill_3).text_color(theme.ink))
+                                        .child(icon_sized(Icon::Close, 11.))
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            let mut items = items.clone();
+                                            items.remove(i);
+                                            this.edit(&file, cx, |d| d.set(&key, string_array(&items)));
+                                        })),
+                                )
+                        },
+                    )))
                 })
                 .child(input)
                 .into_any_element()
@@ -255,7 +272,13 @@ fn field_row(
                         .items_center()
                         .gap(px(8.))
                         .mt(px(3.))
-                        .child(div().font_family(theme.mono.clone()).text_size(px(11.)).text_color(theme.ink_3).child(field.key.clone()))
+                        .child(
+                            div()
+                                .font_family(theme.mono.clone())
+                                .text_size(px(11.))
+                                .text_color(theme.ink_3)
+                                .child(field.key.clone()),
+                        )
                         .when(set, |el| {
                             el.child(
                                 div()

@@ -8,6 +8,7 @@
 use std::{
     collections::{BTreeMap, HashMap},
     path::PathBuf,
+    sync::Mutex,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -18,6 +19,7 @@ use zbus::{Connection, zvariant::OwnedValue};
 use super::{
     Link, Notifications,
     dbus::{self, Wake},
+    icons,
 };
 
 const DEST: &str = "org.freedesktop.Notifications";
@@ -33,6 +35,8 @@ pub struct Notification {
     pub body: String,
     pub icon: String,
     pub desktop_entry: String,
+    /// The icon file to draw, looked up and shrunk here so the UI thread doesn't.
+    pub icon_path: Option<PathBuf>,
     pub urgency: u8,
     /// Unix seconds when the bar first saw it, if it was around to see it.
     pub seen: Option<u64>,
@@ -121,17 +125,41 @@ fn strip_markup(s: &str) -> String {
 
 fn parse(list: Vec<HashMap<String, OwnedValue>>) -> Vec<Notification> {
     list.into_iter()
-        .map(|n| Notification {
-            id: dbus::get(&n, "id").unwrap_or(0),
-            app: dbus::string(&n, "app-name"),
-            summary: strip_markup(&dbus::string(&n, "summary")),
-            body: strip_markup(&dbus::string(&n, "body")).trim().to_string(),
-            icon: dbus::string(&n, "app-icon"),
-            desktop_entry: dbus::string(&n, "desktop-entry"),
-            urgency: dbus::get(&n, "urgency").unwrap_or(1),
-            seen: None,
+        .map(|n| {
+            let icon = dbus::string(&n, "app-icon");
+            let desktop_entry = dbus::string(&n, "desktop-entry");
+            let app = dbus::string(&n, "app-name");
+            Notification {
+                id: dbus::get(&n, "id").unwrap_or(0),
+                icon_path: icon_path(&icon, &desktop_entry, &app),
+                app,
+                summary: strip_markup(&dbus::string(&n, "summary")),
+                body: strip_markup(&dbus::string(&n, "body")).trim().to_string(),
+                icon,
+                desktop_entry,
+                urgency: dbus::get(&n, "urgency").unwrap_or(1),
+                seen: None,
+            }
         })
         .collect()
+}
+
+/// The best icon file for a notification, looked up once per name.
+fn icon_path(icon: &str, desktop_entry: &str, app: &str) -> Option<PathBuf> {
+    static CACHE: Mutex<Option<HashMap<String, Option<PathBuf>>>> = Mutex::new(None);
+    let key = format!("{icon}\0{desktop_entry}\0{app}");
+    let mut cache = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    cache
+        .get_or_insert_with(HashMap::new)
+        .entry(key)
+        .or_insert_with(|| {
+            icons::find(icon.strip_prefix("file://").unwrap_or(icon), &[])
+                .or_else(|| icons::app_icon(desktop_entry))
+                .or_else(|| icons::app_icon(app))
+                // Drawn at 22 px.
+                .map(|p| icons::fit(&p, 48))
+        })
+        .clone()
 }
 
 async fn modes(conn: &Connection) -> anyhow::Result<Vec<String>> {
@@ -168,7 +196,7 @@ async fn snapshot(conn: &Connection, saved: &mut Saved, first: bool) -> anyhow::
         saved.save();
     }
     items.retain(|n| saved.visible(n.id));
-    items.sort_by(|a, b| b.id.cmp(&a.id));
+    items.sort_by_key(|n| std::cmp::Reverse(n.id));
     Ok(State {
         unread: items.iter().any(|n| n.id > saved.last_read),
         items,
@@ -218,7 +246,8 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
                 }
                 Cmd::MarkRead => {
                     let st = snapshot(&conn, &mut saved, false).await?;
-                    saved.last_read = st.items.iter().map(|n| n.id).max().unwrap_or(saved.last_read).max(saved.last_read);
+                    saved.last_read =
+                        st.items.iter().map(|n| n.id).max().unwrap_or(saved.last_read).max(saved.last_read);
                     saved.save();
                 }
             },
@@ -236,6 +265,7 @@ fn run_fake(link: Link<State, Cmd>) {
         body: body.into(),
         icon: String::new(),
         desktop_entry: String::new(),
+        icon_path: None,
         urgency: 1,
         seen: Some(t - ago),
     };

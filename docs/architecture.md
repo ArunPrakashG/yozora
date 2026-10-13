@@ -270,7 +270,9 @@ Targets come from the brief. The dev machine has no 120 Hz display, so budgets a
 - **Scripted UI checks.** `scripts/click.sh` and `scripts/drag.sh` drive the real windows through
   `yz-pointer`. Each refuses to act unless `hyprctl cursorpos` confirms the cursor is where it
   should be.
-- **Not yet:** D-Bus integration tests against python-dbusmock, and CI.
+- CI (`.github/workflows/ci.yml`) checks formatting, runs clippy with warnings as errors, and
+  runs the tests.
+- **Not yet:** D-Bus integration tests against python-dbusmock.
 
 ## Where the design meets reality
 

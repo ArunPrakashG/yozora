@@ -131,7 +131,9 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
             Wake::Command(cmd) => {
                 let result = match &cmd {
                     Cmd::SetPowered(on) => match &state.adapter {
-                        Some(a) => dbus::set_prop(&conn, BLUEZ, a, "org.bluez.Adapter1", "Powered", Value::from(*on)).await,
+                        Some(a) => {
+                            dbus::set_prop(&conn, BLUEZ, a, "org.bluez.Adapter1", "Powered", Value::from(*on)).await
+                        }
                         None => Err(anyhow::anyhow!("no Bluetooth adapter")),
                     },
                     Cmd::Connect(path) | Cmd::Disconnect(path) => {
@@ -209,7 +211,9 @@ pub async fn check() -> anyhow::Result<String> {
     }
     let s = snapshot(&conn).await?;
     Ok(match s.adapter {
-        Some(a) => format!("BlueZ · {a} {} · {} paired device(s)", if s.powered { "on" } else { "off" }, s.devices.len()),
+        Some(a) => {
+            format!("BlueZ · {a} {} · {} paired device(s)", if s.powered { "on" } else { "off" }, s.devices.len())
+        }
         None => "BlueZ · no adapter".into(),
     })
 }

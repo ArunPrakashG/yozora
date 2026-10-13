@@ -126,32 +126,20 @@ async fn saved(conn: &Connection) -> anyhow::Result<Vec<(String, String, String,
         dbus::call(conn, NM, settings, "org.freedesktop.NetworkManager.Settings", "ListConnections", &()).await?;
     let mut out = Vec::new();
     for path in paths {
-        let s: HashMap<String, HashMap<String, OwnedValue>> = match dbus::call(
-            conn,
-            NM,
-            &path,
-            "org.freedesktop.NetworkManager.Settings.Connection",
-            "GetSettings",
-            &(),
-        )
-        .await
-        {
-            Ok(s) => s,
-            Err(_) => continue,
-        };
+        let s: HashMap<String, HashMap<String, OwnedValue>> =
+            match dbus::call(conn, NM, &path, "org.freedesktop.NetworkManager.Settings.Connection", "GetSettings", &())
+                .await
+            {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
         let c = s.get("connection").cloned().unwrap_or_default();
         let ssid = s
             .get("802-11-wireless")
             .and_then(|w| dbus::get::<Vec<u8>>(w, "ssid"))
             .map(|b| String::from_utf8_lossy(&b).into_owned())
             .unwrap_or_default();
-        out.push((
-            dbus::string(&c, "id"),
-            dbus::string(&c, "uuid"),
-            dbus::string(&c, "type"),
-            ssid,
-            path.to_string(),
-        ));
+        out.push((dbus::string(&c, "id"), dbus::string(&c, "uuid"), dbus::string(&c, "type"), ssid, path.to_string()));
     }
     Ok(out)
 }
@@ -179,16 +167,12 @@ async fn snapshot(conn: &Connection) -> anyhow::Result<State> {
     let nm = dbus::get_all(conn, NM, NM_PATH, NM).await?;
     let devices = devices(conn).await?;
     let saved = saved(conn).await.unwrap_or_default();
-    let mut state = State {
-        wifi_enabled: dbus::get(&nm, "WirelessEnabled").unwrap_or(false),
-        ..Default::default()
-    };
+    let mut state = State { wifi_enabled: dbus::get(&nm, "WirelessEnabled").unwrap_or(false), ..Default::default() };
 
     // Active connections: the primary one, VPNs, and anything activating.
     let mut active_vpns = HashMap::new();
     for path in dbus::paths(&nm, "ActiveConnections") {
-        let Ok(ac) = dbus::get_all(conn, NM, &path, "org.freedesktop.NetworkManager.Connection.Active").await
-        else {
+        let Ok(ac) = dbus::get_all(conn, NM, &path, "org.freedesktop.NetworkManager.Connection.Active").await else {
             continue;
         };
         let kind = dbus::string(&ac, "Type");
@@ -202,16 +186,16 @@ async fn snapshot(conn: &Connection) -> anyhow::Result<State> {
 
     let primary_path = dbus::path(&nm, "PrimaryConnection");
     let mut primary = None;
-    if let Some(path) = &primary_path {
-        if let Ok(ac) = dbus::get_all(conn, NM, path, "org.freedesktop.NetworkManager.Connection.Active").await {
-            let kind = match dbus::string(&ac, "Type").as_str() {
-                "802-11-wireless" => Kind::Wifi,
-                "802-3-ethernet" => Kind::Ethernet,
-                "vpn" | "wireguard" => Kind::Vpn,
-                _ => Kind::Other,
-            };
-            primary = Some(Primary { name: dbus::string(&ac, "Id"), kind, strength: 0 });
-        }
+    if let Some(path) = &primary_path
+        && let Ok(ac) = dbus::get_all(conn, NM, path, "org.freedesktop.NetworkManager.Connection.Active").await
+    {
+        let kind = match dbus::string(&ac, "Type").as_str() {
+            "802-11-wireless" => Kind::Wifi,
+            "802-3-ethernet" => Kind::Ethernet,
+            "vpn" | "wireguard" => Kind::Vpn,
+            _ => Kind::Other,
+        };
+        primary = Some(Primary { name: dbus::string(&ac, "Id"), kind, strength: 0 });
     }
 
     for device in &devices {
@@ -228,8 +212,7 @@ async fn snapshot(conn: &Connection) -> anyhow::Result<State> {
                 let active_ap = dbus::path(&w, "ActiveAccessPoint");
                 let mut by_ssid: HashMap<String, AccessPoint> = HashMap::new();
                 for ap_path in dbus::paths(&w, "AccessPoints") {
-                    let Ok(ap) =
-                        dbus::get_all(conn, NM, &ap_path, "org.freedesktop.NetworkManager.AccessPoint").await
+                    let Ok(ap) = dbus::get_all(conn, NM, &ap_path, "org.freedesktop.NetworkManager.AccessPoint").await
                     else {
                         continue;
                     };
@@ -260,10 +243,10 @@ async fn snapshot(conn: &Connection) -> anyhow::Result<State> {
                 }
                 let mut aps: Vec<_> = by_ssid.into_values().collect();
                 aps.sort_by(|a, b| b.active.cmp(&a.active).then(b.strength.cmp(&a.strength)));
-                if let (Some(p), Some(ap)) = (primary.as_mut(), aps.iter().find(|a| a.active)) {
-                    if p.kind == Kind::Wifi {
-                        p.strength = ap.strength;
-                    }
+                if let (Some(p), Some(ap)) = (primary.as_mut(), aps.iter().find(|a| a.active))
+                    && p.kind == Kind::Wifi
+                {
+                    p.strength = ap.strength;
                 }
                 state.access_points = aps;
             }
@@ -315,15 +298,8 @@ async fn apply(conn: &Connection, cmd: Cmd, state: &State) -> anyhow::Result<()>
                 // A new network. NM fills in the details from the access point, and asks a
                 // registered secret agent for a password if it needs one.
                 let settings: HashMap<String, HashMap<String, Value>> = HashMap::new();
-                let _: (OwnedObjectPath, OwnedObjectPath) = dbus::call(
-                    conn,
-                    NM,
-                    NM_PATH,
-                    NM,
-                    "AddAndActivateConnection",
-                    &(settings, dev_obj, ap_obj),
-                )
-                .await?;
+                let _: (OwnedObjectPath, OwnedObjectPath) =
+                    dbus::call(conn, NM, NM_PATH, NM, "AddAndActivateConnection", &(settings, dev_obj, ap_obj)).await?;
             }
             Ok(())
         }
@@ -350,8 +326,15 @@ async fn apply(conn: &Connection, cmd: Cmd, state: &State) -> anyhow::Result<()>
                 for path in dbus::paths(&nm, "ActiveConnections") {
                     let ac = dbus::get_all(conn, NM, &path, "org.freedesktop.NetworkManager.Connection.Active").await?;
                     if dbus::string(&ac, "Uuid") == uuid {
-                        dbus::invoke(conn, NM, NM_PATH, NM, "DeactivateConnection", &(OwnedObjectPath::try_from(path)?,))
-                            .await?;
+                        dbus::invoke(
+                            conn,
+                            NM,
+                            NM_PATH,
+                            NM,
+                            "DeactivateConnection",
+                            &(OwnedObjectPath::try_from(path)?,),
+                        )
+                        .await?;
                     }
                 }
             }
@@ -413,8 +396,7 @@ fn run_fake(link: Link<State, Cmd>) {
                 for a in &mut state.access_points {
                     a.active = on && a.ssid == "Home_5G";
                 }
-                state.primary =
-                    on.then(|| Primary { name: "Home_5G".into(), kind: Kind::Wifi, strength: 82 });
+                state.primary = on.then(|| Primary { name: "Home_5G".into(), kind: Kind::Wifi, strength: 82 });
             }
             Cmd::Connect(ssid) => {
                 state.activating = Some(ssid.clone());
@@ -452,6 +434,7 @@ pub async fn check() -> anyhow::Result<String> {
     let conn = Connection::system().await?;
     let s = snapshot(&conn).await?;
     let primary = s.primary.map(|p| p.name).unwrap_or("offline".into());
-    let wifi = if s.wifi_device { format!("Wi-Fi {} networks", s.access_points.len()) } else { "no Wi-Fi device".into() };
+    let wifi =
+        if s.wifi_device { format!("Wi-Fi {} networks", s.access_points.len()) } else { "no Wi-Fi device".into() };
     Ok(format!("NetworkManager · {primary} · {wifi} · {} VPN(s)", s.vpns.len()))
 }

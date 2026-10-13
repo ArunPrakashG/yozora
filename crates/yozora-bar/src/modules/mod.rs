@@ -158,14 +158,7 @@ impl Layout {
 
 /// Names in `zones` that aren't modules, for config warnings.
 pub fn unknown(zones: &yozora_config::bar::Zones) -> Vec<String> {
-    zones
-        .left
-        .iter()
-        .chain(&zones.center)
-        .chain(&zones.right)
-        .filter(|n| Module::parse(n).is_none())
-        .cloned()
-        .collect()
+    zones.left.iter().chain(&zones.center).chain(&zones.right).filter(|n| Module::parse(n).is_none()).cloned().collect()
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

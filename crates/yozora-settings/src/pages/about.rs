@@ -1,8 +1,8 @@
 //! About an app: what it is, whether it's running, and where its files are.
 
 use gpui::{
-    AnyElement, Context, FontWeight, IntoElement, ParentElement, StatefulInteractiveElement, Styled,
-    div, prelude::FluentBuilder, px,
+    AnyElement, Context, FontWeight, IntoElement, ParentElement, StatefulInteractiveElement, Styled, div,
+    prelude::FluentBuilder, px,
 };
 use yozora_ui::{Icon, Theme, icon_sized};
 
@@ -23,15 +23,11 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
         Status::NoSocket => ("No control socket, so Settings can't tell", None, Vec::new()),
         Status::Unknown => ("Checking…", None, Vec::new()),
     };
-    let subtitle = [
-        version.clone(),
-        hyprland_version(),
-        Some("Built with GPUI".to_string()).filter(|_| app.is_bar()),
-    ]
-    .into_iter()
-    .flatten()
-    .collect::<Vec<_>>()
-    .join(" · ");
+    let subtitle = [version.clone(), hyprland_version(), app.is_bar().then(|| "Built with GPUI".to_string())]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" · ");
     let manifest = m.clone();
     let stopped = app.status == Status::Stopped;
 
@@ -39,10 +35,12 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
         "Status",
         Some(status.into()),
         div().when(stopped, |el| {
-            el.child(button("about-start", Some(Icon::Power), "Start", true, &theme).on_click(cx.listener(move |this, _, _, cx| {
-                this.error = apps::start(&manifest).err().map(|e| format!("{e:#}"));
-                cx.notify();
-            })))
+            el.child(button("about-start", Some(Icon::Power), "Start", true, &theme).on_click(cx.listener(
+                move |this, _, _, cx| {
+                    this.error = apps::start(&manifest).err().map(|e| format!("{e:#}"));
+                    cx.notify();
+                },
+            )))
         }),
         true,
         &theme,
@@ -73,7 +71,13 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
         false,
         &theme,
     ));
-    running = running.child(setting_row("Manifest", Some(tilde(&m.dir.join(format!("{}.toml", m.id))).into()), div(), false, &theme));
+    running = running.child(setting_row(
+        "Manifest",
+        Some(tilde(&m.dir.join(format!("{}.toml", m.id))).into()),
+        div(),
+        false,
+        &theme,
+    ));
 
     div()
         .flex()
@@ -120,7 +124,10 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                                 .flex()
                                 .gap(px(8.))
                                 .mt(px(14.))
-                                .child(button("source", Some(Icon::Code), "Source", true, &theme).on_click(|_, _, _| apps::open(REPO)))
+                                .child(
+                                    button("source", Some(Icon::Code), "Source", true, &theme)
+                                        .on_click(|_, _, _| apps::open(REPO)),
+                                )
                                 .child(
                                     button("docs", Some(Icon::File), "Docs", false, &theme)
                                         .on_click(|_, _, _| apps::open(&format!("{REPO}/tree/main/docs"))),
@@ -133,7 +140,13 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
         .when(!warnings.is_empty(), |el| {
             el.child(group_label("Configuration warnings", false, &theme)).child(card(&theme).children(
                 warnings.iter().enumerate().map(|(i, w)| {
-                    setting_row(w.clone(), None, div().text_color(theme.danger).child(icon_sized(Icon::Warning, 16.)), i == 0, &theme)
+                    setting_row(
+                        w.clone(),
+                        None,
+                        div().text_color(theme.danger).child(icon_sized(Icon::Warning, 16.)),
+                        i == 0,
+                        &theme,
+                    )
                 }),
             ))
         })

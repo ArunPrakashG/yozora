@@ -221,11 +221,11 @@ impl Services {
                 Kind::Power => s.power.is_none(),
                 Kind::Tray => s.tray.is_none(),
             };
-            if kind == Kind::Custom {
-                if let Some(custom) = cx.global::<Self>().custom.clone() {
-                    custom.read(cx).send(custom::Cmd::Configure(customs.clone()));
-                    continue;
-                }
+            if kind == Kind::Custom
+                && let Some(custom) = cx.global::<Self>().custom.clone()
+            {
+                custom.read(cx).send(custom::Cmd::Configure(customs.clone()));
+                continue;
             }
             if !missing {
                 continue;

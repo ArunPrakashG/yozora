@@ -27,11 +27,7 @@ pub fn path(props: &Props, key: &str) -> Option<String> {
 }
 
 pub fn paths(props: &Props, key: &str) -> Vec<String> {
-    get::<Vec<OwnedObjectPath>>(props, key)
-        .unwrap_or_default()
-        .into_iter()
-        .map(|p| p.to_string())
-        .collect()
+    get::<Vec<OwnedObjectPath>>(props, key).unwrap_or_default().into_iter().map(|p| p.to_string()).collect()
 }
 
 pub async fn call<B, R>(
@@ -106,10 +102,7 @@ pub async fn signals(conn: &Connection, rule: MatchRule<'static>) -> anyhow::Res
 
 /// Every signal from `sender`.
 pub async fn signals_from(conn: &Connection, sender: &str) -> anyhow::Result<MessageStream> {
-    let rule = MatchRule::builder()
-        .msg_type(zbus::message::Type::Signal)
-        .sender(sender.to_string())?
-        .build();
+    let rule = MatchRule::builder().msg_type(zbus::message::Type::Signal).sender(sender.to_string())?.build();
     Ok(MessageStream::for_match_rule(rule, conn, Some(256)).await?)
 }
 
@@ -123,11 +116,7 @@ pub enum Wake<C> {
 
 /// Waits for a command or a signal. After a signal, keeps absorbing further signals for
 /// `settle` so a burst of property changes costs one refresh.
-pub async fn next<C, S>(
-    cmds: &async_channel::Receiver<C>,
-    stream: &mut S,
-    settle: Duration,
-) -> anyhow::Result<Wake<C>>
+pub async fn next<C, S>(cmds: &async_channel::Receiver<C>, stream: &mut S, settle: Duration) -> anyhow::Result<Wake<C>>
 where
     S: futures_lite::Stream<Item = zbus::Result<zbus::Message>> + Unpin,
 {
@@ -147,13 +136,12 @@ where
     .await?;
     if let Wake::Changed = first {
         let deadline = async_io::Timer::after(settle);
-        let drain = async {
-            while let Some(Ok(_)) = stream.next().await {}
-        };
-        drain.or(async {
-            deadline.await;
-        })
-        .await;
+        let drain = async { while let Some(Ok(_)) = stream.next().await {} };
+        drain
+            .or(async {
+                deadline.await;
+            })
+            .await;
     }
     Ok(first)
 }

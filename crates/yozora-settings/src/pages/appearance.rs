@@ -1,8 +1,7 @@
 //! Appearance: `theme.toml`'s theme, accent, glass and font, shared by every app.
 
 use gpui::{
-    AnyElement, Context, IntoElement, ParentElement, StatefulInteractiveElement,
-    Styled, Window, div, px, rgba,
+    AnyElement, Context, IntoElement, ParentElement, StatefulInteractiveElement, Styled, Window, div, px, rgba,
 };
 use yozora_config::theme::{Accent, Glass, ThemeConfig, ThemeMode};
 use yozora_ui::{Theme, controls::segmented};
@@ -31,30 +30,34 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
     let config: ThemeConfig = view.doc(THEME_FILE).parse();
     let editable = view.doc(THEME_FILE).is_editable();
 
-    let mode_card = |id: &'static str, mode: ThemeMode, value: &'static str, title: &str, detail: &str, light: bool, split: bool, cx: &mut Context<SettingsView>| {
-        let preview = thumb(light)
-            .child(mini_bar(false, light, theme.accent))
-            .child(
-                div()
-                    .absolute()
-                    .right(px(10.))
-                    .top(px(18.))
-                    .w(px(62.))
-                    .h(px(46.))
-                    .rounded(px(6.))
-                    .bg(if light { rgba(0xF8FAFDDB) } else { rgba(0x0E131FCC) })
-                    .border_1()
-                    .border_color(if light { rgba(0x14285A1F) } else { rgba(0xAAC8FF33) }),
-            );
+    let mode_card = |id: &'static str,
+                     mode: ThemeMode,
+                     value: &'static str,
+                     title: &str,
+                     detail: &str,
+                     light: bool,
+                     split: bool,
+                     cx: &mut Context<SettingsView>| {
+        let preview = thumb(light).child(mini_bar(false, light, theme.accent)).child(
+            div()
+                .absolute()
+                .right(px(10.))
+                .top(px(18.))
+                .w(px(62.))
+                .h(px(46.))
+                .rounded(px(6.))
+                .bg(if light { rgba(0xF8FAFDDB) } else { rgba(0x0E131FCC) })
+                .border_1()
+                .border_color(if light { rgba(0x14285A1F) } else { rgba(0xAAC8FF33) }),
+        );
         let preview = if split {
             // Half night, half dawn.
             thumb(false).child(div().absolute().top_0().bottom_0().right_0().w(px(120.)).bg(crate::widgets::sky(true)))
         } else {
             preview
         };
-        option_card(id, config.theme == mode && editable, preview, title.to_string(), detail.to_string(), &theme).on_click(
-            cx.listener(move |this, _, _, cx| this.edit(THEME_FILE, cx, |d| d.set("theme", value))),
-        )
+        option_card(id, config.theme == mode && editable, preview, title.to_string(), detail.to_string(), &theme)
+            .on_click(cx.listener(move |this, _, _, cx| this.edit(THEME_FILE, cx, |d| d.set("theme", value))))
     };
 
     let accent_name = ACCENTS.iter().find(|a| a.0 == config.accent).map_or("Starlight", |a| a.2);
@@ -85,7 +88,16 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                 .gap(px(16.))
                 .child(mode_card("theme-dark", ThemeMode::Midnight, "midnight", "Midnight", "Dark", false, false, cx))
                 .child(mode_card("theme-light", ThemeMode::Daybreak, "daybreak", "Daybreak", "Light", true, false, cx))
-                .child(mode_card("theme-auto", ThemeMode::Auto, "auto", "Automatic", "Follows the desktop", false, true, cx)),
+                .child(mode_card(
+                    "theme-auto",
+                    ThemeMode::Auto,
+                    "auto",
+                    "Automatic",
+                    "Follows the desktop",
+                    false,
+                    true,
+                    cx,
+                )),
         )
         .child(group_label("Color and glass", false, &theme))
         .child(
@@ -95,8 +107,9 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                     Some(format!("{accent_name} · workspaces, toggles, focus rings").into()),
                     div().flex().gap(px(6.)).children(ACCENTS.iter().map(|&(accent, value, _, dark, light)| {
                         let color = rgba(if theme.dark { dark } else { light });
-                        swatch(SharedId::accent(value), color, config.accent == accent, &theme)
-                            .on_click(cx.listener(move |this, _, _, cx| this.edit(THEME_FILE, cx, |d| d.set("accent", value))))
+                        swatch(SharedId::accent(value), color, config.accent == accent, &theme).on_click(
+                            cx.listener(move |this, _, _, cx| this.edit(THEME_FILE, cx, |d| d.set("accent", value))),
+                        )
                     })),
                     true,
                     &theme,
@@ -104,10 +117,16 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                 .child(setting_row(
                     "Glass",
                     Some("How much of the wallpaper shows through bars and popovers.".into()),
-                    div().w(px(260.)).child(segmented("glass", &["Clear", "Balanced", "Frosted"], glass_index, &theme, move |i, _, cx| {
-                        let value = ["clear", "balanced", "frosted"][i];
-                        weak.update(cx, |this, cx| this.edit(THEME_FILE, cx, |d| d.set("glass", value))).ok();
-                    })),
+                    div().w(px(260.)).child(segmented(
+                        "glass",
+                        &["Clear", "Balanced", "Frosted"],
+                        glass_index,
+                        &theme,
+                        move |i, _, cx| {
+                            let value = ["clear", "balanced", "frosted"][i];
+                            weak.update(cx, |this, cx| this.edit(THEME_FILE, cx, |d| d.set("glass", value))).ok();
+                        },
+                    )),
                     false,
                     &theme,
                 ))

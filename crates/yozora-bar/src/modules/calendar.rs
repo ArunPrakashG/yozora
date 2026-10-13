@@ -46,9 +46,7 @@ fn month_start(today: NaiveDate, offset: i32) -> NaiveDate {
 /// Six weeks of dates starting on the Monday on or before the 1st.
 fn weeks(first: NaiveDate) -> Vec<[NaiveDate; 7]> {
     let start = first - Duration::days(first.weekday().num_days_from_monday() as i64);
-    (0..6)
-        .map(|w| std::array::from_fn(|d| start + Duration::days(w * 7 + d as i64)))
-        .collect()
+    (0..6).map(|w| std::array::from_fn(|d| start + Duration::days(w * 7 + d as i64))).collect()
 }
 
 pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec<AnyElement> {
@@ -64,17 +62,13 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
         .pt(px(4.))
         .pb(px(12.))
         .child(
-            div()
-                .flex()
-                .flex_col()
-                .child(eyebrow(today.format("%A").to_string(), theme))
-                .child(
-                    div()
-                        .text_size(px(22.))
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .mt(px(3.))
-                        .child(today.format("%-d %B").to_string()),
-                ),
+            div().flex().flex_col().child(eyebrow(today.format("%A").to_string(), theme)).child(
+                div()
+                    .text_size(px(22.))
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .mt(px(3.))
+                    .child(today.format("%-d %B").to_string()),
+            ),
         )
         .when(week_numbers, |el| {
             el.child(controls::muted(format!("Week {}", today.iso_week().week()), theme).pb(px(2.)))
@@ -97,11 +91,8 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
                 cx.notify();
             }))
     };
-    let label = if first.year() == today.year() {
-        first.format("%B").to_string()
-    } else {
-        first.format("%B %Y").to_string()
-    };
+    let label =
+        if first.year() == today.year() { first.format("%B").to_string() } else { first.format("%B %Y").to_string() };
     let nav = div()
         .flex()
         .items_center()
@@ -121,15 +112,16 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
                     cx.notify();
                 })),
         )
-        .child(
-            div()
-                .flex()
-                .gap(px(2.))
-                .child(nav_button("prev-month", Icon::ChevronLeft, -1, cx))
-                .child(nav_button("next-month", Icon::ChevronRight, 1, cx)),
-        );
+        .child(div().flex().gap(px(2.)).child(nav_button("prev-month", Icon::ChevronLeft, -1, cx)).child(nav_button(
+            "next-month",
+            Icon::ChevronRight,
+            1,
+            cx,
+        )));
 
-    let cell = |w: f32| div().flex().items_center().justify_center().when(w > 0., |el| el.w(px(w))).when(w == 0., |el| el.flex_1());
+    let cell = |w: f32| {
+        div().flex().items_center().justify_center().when(w > 0., |el| el.w(px(w))).when(w == 0., |el| el.flex_1())
+    };
     let header = div()
         .flex()
         .text_size(px(10.5))
@@ -143,7 +135,9 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
         div()
             .flex()
             .when(week_numbers, |el| {
-                el.child(cell(24.).text_size(px(10.)).text_color(theme.ink_3).child(week[0].iso_week().week().to_string()))
+                el.child(
+                    cell(24.).text_size(px(10.)).text_color(theme.ink_3).child(week[0].iso_week().week().to_string()),
+                )
             })
             .children(week.map(|d| {
                 let is_today = d == today;

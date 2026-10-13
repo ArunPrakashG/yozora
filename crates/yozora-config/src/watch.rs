@@ -53,11 +53,7 @@ impl DirWatcher {
                 let _ = self.inotify.watches().remove(parent);
             }
         } else if let Some(parent) = self.dir.parent().filter(|p| p.is_dir()) {
-            self.parent_watch = Some(
-                self.inotify
-                    .watches()
-                    .add(parent, WatchMask::CREATE | WatchMask::MOVED_TO)?,
-            );
+            self.parent_watch = Some(self.inotify.watches().add(parent, WatchMask::CREATE | WatchMask::MOVED_TO)?);
         }
         Ok(())
     }
@@ -75,9 +71,8 @@ impl DirWatcher {
                             if event.name.is_some_and(|n| Some(n) == self.dir.file_name()) {
                                 rearm = true;
                             }
-                        } else if event.mask.intersects(
-                            inotify::EventMask::DELETE_SELF | inotify::EventMask::MOVE_SELF,
-                        ) {
+                        } else if event.mask.intersects(inotify::EventMask::DELETE_SELF | inotify::EventMask::MOVE_SELF)
+                        {
                             self.dir_watch = None;
                             rearm = true;
                         } else if let Some(name) = event.name {

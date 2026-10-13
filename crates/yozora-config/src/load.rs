@@ -44,11 +44,7 @@ pub fn read_table(path: &Path) -> anyhow::Result<(toml::Table, String)> {
 
 /// Deserializes `table`, collecting unknown keys as warnings. `source` is the original text,
 /// used to find line numbers; `file` names it in messages.
-pub fn deserialize<T: DeserializeOwned>(
-    table: toml::Table,
-    source: &str,
-    file: &str,
-) -> anyhow::Result<Loaded<T>> {
+pub fn deserialize<T: DeserializeOwned>(table: toml::Table, source: &str, file: &str) -> anyhow::Result<Loaded<T>> {
     let mut unknown = Vec::new();
     let value: T = serde_ignored::deserialize(toml::Value::Table(table), |path| {
         unknown.push(path.to_string());
@@ -99,8 +95,7 @@ mod tests {
     #[test]
     fn unknown_keys_become_warnings_with_lines() {
         let text = "a = 1\n\n[inner]\nb = true\ntypo = 3\n";
-        let loaded: Loaded<Sample> =
-            deserialize(text.parse().unwrap(), text, "bar.toml").unwrap();
+        let loaded: Loaded<Sample> = deserialize(text.parse().unwrap(), text, "bar.toml").unwrap();
         assert_eq!(loaded.value.a, 1);
         assert!(loaded.value.inner.b);
         assert_eq!(loaded.warnings.len(), 1);

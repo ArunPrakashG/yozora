@@ -122,13 +122,7 @@ pub fn changed_lines(old: &str, new: &str) -> Vec<usize> {
     let new: Vec<&str> = new.lines().collect();
     let prefix = old.iter().zip(&new).take_while(|(a, b)| a == b).count();
     let max_suffix = old.len().min(new.len()) - prefix;
-    let suffix = old
-        .iter()
-        .rev()
-        .zip(new.iter().rev())
-        .take(max_suffix)
-        .take_while(|(a, b)| a == b)
-        .count();
+    let suffix = old.iter().rev().zip(new.iter().rev()).take(max_suffix).take_while(|(a, b)| a == b).count();
     (prefix..new.len() - suffix).collect()
 }
 
@@ -176,10 +170,7 @@ mod tests {
         assert_eq!(bar.modules.left, vec!["workspaces".to_string(), "window".to_string()]);
         doc.remove(&["bar.height"]).unwrap();
         assert!(!doc.is_set("bar.height"));
-        assert_eq!(
-            to_edit_value(&toml::Value::String("x".into())).map(|v| v.to_string()),
-            Some("\"x\"".into())
-        );
+        assert_eq!(to_edit_value(&toml::Value::String("x".into())).map(|v| v.to_string()), Some("\"x\"".into()));
         std::fs::remove_file(&path).unwrap();
     }
 }

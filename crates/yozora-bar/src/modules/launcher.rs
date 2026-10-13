@@ -2,8 +2,8 @@
 //! pointer between rows.
 
 use gpui::{
-    AnimationExt, AnyElement, Context, Div, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
-    StatefulInteractiveElement, Styled, Window, div, prelude::*, px,
+    AnimationExt, AnyElement, Context, Div, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement,
+    SharedString, StatefulInteractiveElement, Styled, Window, div, prelude::*, px,
 };
 use yozora_ui::{Icon, Theme, controls, icon_sized};
 
@@ -152,7 +152,8 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
                         .child(format!("夜空 · Bar {}", env!("CARGO_PKG_VERSION"))),
                 ),
         );
-    let mut all = vec![head.into_any_element(), div().h(px(1.)).mx(px(6.)).my(px(4.)).bg(theme.hair).into_any_element()];
+    let mut all =
+        vec![head.into_any_element(), div().h(px(1.)).mx(px(6.)).my(px(4.)).bg(theme.hair).into_any_element()];
     all.extend(rows);
     // The highlight sits behind the rows, in one block so the stagger doesn't separate it.
     vec![div().relative().p(px(0.)).child(highlight).children(all).into_any_element()]
@@ -205,13 +206,13 @@ pub fn confirm(action: SessionAction, theme: &Theme, cx: &mut Context<Popover>) 
             .flex()
             .gap(px(6.))
             .p(px(6.))
-            .child(
-                controls::footer_button("cancel", Icon::Close, "Cancel", theme).on_click(cx.listener(|p, _, _, cx| {
+            .child(controls::footer_button("cancel", Icon::Close, "Cancel", theme).on_click(cx.listener(
+                |p, _, _, cx| {
                     p.ui.confirm = None;
                     p.ui.power_choices = false;
                     cx.notify();
-                })),
-            )
+                },
+            )))
             .child(
                 div()
                     .id("confirm")

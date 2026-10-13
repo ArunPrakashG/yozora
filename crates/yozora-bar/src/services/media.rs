@@ -67,9 +67,7 @@ impl State {
     /// The chosen player, else the first one playing, else any.
     pub fn current(&self) -> Option<&Player> {
         let chosen = self.selected.as_ref().and_then(|b| self.players.iter().find(|p| &p.bus == b));
-        chosen
-            .or_else(|| self.players.iter().find(|p| p.status == Status::Playing))
-            .or_else(|| self.players.first())
+        chosen.or_else(|| self.players.iter().find(|p| p.status == Status::Playing)).or_else(|| self.players.first())
     }
 }
 
@@ -138,12 +136,13 @@ fn percent_decode(s: &str) -> String {
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
-        if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let Ok(b) = u8::from_str_radix(&s[i + 1..i + 3], 16) {
-                out.push(b);
-                i += 3;
-                continue;
-            }
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let Ok(b) = u8::from_str_radix(&s[i + 1..i + 3], 16)
+        {
+            out.push(b);
+            i += 3;
+            continue;
         }
         out.push(bytes[i]);
         i += 1;
@@ -155,7 +154,11 @@ fn duration_us(v: Option<i64>) -> Option<Duration> {
     v.filter(|v| *v > 0).map(|v| Duration::from_micros(v as u64))
 }
 
-async fn player(conn: &Connection, bus: &str, fetched: &mut HashMap<String, Option<PathBuf>>) -> anyhow::Result<Player> {
+async fn player(
+    conn: &Connection,
+    bus: &str,
+    fetched: &mut HashMap<String, Option<PathBuf>>,
+) -> anyhow::Result<Player> {
     let root = dbus::get_all(conn, bus, PATH, "org.mpris.MediaPlayer2").await.unwrap_or_default();
     let p = dbus::get_all(conn, bus, PATH, PLAYER).await?;
     let meta: Props = dbus::get(&p, "Metadata").unwrap_or_default();
@@ -163,7 +166,9 @@ async fn player(conn: &Connection, bus: &str, fetched: &mut HashMap<String, Opti
         .map(|a| a.join(", "))
         .or_else(|| dbus::get::<String>(&meta, "xesam:artist"))
         .unwrap_or_default();
-    let length = duration_us(dbus::get::<i64>(&meta, "mpris:length").or_else(|| dbus::get::<u64>(&meta, "mpris:length").map(|v| v as i64)));
+    let length = duration_us(
+        dbus::get::<i64>(&meta, "mpris:length").or_else(|| dbus::get::<u64>(&meta, "mpris:length").map(|v| v as i64)),
+    );
     let position = duration_us(dbus::get::<i64>(&p, "Position")).unwrap_or_default();
     let identity = dbus::get::<String>(&root, "Identity")
         .unwrap_or_else(|| bus.trim_start_matches(PREFIX).split('.').next().unwrap_or(bus).to_string());
@@ -194,7 +199,8 @@ async fn snapshot(
     fetched: &mut HashMap<String, Option<PathBuf>>,
 ) -> anyhow::Result<State> {
     let names: Vec<String> =
-        dbus::call(conn, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames", &()).await?;
+        dbus::call(conn, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames", &())
+            .await?;
     let mut players = Vec::new();
     for name in names.iter().filter(|n| n.starts_with(PREFIX)) {
         // playerctld mirrors whichever player is active; listing it would show doubles.
@@ -217,7 +223,8 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
         .interface("org.freedesktop.DBus.Properties")?
         .path(PATH)?
         .build();
-    let seeked = MatchRule::builder().msg_type(zbus::message::Type::Signal).interface(PLAYER)?.member("Seeked")?.build();
+    let seeked =
+        MatchRule::builder().msg_type(zbus::message::Type::Signal).interface(PLAYER)?.member("Seeked")?.build();
     let owners = MatchRule::builder()
         .msg_type(zbus::message::Type::Signal)
         .sender("org.freedesktop.DBus")?
@@ -256,7 +263,8 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
 }
 
 fn run_fake(link: Link<State, Cmd>) {
-    let tracks = [("Night Transit", "Lumen Drift", "Low Orbit", 252), ("Afterglow", "Ember & Static", "Long Exposure", 218)];
+    let tracks =
+        [("Night Transit", "Lumen Drift", "Low Orbit", 252), ("Afterglow", "Ember & Static", "Long Exposure", 218)];
     let mut track = 0;
     let make = |track: usize, status, position: Duration| {
         let (title, artist, album, secs) = tracks[track];

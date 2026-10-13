@@ -51,9 +51,8 @@ fn parse(mut args: impl Iterator<Item = String>) -> Result<Option<Options>, Stri
             Some((f, v)) if f.starts_with("--") => (f.to_string(), Some(v.to_string())),
             _ => (arg.clone(), None),
         };
-        let mut value = |name: &str| {
-            inline.clone().or_else(|| args.next()).ok_or_else(|| format!("{name} needs a value"))
-        };
+        let mut value =
+            |name: &str| inline.clone().or_else(|| args.next()).ok_or_else(|| format!("{name} needs a value"));
         match flag.as_str() {
             "-h" | "--help" => {
                 print!("{HELP}");

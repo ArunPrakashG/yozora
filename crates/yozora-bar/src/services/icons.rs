@@ -179,20 +179,17 @@ pub fn app_icon(id: &str) -> Option<PathBuf> {
     }
     let lower = id.to_lowercase();
     let data = std::env::var("XDG_DATA_DIRS").unwrap_or_else(|_| "/usr/local/share:/usr/share".into());
-    let mut dirs: Vec<PathBuf> = std::env::var_os("HOME")
-        .map(|h| PathBuf::from(h).join(".local/share/applications"))
-        .into_iter()
-        .collect();
+    let mut dirs: Vec<PathBuf> =
+        std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share/applications")).into_iter().collect();
     dirs.extend(data.split(':').map(|d| PathBuf::from(d).join("applications")));
     for dir in &dirs {
         for candidate in [id, lower.as_str()] {
             let file = dir.join(format!("{candidate}.desktop"));
-            if let Ok(text) = std::fs::read_to_string(&file) {
-                if let Some(icon) = text.lines().find_map(|l| l.strip_prefix("Icon=")) {
-                    if let Some(p) = find(icon.trim(), &[]) {
-                        return Some(p);
-                    }
-                }
+            if let Ok(text) = std::fs::read_to_string(&file)
+                && let Some(icon) = text.lines().find_map(|l| l.strip_prefix("Icon="))
+                && let Some(p) = find(icon.trim(), &[])
+            {
+                return Some(p);
             }
         }
     }

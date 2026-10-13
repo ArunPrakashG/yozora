@@ -21,9 +21,8 @@ impl ConfigFile {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
             Err(e) => return Err(e.into()),
         };
-        let doc = text
-            .parse::<DocumentMut>()
-            .map_err(|e| anyhow::anyhow!("{}: {}", path.display(), e.to_string().trim()))?;
+        let doc =
+            text.parse::<DocumentMut>().map_err(|e| anyhow::anyhow!("{}: {}", path.display(), e.to_string().trim()))?;
         Ok(Self { path: path.to_path_buf(), doc })
     }
 
@@ -51,10 +50,8 @@ impl ConfigFile {
                 new.set_implicit(true);
                 table.insert(part, Item::Table(new));
             }
-            table = table
-                .get_mut(part)
-                .and_then(Item::as_table_like_mut)
-                .expect("a scalar sits where a table is needed");
+            table =
+                table.get_mut(part).and_then(Item::as_table_like_mut).expect("a scalar sits where a table is needed");
         }
         match table.get_mut(last).and_then(Item::as_value_mut) {
             // Keep the existing decoration (comments, alignment) on the value.

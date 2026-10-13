@@ -73,8 +73,7 @@ fn vulkan_installed() -> bool {
     let data_dirs = std::env::var("XDG_DATA_DIRS").unwrap_or_else(|_| "/usr/local/share:/usr/share".into());
     dirs.extend(data_dirs.split(':').filter(|d| !d.is_empty()).map(|d| Path::new(d).join("vulkan/icd.d")));
     dirs.iter().any(|dir| {
-        std::fs::read_dir(dir).is_ok_and(|entries| {
-            entries.flatten().any(|e| e.path().extension().is_some_and(|x| x == "json"))
-        })
+        std::fs::read_dir(dir)
+            .is_ok_and(|entries| entries.flatten().any(|e| e.path().extension().is_some_and(|x| x == "json")))
     })
 }

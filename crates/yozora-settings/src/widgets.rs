@@ -1,9 +1,8 @@
 //! Settings' building blocks from the design: cards, rows, option cards, swatches and buttons.
 
 use gpui::{
-    Div, ElementId, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement,
-    Rgba, SharedString, Stateful, Styled, div, linear_color_stop,
-    linear_gradient, prelude::FluentBuilder, px, rgba,
+    Div, ElementId, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, Rgba, SharedString, Stateful,
+    Styled, div, linear_color_stop, linear_gradient, prelude::FluentBuilder, px, rgba,
 };
 use yozora_ui::{Icon, Theme, icon_sized};
 
@@ -51,9 +50,7 @@ pub fn text_block(title: impl Into<SharedString>, help: Option<SharedString>, th
         .flex_col()
         .gap(px(2.))
         .child(div().text_size(px(13.5)).font_weight(FontWeight::MEDIUM).child(title.into()))
-        .when_some(help, |el, help| {
-            el.child(div().text_size(px(12.5)).text_color(theme.ink_2).child(help))
-        })
+        .when_some(help, |el, help| el.child(div().text_size(px(12.5)).text_color(theme.ink_2).child(help)))
 }
 
 /// A selectable card with a thumbnail, a title and one line of detail.
@@ -171,7 +168,13 @@ pub fn swatch(id: impl Into<ElementId>, color: Rgba, selected: bool, theme: &The
         )
 }
 
-pub fn button(id: impl Into<ElementId>, glyph: Option<Icon>, text: impl Into<SharedString>, primary: bool, theme: &Theme) -> Stateful<Div> {
+pub fn button(
+    id: impl Into<ElementId>,
+    glyph: Option<Icon>,
+    text: impl Into<SharedString>,
+    primary: bool,
+    theme: &Theme,
+) -> Stateful<Div> {
     div()
         .id(id)
         .flex()
@@ -185,9 +188,7 @@ pub fn button(id: impl Into<ElementId>, glyph: Option<Icon>, text: impl Into<Sha
         .font_weight(FontWeight::MEDIUM)
         .cursor_pointer()
         .when(primary, |el| el.bg(theme.accent).text_color(theme.accent_ink))
-        .when(!primary, |el| {
-            el.bg(theme.fill_2).border_1().border_color(theme.hair).hover(|s| s.bg(theme.fill_3))
-        })
+        .when(!primary, |el| el.bg(theme.fill_2).border_1().border_color(theme.hair).hover(|s| s.bg(theme.fill_3)))
         .when_some(glyph, |el, g| el.child(icon_sized(g, 14.)))
         .child(text.into())
 }
@@ -217,7 +218,13 @@ pub fn code(text: impl Into<SharedString>, theme: &Theme) -> Div {
 }
 
 /// A notice inside a page, for errors and empty states.
-pub fn notice(glyph: Icon, title: impl Into<SharedString>, body: impl Into<SharedString>, danger: bool, theme: &Theme) -> Div {
+pub fn notice(
+    glyph: Icon,
+    title: impl Into<SharedString>,
+    body: impl Into<SharedString>,
+    danger: bool,
+    theme: &Theme,
+) -> Div {
     div()
         .flex()
         .gap(px(12.))

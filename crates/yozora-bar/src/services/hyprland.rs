@@ -88,8 +88,7 @@ pub fn socket_dir() -> anyhow::Result<PathBuf> {
 /// One request on the command socket.
 pub fn request(command: &str) -> anyhow::Result<String> {
     let path = socket_dir()?.join(".socket.sock");
-    let mut stream =
-        UnixStream::connect(&path).with_context(|| format!("connecting to {}", path.display()))?;
+    let mut stream = UnixStream::connect(&path).with_context(|| format!("connecting to {}", path.display()))?;
     stream.set_read_timeout(Some(Duration::from_secs(2)))?;
     stream.write_all(command.as_bytes())?;
     let mut reply = String::new();
@@ -174,18 +173,15 @@ enum Wake {
 
 async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
     let path = socket_dir()?.join(".socket2.sock");
-    let events = Async::<UnixStream>::connect(&path)
-        .await
-        .with_context(|| format!("connecting to {}", path.display()))?;
+    let events =
+        Async::<UnixStream>::connect(&path).await.with_context(|| format!("connecting to {}", path.display()))?;
     let mut lines = BufReader::new(events).lines();
     let mut lua = true;
     let mut last = None;
     publish(link, &mut last)?;
 
     loop {
-        let wake = async { Wake::Line(lines.next().await) }
-            .or(async { Wake::Cmd(link.cmds.recv().await.ok()) })
-            .await;
+        let wake = async { Wake::Line(lines.next().await) }.or(async { Wake::Cmd(link.cmds.recv().await.ok()) }).await;
         match wake {
             Wake::Line(None) => anyhow::bail!("Hyprland closed the event socket"),
             Wake::Line(Some(line)) => {
@@ -194,10 +190,12 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
                 }
                 // Events come in bursts (a workspace switch sends five or six). Take what
                 // arrives in the next 2 ms, then query once.
-                let burst = async {
-                    while let Some(Ok(_)) = lines.next().await {}
-                };
-                burst.or(async { Timer::after(Duration::from_millis(2)).await; }).await;
+                let burst = async { while let Some(Ok(_)) = lines.next().await {} };
+                burst
+                    .or(async {
+                        Timer::after(Duration::from_millis(2)).await;
+                    })
+                    .await;
                 publish(link, &mut last)?;
             }
             Wake::Cmd(None) => return Ok(()),
@@ -206,7 +204,10 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
     }
 }
 
-fn publish(link: &Link<State, Cmd>, last: &mut Option<(Vec<Monitor>, Vec<Workspace>, Option<Window>)>) -> anyhow::Result<()> {
+fn publish(
+    link: &Link<State, Cmd>,
+    last: &mut Option<(Vec<Monitor>, Vec<Workspace>, Option<Window>)>,
+) -> anyhow::Result<()> {
     let state = snapshot()?;
     let key = (state.monitors.clone(), state.workspaces.clone(), state.window.clone());
     if last.as_ref() != Some(&key) {

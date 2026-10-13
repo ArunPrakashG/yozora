@@ -54,10 +54,7 @@ pub struct Field {
 
 impl Field {
     pub fn option_label(&self, index: usize) -> String {
-        self.option_labels
-            .get(index)
-            .cloned()
-            .unwrap_or_else(|| display_value(&self.options[index]))
+        self.option_labels.get(index).cloned().unwrap_or_else(|| display_value(&self.options[index]))
     }
 }
 
@@ -79,8 +76,8 @@ pub struct Schema {
 impl Schema {
     pub fn load(path: &Path) -> anyhow::Result<Self> {
         let text = std::fs::read_to_string(path)?;
-        let schema: Schema = toml::from_str(&text)
-            .map_err(|e| anyhow::anyhow!("{}: {}", path.display(), e.to_string().trim()))?;
+        let schema: Schema =
+            toml::from_str(&text).map_err(|e| anyhow::anyhow!("{}: {}", path.display(), e.to_string().trim()))?;
         for field in schema.section.iter().flat_map(|s| &s.field) {
             anyhow::ensure!(
                 field.kind != FieldKind::Enum || !field.options.is_empty(),

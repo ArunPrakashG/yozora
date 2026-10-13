@@ -87,7 +87,13 @@ pub fn start(cx: &mut App, dir: PathBuf, loaded: yozora_config::Loaded<BarSettin
     }
     cx.set_global(Config { settings: Arc::new(loaded.value), warnings: loaded.warnings, dir: dir.clone() });
     cx.set_global(Services { fakes, ..Default::default() });
-    cx.set_global(Shell { bars: Vec::new(), system_dark: true, dark_override: None, started: Instant::now(), opened_any: false });
+    cx.set_global(Shell {
+        bars: Vec::new(),
+        system_dark: true,
+        dark_override: None,
+        started: Instant::now(),
+        opened_any: false,
+    });
     apply_theme(cx);
     ensure_services(cx);
     apply_layer_rules(cx);
@@ -257,9 +263,8 @@ pub fn reload(cx: &mut App) -> anyhow::Result<Vec<Warning>> {
     }
     let old = Config::get(cx).settings.clone();
     let new = Arc::new(loaded.value);
-    let geometry_changed = old.bar.bar != new.bar.bar
-        || old.bar.modules != new.bar.modules
-        || old.bar.monitor != new.bar.monitor;
+    let geometry_changed =
+        old.bar.bar != new.bar.bar || old.bar.modules != new.bar.modules || old.bar.monitor != new.bar.monitor;
     let warnings = loaded.warnings.clone();
     cx.set_global(Config { settings: new.clone(), warnings: loaded.warnings, dir });
     if old.theme != new.theme {
@@ -392,12 +397,7 @@ fn bar_for(monitor: Option<&str>, cx: &App) -> Option<WindowHandle<Bar>> {
         .as_ref()
         .and_then(|h| h.read(cx).state.monitors.iter().find(|m| m.focused).map(|m| m.name.clone()));
     let want = monitor.map(str::to_string).or(focused);
-    shell
-        .bars
-        .iter()
-        .find(|b| Some(&b.monitor) == want.as_ref())
-        .or(shell.bars.first())
-        .map(|b| b.handle)
+    shell.bars.iter().find(|b| Some(&b.monitor) == want.as_ref()).or(shell.bars.first()).map(|b| b.handle)
 }
 
 fn rss_kib() -> Option<u64> {
@@ -438,10 +438,8 @@ pub fn handle_ipc(incoming: Incoming, cx: &mut App) {
         "stats" => {
             let shell = cx.global::<Shell>();
             let bars: Vec<_> = shell.bars.iter().map(|b| b.monitor.clone()).collect();
-            let stats: Vec<_> = Shell::bars(cx)
-                .into_iter()
-                .filter_map(|h| h.read(cx).ok().map(|b| b.stats_json()))
-                .collect();
+            let stats: Vec<_> =
+                Shell::bars(cx).into_iter().filter_map(|h| h.read(cx).ok().map(|b| b.stats_json())).collect();
             Response::data(json!({
                 "version": env!("CARGO_PKG_VERSION"),
                 "uptime_s": cx.global::<Shell>().started.elapsed().as_secs(),

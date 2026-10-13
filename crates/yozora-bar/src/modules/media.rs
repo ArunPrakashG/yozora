@@ -3,8 +3,8 @@
 use std::time::Duration;
 
 use gpui::{
-    AnyElement, App, Context, Div, FontWeight, IntoElement, ParentElement, SharedString,
-    StatefulInteractiveElement, Styled, div, img, prelude::*, px, relative,
+    AnyElement, App, Context, Div, FontWeight, IntoElement, ParentElement, SharedString, StatefulInteractiveElement,
+    Styled, div, img, prelude::*, px, relative,
 };
 use yozora_ui::{Icon, Theme, controls, icon_sized};
 
@@ -92,7 +92,8 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
     let Some(player) = state.current().cloned() else {
         return vec![
             controls::header("Now playing", div()).into_any_element(),
-            controls::empty(&["Nothing is playing.", "Players that support MPRIS show up here."], theme).into_any_element(),
+            controls::empty(&["Nothing is playing.", "Players that support MPRIS show up here."], theme)
+                .into_any_element(),
         ];
     };
     let word = match player.status {
@@ -100,57 +101,47 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
         Status::Paused => "Paused",
         Status::Stopped => "Stopped",
     };
-    let head = div()
-        .flex()
-        .gap(px(14.))
-        .items_center()
-        .p(px(4.))
-        .child(cover(&player, 88., 12., theme))
-        .child(
-            div()
-                .min_w_0()
-                .flex()
-                .flex_col()
-                .gap(px(2.))
-                .child(super::calendar::eyebrow(word, theme))
-                .child(
-                    div()
-                        .text_size(px(15.))
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .mt(px(3.))
-                        .child(if player.title.is_empty() { player.identity.clone() } else { player.title.clone() }),
-                )
-                .when(!player.artist.is_empty(), |el| el.child(controls::muted(player.artist.clone(), theme)))
-                .when(!player.album.is_empty(), |el| el.child(controls::muted(player.album.clone(), theme))),
-        );
+    let head = div().flex().gap(px(14.)).items_center().p(px(4.)).child(cover(&player, 88., 12., theme)).child(
+        div()
+            .min_w_0()
+            .flex()
+            .flex_col()
+            .gap(px(2.))
+            .child(super::calendar::eyebrow(word, theme))
+            .child(
+                div()
+                    .text_size(px(15.))
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .mt(px(3.))
+                    .child(if player.title.is_empty() { player.identity.clone() } else { player.title.clone() }),
+            )
+            .when(!player.artist.is_empty(), |el| el.child(controls::muted(player.artist.clone(), theme)))
+            .when(!player.album.is_empty(), |el| el.child(controls::muted(player.album.clone(), theme))),
+    );
 
     let pos = player.position_now();
-    let progress = player.length.filter(|l| !l.is_zero()).map(|length| {
-        let f = (pos.as_secs_f32() / length.as_secs_f32()).clamp(0., 1.);
-        div()
-            .px(px(4.))
-            .child(
-                div()
-                    .relative()
-                    .h(px(4.))
-                    .mt(px(16.))
-                    .rounded(px(2.))
-                    .bg(theme.fill_3)
-                    .overflow_hidden()
-                    .child(div().absolute().top_0().bottom_0().left_0().w(relative(f)).rounded(px(2.)).bg(theme.ink)),
-            )
-            .child(
-                div()
-                    .flex()
-                    .justify_between()
-                    .mt(px(6.))
-                    .text_size(px(11.))
-                    .text_color(theme.ink_2)
-                    .child(time(pos))
-                    .child(format!("-{}", time(length.saturating_sub(pos)))),
-            )
-            .into_any_element()
-    });
+    let progress =
+        player.length.filter(|l| !l.is_zero()).map(|length| {
+            let f = (pos.as_secs_f32() / length.as_secs_f32()).clamp(0., 1.);
+            div()
+                .px(px(4.))
+                .child(
+                    div().relative().h(px(4.)).mt(px(16.)).rounded(px(2.)).bg(theme.fill_3).overflow_hidden().child(
+                        div().absolute().top_0().bottom_0().left_0().w(relative(f)).rounded(px(2.)).bg(theme.ink),
+                    ),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .justify_between()
+                        .mt(px(6.))
+                        .text_size(px(11.))
+                        .text_color(theme.ink_2)
+                        .child(time(pos))
+                        .child(format!("-{}", time(length.saturating_sub(pos)))),
+                )
+                .into_any_element()
+        });
 
     let playing = player.status == Status::Playing;
     let ctl = div()

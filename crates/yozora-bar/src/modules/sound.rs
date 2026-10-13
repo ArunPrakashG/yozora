@@ -1,8 +1,7 @@
 //! Output and input volume over PulseAudio, and choosing the output device.
 
 use gpui::{
-    AnyElement, App, Context, Div, IntoElement, ParentElement, StatefulInteractiveElement, Styled, div, prelude::*,
-    px,
+    AnyElement, App, Context, Div, IntoElement, ParentElement, StatefulInteractiveElement, Styled, div, prelude::*, px,
 };
 use yozora_ui::{Icon, Theme, controls, icon};
 
@@ -35,21 +34,19 @@ pub fn item(theme: &Theme, cx: &App) -> Option<Div> {
     let dim = !audio.up() || sink.is_none_or(|s| s.muted);
     let entity = Services::get(cx).audio.clone()?;
     let volume = sink.map_or(0., |s| s.volume);
-    Some(
-        bi().child(icon(volume_icon(sink)).text_color(if dim { theme.ink_3 } else { theme.ink })).on_scroll_wheel(
-            move |e, _, cx| {
-                // Scrolling over the icon nudges the volume by 5%.
-                let dy = match e.delta {
-                    gpui::ScrollDelta::Lines(p) => p.y,
-                    gpui::ScrollDelta::Pixels(p) => f32::from(p.y) / 40.,
-                };
-                if dy.abs() >= 0.5 {
-                    let v = (volume + dy.signum() * 0.05).clamp(0., 1.);
-                    entity.read(cx).send(Cmd::SinkVolume(v));
-                }
-            },
-        ),
-    )
+    Some(bi().child(icon(volume_icon(sink)).text_color(if dim { theme.ink_3 } else { theme.ink })).on_scroll_wheel(
+        move |e, _, cx| {
+            // Scrolling over the icon nudges the volume by 5%.
+            let dy = match e.delta {
+                gpui::ScrollDelta::Lines(p) => p.y,
+                gpui::ScrollDelta::Pixels(p) => f32::from(p.y) / 40.,
+            };
+            if dy.abs() >= 0.5 {
+                let v = (volume + dy.signum() * 0.05).clamp(0., 1.);
+                entity.read(cx).send(Cmd::SinkVolume(v));
+            }
+        },
+    ))
 }
 
 pub fn send(cmd: Cmd, cx: &App) {
@@ -92,9 +89,14 @@ pub fn sink_slider(p: &Popover, theme: &Theme, cx: &App) -> Option<AnyElement> {
                     .child(icon(volume_icon(Some(sink))))
                     .on_click(move |_, _, cx| send(Cmd::SinkMute(!muted), cx)),
             )
-            .child(controls::slider("volume", if muted { 0. } else { volume }, None, &p.ui.volume, theme, |v, _, cx| {
-                send(Cmd::SinkVolume(v), cx)
-            }))
+            .child(controls::slider(
+                "volume",
+                if muted { 0. } else { volume },
+                None,
+                &p.ui.volume,
+                theme,
+                |v, _, cx| send(Cmd::SinkVolume(v), cx),
+            ))
             .into_any_element(),
     )
 }
@@ -136,9 +138,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
     let state = service.state.clone();
     let mut rows: Vec<AnyElement> = Vec::new();
     let level = state.sink().map(|s| if s.muted { "Muted".to_string() } else { format!("{}%", percent(s.volume)) });
-    rows.push(
-        controls::header("Sound", controls::muted(level.unwrap_or_default(), theme)).into_any_element(),
-    );
+    rows.push(controls::header("Sound", controls::muted(level.unwrap_or_default(), theme)).into_any_element());
     if let Some(error) = &service.error {
         rows.push(controls::empty(&["PulseAudio is not available.", error.as_str()], theme).into_any_element());
         return rows;
@@ -152,7 +152,11 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
             controls::row(("sink", i), theme)
                 .cursor_pointer()
                 .child(controls::row_icon(kind_icon(s.kind), on, theme))
-                .child(controls::row_text(s.description.clone(), (!s.detail.is_empty()).then(|| s.detail.clone().into()), theme))
+                .child(controls::row_text(
+                    s.description.clone(),
+                    (!s.detail.is_empty()).then(|| s.detail.clone().into()),
+                    theme,
+                ))
                 .child(controls::check(("sink-check", i), on, theme))
                 .on_click(move |_, _, cx| send(Cmd::DefaultSink(name.clone()), cx))
                 .into_any_element()

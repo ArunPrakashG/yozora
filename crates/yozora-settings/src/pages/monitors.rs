@@ -1,8 +1,8 @@
 //! Monitors: the arrangement from Hyprland, and per-monitor bar settings.
 
 use gpui::{
-    AnyElement, Context, FontWeight, InteractiveElement, IntoElement, ParentElement,
-    SharedString, StatefulInteractiveElement, Styled, div, prelude::FluentBuilder, px,
+    AnyElement, Context, FontWeight, InteractiveElement, IntoElement, ParentElement, SharedString,
+    StatefulInteractiveElement, Styled, div, prelude::FluentBuilder, px,
 };
 use yozora_config::bar::BarConfig;
 use yozora_ui::{
@@ -45,9 +45,10 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                 .flex_col()
                 .gap(px(14.))
                 .child(notice(Icon::Display, "Can't read the monitor layout", reason, false, &theme))
-                .child(button("retry", Some(Icon::Sync), "Try again", false, &theme).on_click(cx.listener(|this, _, _, cx| {
-                    this.refresh_monitors(cx)
-                })))
+                .child(
+                    button("retry", Some(Icon::Sync), "Try again", false, &theme)
+                        .on_click(cx.listener(|this, _, _, cx| this.refresh_monitors(cx))),
+                )
                 .into_any_element();
         }
     };
@@ -59,7 +60,8 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
     let monitor = monitors.iter().find(|m| m.name == selected).cloned().expect("selected exists");
 
     // Fit the arrangement into the stage.
-    let (min_x, min_y) = (monitors.iter().map(|m| m.x).min().unwrap_or(0), monitors.iter().map(|m| m.y).min().unwrap_or(0));
+    let (min_x, min_y) =
+        (monitors.iter().map(|m| m.x).min().unwrap_or(0), monitors.iter().map(|m| m.y).min().unwrap_or(0));
     let max_x = monitors.iter().map(|m| m.x + m.width).max().unwrap_or(1);
     let max_y = monitors.iter().map(|m| m.y + m.height).max().unwrap_or(1);
     let (span_w, span_h) = ((max_x - min_x).max(1) as f32, (max_y - min_y).max(1) as f32);
@@ -177,28 +179,36 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                         .flex()
                         .items_center()
                         .gap(px(10.))
-                        .when(mods_index.is_none(), |el| el.child(div().text_size(px(12.)).text_color(theme.ink_3).child("Custom")))
-                        .child(div().w(px(240.)).child(segmented("mon-mods", &["Same as main", "Minimal"], mods_index.unwrap_or(0), &theme, move |i, _, cx| {
-                            let name = name_mods.clone();
-                            let file = file_mods.clone();
-                            weak.update(cx, |this, cx| {
-                                this.edit(&file, cx, |d| {
-                                    d.edit(|f| {
-                                        let key = |z: &str| monitor_key(&name, &format!("modules.{z}"));
-                                        if i == 0 {
-                                            for z in ["left", "center", "right"] {
-                                                f.remove(&key(z));
+                        .when(mods_index.is_none(), |el| {
+                            el.child(div().text_size(px(12.)).text_color(theme.ink_3).child("Custom"))
+                        })
+                        .child(div().w(px(240.)).child(segmented(
+                            "mon-mods",
+                            &["Same as main", "Minimal"],
+                            mods_index.unwrap_or(0),
+                            &theme,
+                            move |i, _, cx| {
+                                let name = name_mods.clone();
+                                let file = file_mods.clone();
+                                weak.update(cx, |this, cx| {
+                                    this.edit(&file, cx, |d| {
+                                        d.edit(|f| {
+                                            let key = |z: &str| monitor_key(&name, &format!("modules.{z}"));
+                                            if i == 0 {
+                                                for z in ["left", "center", "right"] {
+                                                    f.remove(&key(z));
+                                                }
+                                            } else {
+                                                f.set(&key("left"), string_array(MINIMAL_LEFT));
+                                                f.set(&key("center"), string_array::<&str>(&[]));
+                                                f.set(&key("right"), string_array(MINIMAL_RIGHT));
                                             }
-                                        } else {
-                                            f.set(&key("left"), string_array(MINIMAL_LEFT));
-                                            f.set(&key("center"), string_array::<&str>(&[]));
-                                            f.set(&key("right"), string_array(MINIMAL_RIGHT));
-                                        }
+                                        })
                                     })
                                 })
-                            })
-                            .ok();
-                        }))),
+                                .ok();
+                            },
+                        ))),
                     false,
                     &theme,
                 ))

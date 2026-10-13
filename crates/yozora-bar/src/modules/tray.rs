@@ -180,7 +180,9 @@ pub fn popover(p: &mut Popover, key: &str, theme: &Theme, cx: &mut Context<Popov
             .when(!enabled, |el| el.text_color(theme.ink_3))
             .when(enabled, |el| el.cursor_pointer().hover(|s| s.bg(theme.accent_soft)))
             .when(has_marks, |el| {
-                el.child(div().size(px(14.)).flex_none().text_color(theme.accent).children(mark.map(|m| icon_sized(m, 14.))))
+                el.child(
+                    div().size(px(14.)).flex_none().text_color(theme.accent).children(mark.map(|m| icon_sized(m, 14.))),
+                )
             })
             .child(div().flex_1().truncate().child(SharedString::from(label(&item.label))))
             .when(submenu, |el| el.child(icon_sized(Icon::ChevronRight, 14.).text_color(theme.ink_3)))

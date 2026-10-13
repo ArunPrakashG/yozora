@@ -1,7 +1,5 @@
 //! Notification history from mako, and Do Not Disturb.
 
-use std::{cell::RefCell, collections::HashMap, path::PathBuf};
-
 use gpui::{
     AnyElement, App, Context, Div, FontWeight, InteractiveElement, IntoElement, ParentElement,
     StatefulInteractiveElement, Styled, div, img, prelude::*, px,
@@ -11,10 +9,7 @@ use yozora_ui::{Icon, Theme, controls, icon, icon_sized};
 use crate::{
     bar::bi,
     popover::Popover,
-    services::{
-        Services, icons,
-        notifications::{Cmd, Notification},
-    },
+    services::{Services, notifications::Cmd},
 };
 
 pub fn item(theme: &Theme, cx: &App) -> Option<Div> {
@@ -22,7 +17,11 @@ pub fn item(theme: &Theme, cx: &App) -> Option<Div> {
     let (dnd, unread) = (n.state.dnd, n.state.unread);
     Some(
         bi().relative()
-            .child(icon(if dnd { Icon::Moon } else { Icon::Bell }).text_color(if n.up() { theme.ink } else { theme.ink_3 }))
+            .child(icon(if dnd { Icon::Moon } else { Icon::Bell }).text_color(if n.up() {
+                theme.ink
+            } else {
+                theme.ink_3
+            }))
             .when(unread && !dnd, |el| {
                 el.child(
                     div()
@@ -43,27 +42,6 @@ pub fn send(cmd: Cmd, cx: &App) {
     if let Some(n) = &Services::get(cx).notifications {
         n.read(cx).send(cmd);
     }
-}
-
-thread_local! {
-    static ICONS: RefCell<HashMap<String, Option<PathBuf>>> = RefCell::default();
-}
-
-/// The best icon file for a notification, looked up once per name.
-fn icon_for(n: &Notification) -> Option<PathBuf> {
-    let key = format!("{}\0{}\0{}", n.icon, n.desktop_entry, n.app);
-    ICONS.with_borrow_mut(|cache| {
-        cache
-            .entry(key)
-            .or_insert_with(|| {
-                icons::find(n.icon.strip_prefix("file://").unwrap_or(&n.icon), &[])
-                    .or_else(|| icons::app_icon(&n.desktop_entry))
-                    .or_else(|| icons::app_icon(&n.app))
-                    // Drawn at 22 px.
-                    .map(|p| icons::fit(&p, 48))
-            })
-            .clone()
-    })
 }
 
 pub fn dnd_switch(theme: &Theme, cx: &App) -> Option<AnyElement> {
@@ -111,7 +89,7 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
     }
     for (i, n) in state.items.iter().take(30).enumerate() {
         let id = n.id;
-        let glyph = icon_for(n);
+        let glyph = n.icon_path.clone();
         let urgent = n.urgency >= 2;
         let when = n.seen.filter(|s| *s > 0).map(super::ago);
         rows.push(

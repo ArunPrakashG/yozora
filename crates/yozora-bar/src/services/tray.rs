@@ -109,7 +109,7 @@ fn pixmap(props: &Props) -> Option<Arc<RenderImage>> {
         .filter(|(w, h, d)| *w > 0 && *h > 0 && d.len() == (*w * *h * 4) as usize)
         .min_by_key(|(w, _, _)| if *w >= 32 { *w - 32 } else { (32 - *w) * 4 })?;
     let mut bgra = Vec::with_capacity(data.len());
-    for px in data.chunks_exact(4) {
+    for px in data.as_chunks::<4>().0 {
         let (a, r, g, b) = (px[0], px[1], px[2], px[3]);
         bgra.extend_from_slice(&[b, g, r, a]);
     }
@@ -134,10 +134,8 @@ async fn item(conn: &Connection, key: &str) -> anyhow::Result<Item> {
     let icon = super::icons::find(&name, &extra)
         .map(|p| Icon::File(super::icons::fit(&p, 32)))
         .or_else(|| pixmap(&p).map(Icon::Pixmap));
-    let title = dbus::get::<String>(&p, "Title")
-        .filter(|t| !t.is_empty())
-        .or_else(|| dbus::get(&p, "Id"))
-        .unwrap_or_default();
+    let title =
+        dbus::get::<String>(&p, "Title").filter(|t| !t.is_empty()).or_else(|| dbus::get(&p, "Id")).unwrap_or_default();
     let menu = dbus::path(&p, "Menu");
     Ok(Item {
         key: key.to_string(),
@@ -184,7 +182,8 @@ async fn load_menu(conn: &Connection, item: &Item) -> anyhow::Result<Vec<MenuIte
     let path = item.menu.as_deref().ok_or_else(|| anyhow::anyhow!("item has no menu"))?;
     // Some apps fill their menu lazily on AboutToShow; failures here are harmless.
     let _ = dbus::invoke(conn, &item.dest, path, MENU, "AboutToShow", &(0i32,)).await;
-    let (_rev, (id, props, children)): (u32, (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>)) =
+    type Layout = (u32, (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>));
+    let (_rev, (id, props, children)): Layout =
         dbus::call(conn, &item.dest, path, MENU, "GetLayout", &(0i32, -1i32, Vec::<String>::new())).await?;
     Ok(menu_item(id, &props, children).map(|root| root.children).unwrap_or_default())
 }
@@ -254,6 +253,9 @@ async fn registered(conn: &Connection, own: &Option<Arc<Mutex<Vec<String>>>>) ->
 async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
     let conn = Connection::session().await?;
     let host = format!("org.kde.StatusNotifierHost-{}", std::process::id());
+    // Set up the object server before taking a name, so calls that arrive early get an
+    // answer instead of being dropped.
+    let _ = conn.object_server();
     conn.request_name(host.as_str()).await?;
 
     let mut own = None;
@@ -305,12 +307,11 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
             }
         }
         state.items = items;
-        if let Some((key, _)) = &state.menu {
-            if let Some(i) = state.items.iter().find(|i| &i.key == key) {
-                if let Ok(menu) = load_menu(&conn, i).await {
-                    state.menu = Some((key.clone(), menu));
-                }
-            }
+        if let Some((key, _)) = &state.menu
+            && let Some(i) = state.items.iter().find(|i| &i.key == key)
+            && let Ok(menu) = load_menu(&conn, i).await
+        {
+            state.menu = Some((key.clone(), menu));
         }
         if !link.publish(state.clone()) {
             return Ok(());
@@ -327,7 +328,9 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
                         None => Ok(()),
                     },
                     Cmd::SecondaryActivate(key) => match find(&key) {
-                        Some(i) => dbus::invoke(&conn, &i.dest, &i.path, ITEM, "SecondaryActivate", &(0i32, 0i32)).await,
+                        Some(i) => {
+                            dbus::invoke(&conn, &i.dest, &i.path, ITEM, "SecondaryActivate", &(0i32, 0i32)).await
+                        }
                         None => Ok(()),
                     },
                     Cmd::Scroll(key, delta) => match find(&key) {
@@ -345,7 +348,8 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
                             let at = std::time::SystemTime::now()
                                 .duration_since(std::time::UNIX_EPOCH)
                                 .map_or(0, |d| d.as_secs() as u32);
-                            dbus::invoke(&conn, &dest, &path, MENU, "Event", &(id, "clicked", Value::from(0i32), at)).await
+                            dbus::invoke(&conn, &dest, &path, MENU, "Event", &(id, "clicked", Value::from(0i32), at))
+                                .await
                         }
                         _ => Ok(()),
                     },
@@ -371,7 +375,13 @@ pub async fn check() -> anyhow::Result<String> {
 mod tests {
     #[test]
     fn splits_keys() {
-        assert_eq!(super::split(":1.5/org/ayatana/NotificationItem/x"), (":1.5".into(), "/org/ayatana/NotificationItem/x".into()));
-        assert_eq!(super::split("org.kde.StatusNotifierItem-3-1"), ("org.kde.StatusNotifierItem-3-1".into(), "/StatusNotifierItem".into()));
+        assert_eq!(
+            super::split(":1.5/org/ayatana/NotificationItem/x"),
+            (":1.5".into(), "/org/ayatana/NotificationItem/x".into())
+        );
+        assert_eq!(
+            super::split("org.kde.StatusNotifierItem-3-1"),
+            ("org.kde.StatusNotifierItem-3-1".into(), "/StatusNotifierItem".into())
+        );
     }
 }

@@ -49,7 +49,9 @@ pub fn title(view: &SettingsView) -> (String, String) {
                         .and_then(|a| a.manifest.description.clone())
                         .unwrap_or_else(|| "Everything else this app lets you change.".into()),
                 ),
-                AppPage::About => (name.clone(), view.app(id).and_then(|a| a.manifest.description.clone()).unwrap_or_default()),
+                AppPage::About => {
+                    (name.clone(), view.app(id).and_then(|a| a.manifest.description.clone()).unwrap_or_default())
+                }
             };
         }
     };
@@ -91,7 +93,12 @@ pub fn search_entries(view: &SettingsView) -> Vec<SearchEntry> {
     let mut entries = Vec::new();
     let add = |entries: &mut Vec<SearchEntry>, page: Page, place: &str, items: &[(&str, &str)]| {
         for (title, help) in items {
-            entries.push(SearchEntry { page: page.clone(), title: title.to_string(), help: help.to_string(), place: place.into() });
+            entries.push(SearchEntry {
+                page: page.clone(),
+                title: title.to_string(),
+                help: help.to_string(),
+                place: place.into(),
+            });
         }
     };
     add(&mut entries, Page::Appearance, "Appearance", appearance::SEARCH);
@@ -102,7 +109,12 @@ pub fn search_entries(view: &SettingsView) -> Vec<SearchEntry> {
             let name = &app.manifest.name;
             add(&mut entries, Page::App(id.clone(), AppPage::Bar), &format!("{name} · Bar"), bar::SEARCH);
             add(&mut entries, Page::App(id.clone(), AppPage::Modules), &format!("{name} · Modules"), modules::SEARCH);
-            add(&mut entries, Page::App(id.clone(), AppPage::Monitors), &format!("{name} · Monitors"), monitors::SEARCH);
+            add(
+                &mut entries,
+                Page::App(id.clone(), AppPage::Monitors),
+                &format!("{name} · Monitors"),
+                monitors::SEARCH,
+            );
         }
         if let Some(schema) = &app.schema {
             for section in &schema.section {

@@ -135,7 +135,8 @@ A line is plain text, or JSON with a `text` field:
 {"text": "3 updates", "tooltip": "pacman"}
 ```
 
-`tooltip` is read but not shown yet.
+`tooltip` shows under the module when the pointer rests on it. Use `\n` for more lines. A
+failing command shows its error there instead.
 
 ### Per-monitor settings
 

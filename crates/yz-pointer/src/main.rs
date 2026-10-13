@@ -16,8 +16,7 @@ use wayland_client::{
     protocol::{wl_pointer::ButtonState, wl_registry},
 };
 use wayland_protocols_wlr::virtual_pointer::v1::client::{
-    zwlr_virtual_pointer_manager_v1::ZwlrVirtualPointerManagerV1,
-    zwlr_virtual_pointer_v1::ZwlrVirtualPointerV1,
+    zwlr_virtual_pointer_manager_v1::ZwlrVirtualPointerManagerV1, zwlr_virtual_pointer_v1::ZwlrVirtualPointerV1,
 };
 
 const BTN_LEFT: u32 = 0x110;
@@ -46,28 +45,22 @@ fn main() {
     let conn = Connection::connect_to_env().expect("no Wayland display");
     let (globals, mut queue) = registry_queue_init::<State>(&conn).expect("registry");
     let qh = queue.handle();
-    let manager: ZwlrVirtualPointerManagerV1 = globals
-        .bind(&qh, 1..=2, ())
-        .expect("compositor lacks zwlr_virtual_pointer_manager_v1");
+    let manager: ZwlrVirtualPointerManagerV1 =
+        globals.bind(&qh, 1..=2, ()).expect("compositor lacks zwlr_virtual_pointer_manager_v1");
     let pointer = manager.create_virtual_pointer(None, &qh, ());
 
     match args.first().map(String::as_str) {
         Some("move") => {
-            let coord = |i: usize| -> i32 {
-                args.get(i)
-                    .and_then(|a| a.parse().ok())
-                    .expect("usage: yz-pointer move X Y")
-            };
+            let coord =
+                |i: usize| -> i32 { args.get(i).and_then(|a| a.parse().ok()).expect("usage: yz-pointer move X Y") };
             let (x, y) = (coord(1) - LAYOUT_ORIGIN.0, coord(2) - LAYOUT_ORIGIN.1);
             pointer.motion_absolute(time(), x as u32, y as u32, LAYOUT_EXTENT.0, LAYOUT_EXTENT.1);
             pointer.frame();
             sync(&mut queue);
         }
         Some("click") => {
-            let hold = args
-                .get(1)
-                .and_then(|a| a.parse().ok())
-                .map_or(Duration::from_millis(40), Duration::from_millis);
+            let hold =
+                args.get(1).and_then(|a| a.parse().ok()).map_or(Duration::from_millis(40), Duration::from_millis);
             pointer.button(time(), BTN_LEFT, ButtonState::Pressed);
             pointer.frame();
             sync(&mut queue);
@@ -124,8 +117,5 @@ fn sync(queue: &mut EventQueue<State>) {
 
 /// Milliseconds since an arbitrary epoch, as the protocol wants.
 fn time() -> u32 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u32
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u32
 }

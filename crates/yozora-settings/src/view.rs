@@ -9,14 +9,14 @@ use std::{
 
 use gpui::{
     Animation, AnimationExt, AnyElement, AppContext, Context, Entity, FocusHandle, Focusable, FontWeight,
-    InteractiveElement, IntoElement, ParentElement, Render, Rgba, SharedString,
-    StatefulInteractiveElement, Styled, Subscription, Task, Window, div, ease_out_quint,
-    prelude::FluentBuilder, px, rgba,
+    InteractiveElement, IntoElement, ParentElement, Render, Rgba, SharedString, StatefulInteractiveElement, Styled,
+    Subscription, Task, Window, div, ease_out_quint, prelude::FluentBuilder, px, rgba,
 };
 use yozora_config::{manifest::AppManifest, theme::ThemeConfig};
 use yozora_ui::{
-    Icon, Theme, icon_sized,
+    Icon, Theme,
     controls::indicator_spring,
+    icon_sized,
     input::{InputEvent, TextInput},
 };
 
@@ -195,9 +195,7 @@ impl SettingsView {
         tracing::info!("apps: {}", apps.iter().map(|a| a.id()).collect::<Vec<_>>().join(", "));
         self.apps = apps;
         if let Page::App(id, page) = &self.page {
-            let still_valid = self
-                .app(id)
-                .is_some_and(|a| self.app_pages(a).contains(page));
+            let still_valid = self.app(id).is_some_and(|a| self.app_pages(a).contains(page));
             if !still_valid {
                 self.page = Page::Appearance;
                 self.page_serial += 1;
@@ -312,6 +310,7 @@ impl SettingsView {
     }
 
     /// A text field bound to `target`, kept across frames by `id`.
+    #[allow(clippy::too_many_arguments)]
     pub fn input(
         &mut self,
         id: &str,
@@ -489,41 +488,27 @@ impl SettingsView {
                             ),
                     ),
             )
-            .child(
-                div()
-                    .relative()
-                    .mt(px(16.))
-                    .child(self.search.clone())
-                    .when(self.query.is_empty(), |el| {
-                        el.child(
-                            div()
-                                .absolute()
-                                .right(px(8.))
-                                .top(px(7.))
-                                .px(px(6.))
-                                .py(px(1.))
-                                .rounded(px(5.))
-                                .border_1()
-                                .border_color(theme.hair_2)
-                                .text_size(px(11.))
-                                .text_color(theme.ink_3)
-                                .child("Ctrl F"),
-                        )
-                    }),
-            )
-            .child(
-                div()
-                    .id("nav")
-                    .flex_1()
-                    .min_h_0()
-                    .mt(px(14.))
-                    .overflow_y_scroll()
-                    .child(if self.query.is_empty() {
-                        self.render_nav(theme, cx).into_any_element()
-                    } else {
-                        self.render_search_results(theme, cx).into_any_element()
-                    }),
-            )
+            .child(div().relative().mt(px(16.)).child(self.search.clone()).when(self.query.is_empty(), |el| {
+                el.child(
+                    div()
+                        .absolute()
+                        .right(px(8.))
+                        .top(px(7.))
+                        .px(px(6.))
+                        .py(px(1.))
+                        .rounded(px(5.))
+                        .border_1()
+                        .border_color(theme.hair_2)
+                        .text_size(px(11.))
+                        .text_color(theme.ink_3)
+                        .child("Ctrl F"),
+                )
+            }))
+            .child(div().id("nav").flex_1().min_h_0().mt(px(14.)).overflow_y_scroll().child(if self.query.is_empty() {
+                self.render_nav(theme, cx).into_any_element()
+            } else {
+                self.render_search_results(theme, cx).into_any_element()
+            }))
             .when(!file.is_empty(), |el| {
                 el.child(
                     div()
@@ -564,34 +549,35 @@ impl SettingsView {
         let mut selected_y = None;
         let mut children: Vec<AnyElement> = Vec::new();
 
-        let mut item = |page: Page, glyph: Icon, label: String, trailing: Option<AnyElement>, y: &mut f32, this: &Self| {
-            let on = this.page == page;
-            if on {
-                selected_y = Some(*y);
-            }
-            *y += ITEM + GAP;
-            let id = SharedString::from(format!("nav-{label}-{page:?}"));
-            div()
-                .id(id)
-                .relative()
-                .flex()
-                .items_center()
-                .gap(px(11.))
-                .h(px(ITEM))
-                .mb(px(GAP))
-                .px(px(10.))
-                .rounded(px(9.))
-                .text_size(px(13.5))
-                .cursor_pointer()
-                .text_color(if on { theme.ink } else { theme.ink_2 })
-                .when(on, |el| el.font_weight(FontWeight::MEDIUM))
-                .when(!on, |el| el.hover(|s| s.bg(theme.fill)))
-                .child(div().text_color(if on { theme.accent } else { theme.ink_2 }).child(icon_sized(glyph, 17.)))
-                .child(div().flex_1().truncate().child(label))
-                .children(trailing)
-                .on_click(cx.listener(move |this, _, _, cx| this.go(page.clone(), cx)))
-                .into_any_element()
-        };
+        let mut item =
+            |page: Page, glyph: Icon, label: String, trailing: Option<AnyElement>, y: &mut f32, this: &Self| {
+                let on = this.page == page;
+                if on {
+                    selected_y = Some(*y);
+                }
+                *y += ITEM + GAP;
+                let id = SharedString::from(format!("nav-{label}-{page:?}"));
+                div()
+                    .id(id)
+                    .relative()
+                    .flex()
+                    .items_center()
+                    .gap(px(11.))
+                    .h(px(ITEM))
+                    .mb(px(GAP))
+                    .px(px(10.))
+                    .rounded(px(9.))
+                    .text_size(px(13.5))
+                    .cursor_pointer()
+                    .text_color(if on { theme.ink } else { theme.ink_2 })
+                    .when(on, |el| el.font_weight(FontWeight::MEDIUM))
+                    .when(!on, |el| el.hover(|s| s.bg(theme.fill)))
+                    .child(div().text_color(if on { theme.accent } else { theme.ink_2 }).child(icon_sized(glyph, 17.)))
+                    .child(div().flex_1().truncate().child(label))
+                    .children(trailing)
+                    .on_click(cx.listener(move |this, _, _, cx| this.go(page.clone(), cx)))
+                    .into_any_element()
+            };
         let header = |text: String, trailing: Option<AnyElement>, y: &mut f32| {
             *y += HEADER;
             div()
@@ -720,7 +706,9 @@ impl SettingsView {
                 .child(text)
         };
         let status: AnyElement = match &self.page {
-            Page::Appearance | Page::Motion => pill(Some(theme.accent), "Shared by every Yozora app".into()).into_any_element(),
+            Page::Appearance | Page::Motion => {
+                pill(Some(theme.accent), "Shared by every Yozora app".into()).into_any_element()
+            }
             Page::App(id, _) => match self.app(id) {
                 Some(app) => match &app.status {
                     Status::Running { version, .. } => pill(
@@ -738,12 +726,12 @@ impl SettingsView {
                             .items_center()
                             .gap(px(8.))
                             .child(pill(Some(theme.ink_3), "Not running".into()))
-                            .child(widgets::button("start", Some(Icon::Power), "Start", true, theme).on_click(cx.listener(
-                                move |this, _, _, cx| {
+                            .child(widgets::button("start", Some(Icon::Power), "Start", true, theme).on_click(
+                                cx.listener(move |this, _, _, cx| {
                                     this.error = apps::start(&manifest).err().map(|e| format!("{e:#}"));
                                     cx.notify();
-                                },
-                            )))
+                                }),
+                            ))
                             .into_any_element()
                     }
                     Status::NoSocket => pill(None, "Applies when the app reloads".into()).into_any_element(),
@@ -830,11 +818,8 @@ impl SettingsView {
                         .text_size(px(11.5))
                         .line_height(px(17.))
                         .children(lines.into_iter().enumerate().map(move |(i, line)| {
-                            let row = div()
-                                .px(px(16.))
-                                .min_h(px(17.))
-                                .whitespace_nowrap()
-                                .children(colors.spans(&line));
+                            let row =
+                                div().px(px(16.)).min_h(px(17.)).whitespace_nowrap().children(colors.spans(&line));
                             if changed.contains(&i) {
                                 row.with_animation(
                                     SharedString::from(format!("chg-{file_key}-{saves}-{i}")),
@@ -884,7 +869,7 @@ impl SettingsView {
                     .items_center()
                     .gap(px(9.))
                     .flex_1()
-                .min_w_0()
+                    .min_w_0()
                     .text_size(px(12.5))
                     .text_color(theme.danger)
                     .child(icon_sized(Icon::Warning, 15.))
@@ -965,14 +950,15 @@ impl SettingsView {
                                 .on_click(cx.listener(|this, _, _, cx| this.restore_defaults(cx))),
                             )
                         })
-                        .child(widgets::button("open-file", Some(Icon::External), format!("Open {file}"), false, theme).on_click(
-                            move |_, _, _| {
-                                if !open_path.exists() {
-                                    let _ = yozora_config::edit::write_atomic(&open_path, b"");
-                                }
-                                apps::open(&open_path.to_string_lossy());
-                            },
-                        )),
+                        .child(
+                            widgets::button("open-file", Some(Icon::External), format!("Open {file}"), false, theme)
+                                .on_click(move |_, _, _| {
+                                    if !open_path.exists() {
+                                        let _ = yozora_config::edit::write_atomic(&open_path, b"");
+                                    }
+                                    apps::open(&open_path.to_string_lossy());
+                                }),
+                        ),
                 )
             })
     }
@@ -987,9 +973,11 @@ impl Render for SettingsView {
         let animated = if theme.motion.reduced {
             div()
                 .child(page)
-                .with_animation(("page", self.page_serial as usize), Animation::new(Duration::from_millis(120)), |el, t| {
-                    el.opacity(t)
-                })
+                .with_animation(
+                    ("page", self.page_serial as usize),
+                    Animation::new(Duration::from_millis(120)),
+                    |el, t| el.opacity(t),
+                )
                 .into_any_element()
         } else {
             div()
@@ -1010,12 +998,15 @@ impl Render for SettingsView {
                 window.focus(&focus, cx);
             }))
             .on_action(|_: &CloseWindow, window, _| window.remove_window())
-            .on_mouse_down(gpui::MouseButton::Left, cx.listener(|this, _, window, cx| {
-                // Clicking outside a text field commits it. Fields stop their own clicks.
-                if this.inputs.values().any(|(i, _)| i.read(cx).is_focused(window)) {
-                    window.focus(&this.focus, cx);
-                }
-            }))
+            .on_mouse_down(
+                gpui::MouseButton::Left,
+                cx.listener(|this, _, window, cx| {
+                    // Clicking outside a text field commits it. Fields stop their own clicks.
+                    if this.inputs.values().any(|(i, _)| i.read(cx).is_focused(window)) {
+                        window.focus(&this.focus, cx);
+                    }
+                }),
+            )
             .size_full()
             .flex()
             .bg(win_bg)
@@ -1038,15 +1029,7 @@ impl Render for SettingsView {
                             .gap(px(28.))
                             .px(px(40.))
                             .pb(px(20.))
-                            .child(
-                                div()
-                                    .id("page")
-                                    .flex_1()
-                                    .min_w_0()
-                                    .h_full()
-                                    .overflow_y_scroll()
-                                    .child(animated),
-                            )
+                            .child(div().id("page").flex_1().min_w_0().h_full().overflow_y_scroll().child(animated))
                             .children(toml),
                     )
                     .child(self.render_footer(&theme, cx)),
@@ -1111,7 +1094,8 @@ impl SyntaxColors {
     }
 
     fn spans(&self, line: &str) -> Vec<AnyElement> {
-        let span = |text: &str, color: Rgba| div().flex_none().text_color(color).child(text.to_string()).into_any_element();
+        let span =
+            |text: &str, color: Rgba| div().flex_none().text_color(color).child(text.to_string()).into_any_element();
         let row = |spans: Vec<AnyElement>| vec![div().flex().children(spans).into_any_element()];
         let trimmed = line.trim_start();
         if trimmed.starts_with('#') {

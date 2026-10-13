@@ -6,8 +6,8 @@
 use std::borrow::Cow;
 
 use gpui::{
-    App, AssetSource, Bounds, Element, ElementId, GlobalElementId, InspectorElementId, IntoElement, LayoutId,
-    Pixels, SharedString, StyleRefinement, Styled, Svg, Window, px, svg,
+    App, AssetSource, Bounds, Element, ElementId, GlobalElementId, InspectorElementId, IntoElement, LayoutId, Pixels,
+    SharedString, StyleRefinement, Styled, Svg, Window, px, svg,
 };
 
 /// Icons, by file name under `icons/`.
@@ -150,8 +150,7 @@ const ALL: &[Icon] = &[
 
 const ARC3: &str = r#"<path d="M2.5 9.2a14 14 0 0 1 19 0"/>"#;
 const ARC2: &str = r#"<path d="M5.6 12.6a9.5 9.5 0 0 1 12.8 0"/>"#;
-const ARC1: &str =
-    r#"<path d="M8.7 16a5 5 0 0 1 6.6 0"/><circle class="f" cx="12" cy="19.3" r="1.2"/>"#;
+const ARC1: &str = r#"<path d="M8.7 16a5 5 0 0 1 6.6 0"/><circle class="f" cx="12" cy="19.3" r="1.2"/>"#;
 const SPEAKER: &str = r#"<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/>"#;
 
 impl Icon {
@@ -245,10 +244,7 @@ impl Icon {
                 return format!(r#"<g opacity=".25">{ARC3}{ARC2}</g>{ARC1}"#).into();
             }
             Icon::WifiOff => {
-                return format!(
-                    r#"<g opacity=".28">{ARC3}{ARC2}</g>{ARC1}<path d="M4 3.5l16 17"/>"#
-                )
-                .into();
+                return format!(r#"<g opacity=".28">{ARC3}{ARC2}</g>{ARC1}<path d="M4 3.5l16 17"/>"#).into();
             }
             Icon::Ethernet => {
                 r#"<rect x="4" y="3.5" width="16" height="12" rx="2.4"/><path d="M8 15.5v2.5h8v-2.5M12 18v2.5M8.5 8h.01M12 8h.01M15.5 8h.01"/>"#
@@ -256,11 +252,12 @@ impl Icon {
             Icon::NetworkOff => {
                 r#"<path d="M4 9.5a12 12 0 0 1 3-2M10.5 6.2a12 12 0 0 1 9.5 3.3M7.3 13a7 7 0 0 1 3-1.6M15.2 11.7a7 7 0 0 1 1.5 1.3"/><circle class="f" cx="12" cy="18.5" r="1.3"/><path d="M4 3.5l16 17"/>"#
             }
-            Icon::Vpn => {
-                r#"<path d="M12 3.2l7 2.9v5.6c0 4.4-2.9 7.6-7 9.3-4.1-1.7-7-4.9-7-9.3V6.1z"/>"#
-            }
+            Icon::Vpn => r#"<path d="M12 3.2l7 2.9v5.6c0 4.4-2.9 7.6-7 9.3-4.1-1.7-7-4.9-7-9.3V6.1z"/>"#,
             Icon::VolumeHigh => {
-                return format!(r#"{SPEAKER}<path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.4 6.6a7.6 7.6 0 0 1 0 10.8"/>"#).into();
+                return format!(
+                    r#"{SPEAKER}<path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.4 6.6a7.6 7.6 0 0 1 0 10.8"/>"#
+                )
+                .into();
             }
             Icon::VolumeLow => {
                 return format!(r#"{SPEAKER}<path d="M15.6 9.2a4 4 0 0 1 0 5.6"/>"#).into();
@@ -280,16 +277,10 @@ impl Icon {
             Icon::Headphones => {
                 r#"<path d="M4.5 15.5V12a7.5 7.5 0 0 1 15 0v3.5"/><rect x="3.5" y="14" width="4.5" height="6.5" rx="1.6"/><rect x="16" y="14" width="4.5" height="6.5" rx="1.6"/>"#
             }
-            Icon::Display => {
-                r#"<rect x="3" y="4.5" width="18" height="12" rx="2.2"/><path d="M9 20h6M12 16.5V20"/>"#
-            }
+            Icon::Display => r#"<rect x="3" y="4.5" width="18" height="12" rx="2.2"/><path d="M9 20h6M12 16.5V20"/>"#,
             Icon::Bluetooth => r#"<path d="M7 7.5l10 9-5 4.5V3l5 4.5-10 9"/>"#,
-            Icon::BluetoothOff => {
-                r#"<g opacity=".45"><path d="M7 7.5l10 9-5 4.5V3l5 4.5-10 9"/></g>"#
-            }
-            Icon::Battery => {
-                r#"<rect x="2.5" y="7" width="17" height="10" rx="2.6"/><path d="M21.6 10.5v3"/>"#
-            }
+            Icon::BluetoothOff => r#"<g opacity=".45"><path d="M7 7.5l10 9-5 4.5V3l5 4.5-10 9"/></g>"#,
+            Icon::Battery => r#"<rect x="2.5" y="7" width="17" height="10" rx="2.6"/><path d="M21.6 10.5v3"/>"#,
             Icon::BatteryCharging => {
                 r#"<rect x="2.5" y="7" width="17" height="10" rx="2.6"/><path d="M21.6 10.5v3"/><path class="f" d="M11.8 8.4l-3.6 4.4h3l-.9 2.8 3.6-4.4h-3z"/>"#
             }
@@ -297,9 +288,7 @@ impl Icon {
                 r#"<path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 2h-14z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>"#
             }
             Icon::Moon => r#"<path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/>"#,
-            Icon::Appearance => {
-                r#"<circle cx="12" cy="12" r="8"/><path class="f" d="M12 4a8 8 0 0 1 0 16z"/>"#
-            }
+            Icon::Appearance => r#"<circle cx="12" cy="12" r="8"/><path class="f" d="M12 4a8 8 0 0 1 0 16z"/>"#,
             Icon::Check => r#"<path d="M5.5 12.5l4.2 4.2L18.5 8"/>"#,
             Icon::ChevronLeft => r#"<path d="M14.5 6.5l-5.5 5.5 5.5 5.5"/>"#,
             Icon::ChevronRight => r#"<path d="M9.5 6.5l5.5 5.5-5.5 5.5"/>"#,
@@ -313,9 +302,7 @@ impl Icon {
             Icon::Previous => {
                 r#"<path class="f" d="M20.5 6.8v10.4l-7.5-5.2z"/><path class="f" d="M12 6.8v10.4L4.5 12z"/>"#
             }
-            Icon::Next => {
-                r#"<path class="f" d="M3.5 6.8v10.4l7.5-5.2z"/><path class="f" d="M12 6.8v10.4l7.5-5.2z"/>"#
-            }
+            Icon::Next => r#"<path class="f" d="M3.5 6.8v10.4l7.5-5.2z"/><path class="f" d="M12 6.8v10.4l7.5-5.2z"/>"#,
             Icon::Close => r#"<path d="M7.5 7.5l9 9M16.5 7.5l-9 9"/>"#,
             Icon::Settings => {
                 r#"<path d="M4 7.5h9M18.5 7.5H20M4 16.5h1.5M11 16.5h9"/><circle cx="15.8" cy="7.5" r="2.3"/><circle cx="8.2" cy="16.5" r="2.3"/>"#
@@ -327,24 +314,18 @@ impl Icon {
             Icon::Keyboard => {
                 r#"<rect x="2.5" y="6.5" width="19" height="11" rx="2.6"/><path d="M6.5 10.2h.01M10 10.2h.01M13.5 10.2h.01M17 10.2h.01M7.5 14h9"/>"#
             }
-            Icon::Mouse => {
-                r#"<rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/>"#
-            }
+            Icon::Mouse => r#"<rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/>"#,
             Icon::Gamepad => {
                 r#"<path d="M7.5 8h9a4.5 4.5 0 0 1 4.4 5.5l-.7 3a2.3 2.3 0 0 1-3.9 1L14.6 16H9.4l-1.7 1.5a2.3 2.3 0 0 1-3.9-1l-.7-3A4.5 4.5 0 0 1 7.5 8z"/><path d="M8 11v3M6.5 12.5h3M15.5 12h.01M17.5 13.5h.01"/>"#
             }
-            Icon::Phone => {
-                r#"<rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M11 18.5h2"/>"#
-            }
+            Icon::Phone => r#"<rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M11 18.5h2"/>"#,
             Icon::Terminal => {
                 r#"<rect x="3" y="4.5" width="18" height="15" rx="2.6"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5"/>"#
             }
             Icon::Globe => {
                 r#"<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.5 3.6 5.4 3.6 8.5s-1.2 6-3.6 8.5c-2.4-2.5-3.6-5.4-3.6-8.5s1.2-6 3.6-8.5z"/>"#
             }
-            Icon::Package => {
-                r#"<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>"#
-            }
+            Icon::Package => r#"<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>"#,
             Icon::Sync => {
                 r#"<path d="M19.5 12a7.5 7.5 0 0 1-13.1 5"/><path d="M4.5 12a7.5 7.5 0 0 1 13.1-5"/><path d="M17.6 3.5V7h-3.5M6.4 20.5V17h3.5"/>"#
             }
@@ -361,9 +342,7 @@ impl Icon {
                 r#"<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>"#
             }
             Icon::Bolt => r#"<path d="M13 3L5.5 13.5h6L10.5 21 18.5 10.5h-6z"/>"#,
-            Icon::Leaf => {
-                r#"<path d="M5 19c0-8 5-13.5 14-14 .5 9-5 14-13 14z"/><path d="M5 19c3-4 6-6.5 9.5-8"/>"#
-            }
+            Icon::Leaf => r#"<path d="M5 19c0-8 5-13.5 14-14 .5 9-5 14-13 14z"/><path d="M5 19c3-4 6-6.5 9.5-8"/>"#,
             Icon::Gauge => {
                 r#"<path d="M4.2 17a8.5 8.5 0 1 1 15.6 0"/><path d="M12 13.5l4-4.5"/><circle class="f" cx="12" cy="13.5" r="1.5"/>"#
             }
@@ -374,16 +353,26 @@ impl Icon {
             Icon::Warning => r#"<path d="M12 4l9 15.5H3z"/><path d="M12 10v4M12 17h.01"/>"#,
             Icon::Bar => r#"<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/>"#,
             Icon::Motion => r#"<path d="M3 16c2.5 0 3-9 6-9s3 11 6 11 3.5-6 6-6"/>"#,
-            Icon::Modules => r#"<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>"#,
-            Icon::Info => r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><circle class="f" cx="12" cy="8" r="1.1"/>"#,
+            Icon::Modules => {
+                r#"<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>"#
+            }
+            Icon::Info => {
+                r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><circle class="f" cx="12" cy="8" r="1.1"/>"#
+            }
             Icon::Search => r#"<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>"#,
             Icon::File => r#"<path d="M7 3.5h7l4.5 4.5v12.5H7z"/><path d="M14 3.5V8h4.5"/>"#,
-            Icon::Grip => r#"<circle class="f" cx="9.5" cy="6" r="1.5"/><circle class="f" cx="14.5" cy="6" r="1.5"/><circle class="f" cx="9.5" cy="12" r="1.5"/><circle class="f" cx="14.5" cy="12" r="1.5"/><circle class="f" cx="9.5" cy="18" r="1.5"/><circle class="f" cx="14.5" cy="18" r="1.5"/>"#,
+            Icon::Grip => {
+                r#"<circle class="f" cx="9.5" cy="6" r="1.5"/><circle class="f" cx="14.5" cy="6" r="1.5"/><circle class="f" cx="9.5" cy="12" r="1.5"/><circle class="f" cx="14.5" cy="12" r="1.5"/><circle class="f" cx="9.5" cy="18" r="1.5"/><circle class="f" cx="14.5" cy="18" r="1.5"/>"#
+            }
             Icon::Plus => r#"<path d="M12 5v14M5 12h14"/>"#,
             Icon::Reset => r#"<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/>"#,
-            Icon::External => r#"<path d="M13.5 4.5H19.5V10.5M19.5 4.5L11 13M17 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 4 18.5v-10A1.5 1.5 0 0 1 5.5 7H10"/>"#,
+            Icon::External => {
+                r#"<path d="M13.5 4.5H19.5V10.5M19.5 4.5L11 13M17 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 4 18.5v-10A1.5 1.5 0 0 1 5.5 7H10"/>"#
+            }
             Icon::Code => r#"<path d="M8.5 7.5L4 12l4.5 4.5M15.5 7.5L20 12l-4.5 4.5"/>"#,
-            Icon::Window => r#"<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 8.5h17M6.5 6.5h.01M9 6.5h.01"/>"#,
+            Icon::Window => {
+                r#"<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 8.5h17M6.5 6.5h.01M9 6.5h.01"/>"#
+            }
         };
         Cow::Borrowed(s)
     }
@@ -412,9 +401,7 @@ impl Icon {
         let fill = if charging {
             String::new()
         } else {
-            format!(
-                r##"<rect fill="#000" stroke="none" x="4.6" y="9.1" width="{width}" height="5.8" rx="1.2"/>"##
-            )
+            format!(r##"<rect fill="#000" stroke="none" x="4.6" y="9.1" width="{width}" height="5.8" rx="1.2"/>"##)
         };
         format!(
             r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="17" height="10" rx="2.6"/><path d="M21.6 10.5v3"/>{fill}{bolt}</svg>"##
@@ -520,22 +507,14 @@ pub struct Assets;
 
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {
-        if let Some(name) = path
-            .strip_prefix("icons/")
-            .and_then(|p| p.strip_suffix(".svg"))
-        {
+        if let Some(name) = path.strip_prefix("icons/").and_then(|p| p.strip_suffix(".svg")) {
             if let Some(name) = name.strip_prefix("battery-level-") {
                 // battery-level-<percent>[-charging]
                 let charging = name.ends_with("-charging");
                 let percent = name.trim_end_matches("-charging").parse().unwrap_or(50.0);
-                return Ok(Some(Cow::Owned(
-                    Icon::battery_svg(percent, charging).into_bytes(),
-                )));
+                return Ok(Some(Cow::Owned(Icon::battery_svg(percent, charging).into_bytes())));
             }
-            return Ok(ALL
-                .iter()
-                .find(|i| i.name() == name)
-                .map(|i| Cow::Owned(i.svg_source().into_bytes())));
+            return Ok(ALL.iter().find(|i| i.name() == name).map(|i| Cow::Owned(i.svg_source().into_bytes())));
         }
         if path.starts_with('/') {
             return Ok(std::fs::read(path).ok().map(Cow::Owned));
@@ -569,16 +548,9 @@ mod tests {
     fn every_icon_is_valid_svg() {
         for icon in ALL {
             let source = icon.svg_source();
-            assert!(
-                source.starts_with("<svg") && source.ends_with("</svg>"),
-                "{icon:?}"
-            );
+            assert!(source.starts_with("<svg") && source.ends_with("</svg>"), "{icon:?}");
             assert!(!source.contains("class="), "{icon:?} kept a class");
-            assert_eq!(
-                source.matches('<').count(),
-                source.matches('>').count(),
-                "{icon:?}"
-            );
+            assert_eq!(source.matches('<').count(), source.matches('>').count(), "{icon:?}");
         }
         assert!(Assets.load("icons/battery-level-40.svg").unwrap().is_some());
         assert!(Assets.load("icons/nope.svg").unwrap().is_none());

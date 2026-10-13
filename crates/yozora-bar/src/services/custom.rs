@@ -43,14 +43,14 @@ pub fn start(cx: &mut App, config: BTreeMap<String, CustomConfig>) -> Entity<Cus
 
 pub fn parse_line(line: &str) -> Output {
     let line = line.trim();
-    if line.starts_with('{') {
-        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
-            return Output {
-                text: v["text"].as_str().unwrap_or_default().to_string(),
-                tooltip: v["tooltip"].as_str().unwrap_or_default().to_string(),
-                error: None,
-            };
-        }
+    if line.starts_with('{')
+        && let Ok(v) = serde_json::from_str::<serde_json::Value>(line)
+    {
+        return Output {
+            text: v["text"].as_str().unwrap_or_default().to_string(),
+            tooltip: v["tooltip"].as_str().unwrap_or_default().to_string(),
+            error: None,
+        };
     }
     Output { text: line.to_string(), ..Default::default() }
 }
@@ -83,10 +83,16 @@ fn spawn_worker(name: String, config: CustomConfig, tx: async_channel::Sender<(S
                 Some(secs) => {
                     let every = Duration::from_secs(secs.max(1));
                     while !stop.load(Ordering::Relaxed) {
-                        let out = match yozora_ui::gpu::child(&mut Command::new("sh")).arg("-c").arg(&config.exec).stdin(Stdio::null()).output() {
+                        let out = match yozora_ui::gpu::child(&mut Command::new("sh"))
+                            .arg("-c")
+                            .arg(&config.exec)
+                            .stdin(Stdio::null())
+                            .output()
+                        {
                             Ok(o) => {
                                 let text = String::from_utf8_lossy(&o.stdout);
-                                let mut out = parse_line(text.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or(""));
+                                let mut out =
+                                    parse_line(text.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or(""));
                                 if !o.status.success() {
                                     out.error = Some(format!("exited with {}", o.status));
                                 }
@@ -159,21 +165,22 @@ fn run(link: Link<State, Cmd>, config: BTreeMap<String, CustomConfig>) {
     let (tx, outputs) = async_channel::unbounded::<(String, Output)>();
     let mut workers: BTreeMap<String, Worker> = BTreeMap::new();
     let mut state = State::default();
-    let configure = |config: BTreeMap<String, CustomConfig>, workers: &mut BTreeMap<String, Worker>, state: &mut State| {
-        workers.retain(|name, w| {
-            let keep = config.get(name) == Some(&w.config);
-            if !keep {
-                w.stop();
-                state.outputs.remove(name);
+    let configure =
+        |config: BTreeMap<String, CustomConfig>, workers: &mut BTreeMap<String, Worker>, state: &mut State| {
+            workers.retain(|name, w| {
+                let keep = config.get(name) == Some(&w.config);
+                if !keep {
+                    w.stop();
+                    state.outputs.remove(name);
+                }
+                keep
+            });
+            for (name, c) in config {
+                if !workers.contains_key(&name) && !c.exec.trim().is_empty() {
+                    workers.insert(name.clone(), spawn_worker(name, c, tx.clone()));
+                }
             }
-            keep
-        });
-        for (name, c) in config {
-            if !workers.contains_key(&name) && !c.exec.trim().is_empty() {
-                workers.insert(name.clone(), spawn_worker(name, c, tx.clone()));
-            }
-        }
-    };
+        };
     configure(config, &mut workers, &mut state);
     link.publish(state.clone());
     loop {

@@ -18,7 +18,10 @@ pub enum Status {
     Unknown,
     /// The app has no control socket, so Settings can't tell.
     NoSocket,
-    Running { version: Option<String>, warnings: Vec<String> },
+    Running {
+        version: Option<String>,
+        warnings: Vec<String>,
+    },
     Stopped,
 }
 

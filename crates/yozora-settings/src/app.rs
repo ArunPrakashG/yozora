@@ -4,8 +4,8 @@
 use std::{path::PathBuf, time::Duration};
 
 use gpui::{
-    App, AppContext, Bounds, Global, KeyBinding, WeakEntity, WindowBackgroundAppearance,
-    WindowBounds, WindowDecorations, WindowOptions, actions, px, size,
+    App, AppContext, Bounds, Global, KeyBinding, WeakEntity, WindowBackgroundAppearance, WindowBounds,
+    WindowDecorations, WindowOptions, actions, px, size,
 };
 use serde_json::json;
 use yozora_config::{theme::ThemeConfig, watch::DirWatcher};
@@ -171,7 +171,7 @@ fn poll_status(view: WeakEntity<SettingsView>, cx: &mut App) {
     cx.spawn(async move |cx| {
         let mut tick = 0u32;
         loop {
-            if tick % 3 == 0 && view.update(cx, |view, cx| view.rescan(cx)).is_err() {
+            if tick.is_multiple_of(3) && view.update(cx, |view, cx| view.rescan(cx)).is_err() {
                 return;
             }
             let Ok(manifests) = view.read_with(cx, |view, _| view.manifests()) else {

@@ -72,7 +72,10 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Command, String> 
                     } else if Fakes::ALL.contains(&name) {
                         set.insert(name.to_string());
                     } else {
-                        return Err(format!("unknown fake backend {name:?}; expected one of {}", Fakes::ALL.join(", ")));
+                        return Err(format!(
+                            "unknown fake backend {name:?}; expected one of {}",
+                            Fakes::ALL.join(", ")
+                        ));
                     }
                 }
                 fakes = Fakes(set);

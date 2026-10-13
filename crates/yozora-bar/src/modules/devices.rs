@@ -6,7 +6,10 @@ use gpui::{
     AnyElement, App, Context, Div, FontWeight, IntoElement, ParentElement, SharedString, StatefulInteractiveElement,
     Styled, div, prelude::*, px,
 };
-use yozora_ui::{Icon, Theme, controls, icon, icons::{IconElement, battery_path}};
+use yozora_ui::{
+    Icon, Theme, controls, icon,
+    icons::{IconElement, battery_path},
+};
 
 use crate::{
     bar::bi,
@@ -104,8 +107,7 @@ fn send_bt(cmd: bluetooth::Cmd, cx: &App) {
 }
 
 fn which(program: &str) -> bool {
-    std::env::var_os("PATH")
-        .is_some_and(|paths| std::env::split_paths(&paths).any(|d| d.join(program).is_file()))
+    std::env::var_os("PATH").is_some_and(|paths| std::env::split_paths(&paths).any(|d| d.join(program).is_file()))
 }
 
 /// A Bluetooth manager to hand off to, if one is installed.
@@ -129,7 +131,10 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
     rows.push(controls::header("Bluetooth", div().children(header_switch)).into_any_element());
 
     if state.adapter.is_none() {
-        rows.push(controls::empty(&["No Bluetooth adapter.", "BlueZ is not running or found no hardware."], theme).into_any_element());
+        rows.push(
+            controls::empty(&["No Bluetooth adapter.", "BlueZ is not running or found no hardware."], theme)
+                .into_any_element(),
+        );
     } else if !on {
         rows.push(
             controls::empty(&["Bluetooth is off.", "Wired devices that report a battery still show here."], theme)
@@ -178,7 +183,10 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
             rows.push(div().flex().flex_col().children(list).into_any_element());
         }
         if connected.is_empty() && paired.is_empty() {
-            rows.push(controls::empty(&["No paired devices.", "Pair new devices with a Bluetooth manager."], theme).into_any_element());
+            rows.push(
+                controls::empty(&["No paired devices.", "Pair new devices with a Bluetooth manager."], theme)
+                    .into_any_element(),
+            );
         }
     }
 
@@ -188,7 +196,8 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
         .iter()
         .filter(|p| {
             !shown.iter().any(|d| {
-                p.address.as_ref().is_some_and(|a| a.eq_ignore_ascii_case(&d.address)) || p.name.eq_ignore_ascii_case(&d.name)
+                p.address.as_ref().is_some_and(|a| a.eq_ignore_ascii_case(&d.address))
+                    || p.name.eq_ignore_ascii_case(&d.name)
             })
         })
         .collect();
@@ -250,7 +259,12 @@ pub fn profile_picker(theme: &Theme, cx: &App) -> Option<AnyElement> {
                     .text_size(px(12.))
                     .text_color(theme.ink_2)
                     .child("Power profile")
-                    .child(div().font_weight(FontWeight::MEDIUM).text_color(theme.ink).child(power::profile_label(&current).to_string())),
+                    .child(
+                        div()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(theme.ink)
+                            .child(power::profile_label(&current).to_string()),
+                    ),
             )
             .child(controls::segmented("profile", &labels, selected, theme, move |i, _, cx| {
                 if let Some(p) = profiles.get(i) {
@@ -286,11 +300,13 @@ pub fn battery_popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover
                     .pt(px(4.))
                     .pb(px(12.))
                     .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .child(super::calendar::eyebrow(status, theme))
-                            .child(div().text_size(px(22.)).font_weight(FontWeight::SEMIBOLD).mt(px(3.)).child(format!("{}%", b.percent.round()))),
+                        div().flex().flex_col().child(super::calendar::eyebrow(status, theme)).child(
+                            div()
+                                .text_size(px(22.))
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .mt(px(3.))
+                                .child(format!("{}%", b.percent.round())),
+                        ),
                     )
                     .children(left.map(|l| controls::muted(l, theme).pb(px(2.))))
                     .into_any_element(),

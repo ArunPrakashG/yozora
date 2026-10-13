@@ -7,10 +7,7 @@ fn home() -> PathBuf {
 }
 
 fn xdg(var: &str, fallback: &str) -> PathBuf {
-    env::var_os(var)
-        .map(PathBuf::from)
-        .filter(|p| p.is_absolute())
-        .unwrap_or_else(|| home().join(fallback))
+    env::var_os(var).map(PathBuf::from).filter(|p| p.is_absolute()).unwrap_or_else(|| home().join(fallback))
 }
 
 /// `~/.config/yozora`, or `$YOZORA_CONFIG_DIR` when set (tests, `--config`).
@@ -22,9 +19,7 @@ pub fn config_dir() -> PathBuf {
 
 /// `$XDG_RUNTIME_DIR/yozora`, where control sockets live.
 pub fn runtime_dir() -> PathBuf {
-    let base = env::var_os("XDG_RUNTIME_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(env::temp_dir);
+    let base = env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from).unwrap_or_else(env::temp_dir);
     base.join("yozora")
 }
 

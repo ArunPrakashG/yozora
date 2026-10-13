@@ -9,9 +9,8 @@ use std::{
 
 use gpui::{
     AnyElement, App, Bounds, Context, Div, ElementId, FontWeight, InteractiveElement, IntoElement, MouseButton,
-    ParentElement, Pixels, Render, Styled, Subscription, WeakEntity, Window, WindowBackgroundAppearance,
-    WindowBounds, WindowHandle, WindowKind, WindowOptions, canvas, div, layer_shell::*, point, prelude::*, px,
-    size,
+    ParentElement, Pixels, Render, Styled, Subscription, WeakEntity, Window, WindowBackgroundAppearance, WindowBounds,
+    WindowHandle, WindowKind, WindowOptions, canvas, div, layer_shell::*, point, prelude::*, px, size,
 };
 use serde_json::json;
 use yozora_config::bar::BarStyle;
@@ -337,10 +336,10 @@ impl Bar {
         cx: &mut Context<Self>,
     ) -> f32 {
         let benching = self.benching_workspaces();
-        if let (Some(t), false) = (target, benching) {
-            if self.indicator.target() != t as f32 {
-                self.indicator.set_target(t as f32);
-            }
+        if let (Some(t), false) = (target, benching)
+            && self.indicator.target() != t as f32
+        {
+            self.indicator.set_target(t as f32);
         }
         if reduced && !benching {
             self.indicator = Spring::new(self.indicator.target(), SpringConfig::INDICATOR);
@@ -512,11 +511,10 @@ impl Render for Bar {
 fn spawn_clock(cx: &mut Context<Bar>) {
     cx.spawn(async move |bar, cx| {
         loop {
-            let seconds = cx
-                .update(|cx| {
-                    let f = &Config::get(cx).settings.bar.clock.format;
-                    f.contains("%S") || f.contains("%T") || f.contains("%r") || f.contains("%X")
-                });
+            let seconds = cx.update(|cx| {
+                let f = &Config::get(cx).settings.bar.clock.format;
+                f.contains("%S") || f.contains("%T") || f.contains("%r") || f.contains("%X")
+            });
             let now = chrono::Local::now();
             let nanos = u64::from(chrono::Timelike::nanosecond(&now) % 1_000_000_000);
             let into_second = Duration::from_nanos(nanos);

@@ -42,7 +42,8 @@ pub fn curve(config: SpringConfig) -> Curve {
     let t95_ms = (0..2000).find(|ms| step_response(config, *ms as f32 / 1000.) >= 0.95).unwrap_or(0);
     let w0 = config.stiffness.sqrt();
     let zeta = config.damping / (2. * w0);
-    let overshoot = if zeta < 1. { (-zeta * std::f32::consts::PI / (1. - zeta * zeta).sqrt()).exp() * 100. } else { 0. };
+    let overshoot =
+        if zeta < 1. { (-zeta * std::f32::consts::PI / (1. - zeta * zeta).sqrt()).exp() * 100. } else { 0. };
     Curve { t95_ms, overshoot, rest_ms: settle_time(config).as_millis() as u32 }
 }
 
@@ -91,7 +92,7 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
             }
             ghost.line_to(at(GRAPH_MS, 1.));
             if let Ok(path) = ghost.build() {
-                window.paint_path(path, with_alpha(ink_3.into(), 0xA0));
+                window.paint_path(path, with_alpha(ink_3, 0xA0));
             }
             // The spring, as reduced motion would play it when that's on.
             let mut line = PathBuilder::stroke(px(2.2));

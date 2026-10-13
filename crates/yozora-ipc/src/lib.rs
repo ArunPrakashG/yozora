@@ -128,10 +128,7 @@ impl Drop for Server {
     }
 }
 
-async fn handle(
-    stream: Async<UnixStream>,
-    sink: &async_channel::Sender<Incoming>,
-) -> anyhow::Result<()> {
+async fn handle(stream: Async<UnixStream>, sink: &async_channel::Sender<Incoming>) -> anyhow::Result<()> {
     let mut reader = AsyncBufReader::new(&stream);
     let mut line = String::new();
     reader
