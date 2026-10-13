@@ -1,0 +1,17 @@
+[Unit]
+Description=Yozora Notify, the notification server
+Documentation=https://github.com/ArunPrakashG/yozora
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.Notifications
+ExecStart=/usr/bin/yozora-notify
+Restart=on-failure
+RestartSec=2
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target

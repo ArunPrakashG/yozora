@@ -1,9 +1,12 @@
-//! Notification history and Do Not Disturb, from mako over D-Bus.
+//! Notification history and Do Not Disturb, from Yozora Notify or else mako, over D-Bus.
 //!
-//! mako keeps showing notifications itself; the bar only reads its history and toggles its
-//! `do-not-disturb` mode. mako has no call to clear its history, so "Clear all" and dismissing
-//! from history hide entries here, remembered in `$XDG_STATE_HOME/yozora/notifications.json`.
-//! mako doesn't record when a notification arrived, so the bar notes when it first saw each.
+//! Either daemon shows notifications itself; the bar reads the history for its notification
+//! center and toggles Do Not Disturb.
+//!
+//! Yozora Notify keeps the history, the read marker and Do Not Disturb, and the bar only asks.
+//! mako has no call to clear its history, so with mako "Clear all" and dismissing from history
+//! hide entries here, remembered in `$XDG_STATE_HOME/yozora/notifications.json`. mako doesn't
+//! record when a notification arrived either, so the bar notes when it first saw each.
 
 use std::{
     collections::{BTreeMap, HashMap},
@@ -25,7 +28,17 @@ use super::{
 const DEST: &str = "org.freedesktop.Notifications";
 const PATH: &str = "/fr/emersion/Mako";
 const IFACE: &str = "fr.emersion.Mako";
+const YZ_PATH: &str = "/dev/yozora/Notify";
+const YZ_IFACE: &str = "dev.yozora.Notify1";
 pub const DND_MODE: &str = "do-not-disturb";
+
+/// Which daemon the history comes from.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Daemon {
+    #[default]
+    Yozora,
+    Mako,
+}
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Notification {
@@ -38,8 +51,10 @@ pub struct Notification {
     /// The icon file to draw, looked up and shrunk here so the UI thread doesn't.
     pub icon_path: Option<PathBuf>,
     pub urgency: u8,
-    /// Unix seconds when the bar first saw it, if it was around to see it.
+    /// Unix seconds when it arrived, or when the bar first saw it if the daemon doesn't say.
     pub seen: Option<u64>,
+    /// Clicking it opens something in the app.
+    pub default_action: bool,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -48,6 +63,7 @@ pub struct State {
     pub items: Vec<Notification>,
     pub dnd: bool,
     pub unread: bool,
+    pub daemon: Daemon,
 }
 
 #[derive(Clone, Debug)]
@@ -56,6 +72,8 @@ pub enum Cmd {
     Dismiss(u32),
     ClearAll,
     MarkRead,
+    /// Runs a notification's default action. Yozora Notify only.
+    Activate(u32),
 }
 
 pub fn start(cx: &mut App, fake: bool) -> Entity<Notifications> {
@@ -129,16 +147,19 @@ fn parse(list: Vec<HashMap<String, OwnedValue>>) -> Vec<Notification> {
             let icon = dbus::string(&n, "app-icon");
             let desktop_entry = dbus::string(&n, "desktop-entry");
             let app = dbus::string(&n, "app-name");
+            // Yozora Notify has already looked the icon up and sized it.
+            let resolved = Some(dbus::string(&n, "icon")).filter(|p| !p.is_empty()).map(PathBuf::from);
             Notification {
                 id: dbus::get(&n, "id").unwrap_or(0),
-                icon_path: icon_path(&icon, &desktop_entry, &app),
+                icon_path: resolved.or_else(|| icon_path(&icon, &desktop_entry, &app)),
                 app,
                 summary: strip_markup(&dbus::string(&n, "summary")),
                 body: strip_markup(&dbus::string(&n, "body")).trim().to_string(),
                 icon,
                 desktop_entry,
                 urgency: dbus::get(&n, "urgency").unwrap_or(1),
-                seen: None,
+                seen: dbus::get::<u64>(&n, "time").filter(|t| *t > 0),
+                default_action: dbus::get(&n, "default-action").unwrap_or(false),
             }
         })
         .collect()
@@ -201,16 +222,63 @@ async fn snapshot(conn: &Connection, saved: &mut Saved, first: bool) -> anyhow::
         unread: items.iter().any(|n| n.id > saved.last_read),
         items,
         dnd: modes(conn).await?.iter().any(|m| m == DND_MODE),
+        daemon: Daemon::Mako,
     })
+}
+
+async fn yozora_state(conn: &Connection) -> anyhow::Result<(bool, bool)> {
+    dbus::call(conn, DEST, YZ_PATH, YZ_IFACE, "GetState", &()).await
+}
+
+async fn yozora_snapshot(conn: &Connection) -> anyhow::Result<State> {
+    let list: Vec<HashMap<String, OwnedValue>> = dbus::call(conn, DEST, YZ_PATH, YZ_IFACE, "List", &()).await?;
+    let (dnd, unread) = yozora_state(conn).await?;
+    Ok(State { items: parse(list), dnd, unread, daemon: Daemon::Yozora })
 }
 
 async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
     let conn = Connection::session().await?;
     if !dbus::name_has_owner(&conn, DEST).await {
-        anyhow::bail!("no notification daemon on the session bus; is mako running?");
+        anyhow::bail!("no notification server on the session bus; start yozora-notify or mako");
     }
-    // Fails fast when the daemon isn't mako.
-    modes(&conn).await.map_err(|e| e.context("the notification daemon is not mako"))?;
+    if yozora_state(&conn).await.is_ok() {
+        return run_yozora(link, &conn).await;
+    }
+    // Fails fast when the daemon is neither.
+    modes(&conn).await.map_err(|e| e.context("the notification server is neither yozora-notify nor mako"))?;
+    run_mako(link, &conn).await
+}
+
+async fn run_yozora(link: &Link<State, Cmd>, conn: &Connection) -> anyhow::Result<()> {
+    let mut stream = dbus::signals_from(conn, DEST).await?;
+    link.publish(yozora_snapshot(conn).await?);
+    loop {
+        match dbus::next(&link.cmds, &mut stream, Duration::from_millis(40)).await? {
+            Wake::Quit => return Ok(()),
+            Wake::Changed => {}
+            Wake::Command(cmd) => {
+                let call = |method: &'static str| dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, method, &());
+                match cmd {
+                    Cmd::SetDnd(on) => dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "SetDoNotDisturb", &(on,)).await?,
+                    Cmd::Dismiss(id) => dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "Dismiss", &(id,)).await?,
+                    Cmd::Activate(id) => {
+                        dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "InvokeAction", &(id, "default")).await?
+                    }
+                    Cmd::ClearAll => call("ClearAll").await?,
+                    Cmd::MarkRead => call("MarkRead").await?,
+                }
+            }
+        }
+        // The daemon may have been replaced, by mako say: start over to find out.
+        if yozora_state(conn).await.is_err() {
+            anyhow::bail!("the notification server went away");
+        }
+        link.publish(yozora_snapshot(conn).await?);
+    }
+}
+
+async fn run_mako(link: &Link<State, Cmd>, conn: &Connection) -> anyhow::Result<()> {
+    let conn = conn.clone();
     let mut stream = dbus::signals_from(&conn, DEST).await?;
     let mut saved = Saved::load();
     let first = snapshot(&conn, &mut saved, true).await?;
@@ -250,6 +318,8 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
                         st.items.iter().map(|n| n.id).max().unwrap_or(saved.last_read).max(saved.last_read);
                     saved.save();
                 }
+                // mako runs actions from its own popups only.
+                Cmd::Activate(_) => {}
             },
         }
         link.publish(snapshot(&conn, &mut saved, false).await?);
@@ -268,6 +338,7 @@ fn run_fake(link: Link<State, Cmd>) {
         icon_path: None,
         urgency: 1,
         seen: Some(t - ago),
+        default_action: false,
     };
     let mut state = State {
         items: vec![
@@ -278,6 +349,7 @@ fn run_fake(link: Link<State, Cmd>) {
         ],
         dnd: false,
         unread: true,
+        daemon: Daemon::Yozora,
     };
     link.publish(state.clone());
     while let Ok(cmd) = link.cmds.recv_blocking() {
@@ -286,6 +358,7 @@ fn run_fake(link: Link<State, Cmd>) {
             Cmd::Dismiss(id) => state.items.retain(|n| n.id != id),
             Cmd::ClearAll => state.items.clear(),
             Cmd::MarkRead => state.unread = false,
+            Cmd::Activate(id) => state.items.retain(|n| n.id != id),
         }
         if !link.publish(state.clone()) {
             break;
@@ -295,7 +368,11 @@ fn run_fake(link: Link<State, Cmd>) {
 
 pub async fn check() -> anyhow::Result<String> {
     let conn = Connection::session().await?;
-    let modes = modes(&conn).await.map_err(|e| e.context("is mako running?"))?;
+    if let Ok(st) = yozora_snapshot(&conn).await {
+        let dnd = if st.dnd { "on" } else { "off" };
+        return Ok(format!("yozora-notify · {} in history · do not disturb {dnd}", st.items.len()));
+    }
+    let modes = modes(&conn).await.map_err(|e| e.context("is yozora-notify or mako running?"))?;
     let history: Vec<HashMap<String, OwnedValue>> = dbus::call(&conn, DEST, PATH, IFACE, "ListHistory", &()).await?;
     Ok(format!("mako · {} in history · modes: {}", history.len(), modes.join(", ")))
 }

@@ -1,4 +1,4 @@
-//! Notification history from mako, and Do Not Disturb.
+//! The notification center, grouped by app, and Do Not Disturb.
 
 use gpui::{
     AnyElement, App, Context, Div, FontWeight, InteractiveElement, IntoElement, ParentElement,
@@ -9,7 +9,10 @@ use yozora_ui::{Icon, IconElement, Theme, controls, icon, icon_sized};
 use crate::{
     bar::bi,
     popover::Popover,
-    services::{Services, icons, notifications::Cmd},
+    services::{
+        Services, icons,
+        notifications::{Cmd, Daemon, Notification},
+    },
 };
 
 pub fn item(theme: &Theme, cx: &App) -> Option<Div> {
@@ -50,7 +53,7 @@ pub fn dnd_switch(theme: &Theme, cx: &App) -> Option<AnyElement> {
     Some(controls::switch("dnd", on, theme).on_click(move |_, _, cx| send(Cmd::SetDnd(!on), cx)).into_any_element())
 }
 
-pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec<AnyElement> {
+pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec<AnyElement> {
     let Some(service) = Services::get(cx).notifications.as_ref().map(|n| n.read(cx)) else { return Vec::new() };
     let state = service.state.clone();
     let error = service.error.clone();
@@ -71,7 +74,7 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
         .into_any_element(),
     );
     if let Some(e) = error {
-        rows.push(controls::empty(&["mako is not running.", e.as_str()], theme).into_any_element());
+        rows.push(controls::empty(&["No notification server is running.", e.as_str()], theme).into_any_element());
         return rows;
     }
     if state.items.is_empty() {
@@ -82,102 +85,83 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
                 .items_center()
                 .py(px(26.))
                 .gap(px(10.))
-                .child(icon_sized(Icon::Bell, 22.).text_color(theme.accent))
+                .child(icon_sized(Icon::Check, 22.).text_color(theme.accent))
                 .child(controls::muted("You're all caught up.", theme))
                 .into_any_element(),
         );
     }
-    for (i, n) in state.items.iter().take(30).enumerate() {
-        let id = n.id;
-        let glyph = n.icon_path.clone();
-        let fallback = fallback_icon(&n.app, &n.desktop_entry);
-        let urgent = n.urgency >= 2;
-        let when = n.seen.filter(|s| *s > 0).map(super::ago);
-        rows.push(
+    let mut shown = 0;
+    for (g, group) in groups(&state.items).into_iter().enumerate() {
+        if shown >= 30 {
+            break;
+        }
+        let app = group[0].app.clone();
+        let expanded = group.len() == 1 || p.ui.expanded.contains(&app);
+        let glyph = yozora_ui::icons::guess_app_icon(&app, &group[0].desktop_entry);
+        let toggle_app = app.clone();
+        let mut el = div().flex().flex_col().pt(px(if g == 0 { 0. } else { 8. })).child(
             div()
-                .id(("notification", i))
-                .group("nt")
-                .relative()
+                .id(("group", g))
                 .flex()
-                .gap(px(11.))
-                .px(px(11.))
-                .py(px(10.))
-                .mb(px(6.))
-                .rounded(px(12.))
-                .bg(theme.fill)
-                .border_1()
-                .border_color(if urgent { theme.danger } else { theme.hair })
-                .child(
-                    div()
-                        .size(px(32.))
-                        .flex_none()
-                        .rounded(px(9.))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .bg(theme.fill_3)
-                        .overflow_hidden()
-                        .child(match glyph {
-                            Some(path) if icons::is_symbolic(&path) => {
-                                IconElement::from_path(path.to_string_lossy().into_owned(), 18.)
-                                    .text_color(theme.ink)
-                                    .into_any_element()
+                .items_center()
+                .justify_between()
+                .px(px(6.))
+                .pt(px(4.))
+                .pb(px(6.))
+                .text_size(px(11.))
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(theme.ink_3)
+                .child(div().flex().items_center().gap(px(8.)).child(icon_sized(glyph, 13.)).child(if app.is_empty() {
+                    "NOTIFICATIONS".to_string()
+                } else {
+                    app.to_uppercase()
+                }))
+                .child(div().font_weight(FontWeight::NORMAL).child(if group.len() > 1 && expanded {
+                    "Show less".to_string()
+                } else {
+                    group.len().to_string()
+                }))
+                .when(group.len() > 1, |el| {
+                    el.cursor_pointer().hover(|s| s.text_color(theme.ink_2)).on_click(cx.listener(
+                        move |p, _, _, cx| {
+                            if !p.ui.expanded.remove(&toggle_app) {
+                                p.ui.expanded.insert(toggle_app.clone());
                             }
-                            Some(path) => img(path).size(px(22.)).into_any_element(),
-                            None => icon_sized(fallback, 17.).text_color(theme.ink_2).into_any_element(),
-                        }),
-                )
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .flex()
-                        .flex_col()
-                        .child(
-                            div()
-                                .flex()
-                                .justify_between()
-                                .text_size(px(11.5))
-                                .text_color(theme.ink_2)
-                                .child(n.app.clone())
-                                .children(when),
-                        )
-                        .child(div().font_weight(FontWeight::SEMIBOLD).mt(px(1.)).child(n.summary.clone()))
-                        .when(!n.body.is_empty(), |el| {
-                            el.child(
-                                div()
-                                    .mt(px(1.))
-                                    .text_size(px(12.5))
-                                    .text_color(theme.ink_2)
-                                    .line_height(px(17.5))
-                                    .child(super::ellipsize(&n.body, 280)),
-                            )
-                        }),
-                )
-                .child(
-                    div()
-                        .id(("dismiss", i))
-                        .absolute()
-                        .top(px(-6.))
-                        .left(px(-6.))
-                        .size(px(20.))
-                        .rounded_full()
-                        .bg(theme.glass_pop)
-                        .border_1()
-                        .border_color(theme.hair_2)
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .cursor_pointer()
-                        .opacity(0.)
-                        .group_hover("nt", |s| s.opacity(1.))
-                        .child(icon_sized(Icon::Close, 11.))
-                        .on_click(move |_, _, cx| send(Cmd::Dismiss(id), cx)),
-                )
-                .into_any_element(),
+                            cx.notify();
+                        },
+                    ))
+                }),
         );
+        let take = if expanded { group.len() } else { 1 };
+        for n in group.iter().take(take) {
+            el = el.child(card(n, shown, theme, cx));
+            shown += 1;
+        }
+        if !expanded {
+            // The rest peek out from under the newest, like a stack of cards.
+            let peek_app = app.clone();
+            el = el.child(
+                div()
+                    .id(("peek", g))
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .cursor_pointer()
+                    .child(div().h(px(7.)).w_full().px(px(10.)).child(peek(theme, 1.)))
+                    .when(group.len() > 2, |el| el.child(div().h(px(6.)).w_full().px(px(20.)).child(peek(theme, 0.7))))
+                    .on_click(cx.listener(move |p, _, _, cx| {
+                        p.ui.expanded.insert(peek_app.clone());
+                        cx.notify();
+                    })),
+            );
+        }
+        rows.push(el.into_any_element());
     }
-    let note = if fake { "History from mako · fake" } else { "History from mako" };
+    let note = match (fake, state.daemon) {
+        (true, _) => "History · fake",
+        (false, Daemon::Yozora) => "History from Yozora Notify",
+        (false, Daemon::Mako) => "History from mako",
+    };
     rows.push(
         controls::footer(
             note,
@@ -189,40 +173,125 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
     rows
 }
 
-/// A built-in icon for a notification with no icon of its own, guessed from the app's name.
-fn fallback_icon(app: &str, desktop_entry: &str) -> Icon {
-    let name = format!("{app} {desktop_entry}").to_lowercase();
-    let has = |words: &[&str]| words.iter().any(|w| name.contains(w));
-    if has(&["terminal", "kitty", "alacritty", "foot", "wezterm", "ghostty", "konsole"]) {
-        Icon::Terminal
-    } else if has(&["firefox", "chrom", "browser", "brave", "zen", "vivaldi", "epiphany"]) {
-        Icon::Globe
-    } else if has(&["update", "pacman", "paru", "yay", "package", "pamac", "flatpak"]) {
-        Icon::Package
-    } else if has(&["sync", "nextcloud", "dropbox", "drive", "cloud"]) {
-        Icon::Sync
-    } else if has(&["spotify", "music", "player", "mpv", "vlc"]) {
-        Icon::Music
-    } else if has(&["bluetooth", "blueman"]) {
-        Icon::Bluetooth
-    } else if has(&["network", "nm-applet"]) {
-        Icon::Wifi
-    } else if has(&["battery", "power", "upower"]) {
-        Icon::Battery
-    } else {
-        Icon::Bell
-    }
+/// The edge of a card hidden under the one above it.
+fn peek(theme: &Theme, opacity: f32) -> impl IntoElement {
+    div()
+        .size_full()
+        .rounded_b(px(10.))
+        .bg(theme.fill_2)
+        .border_1()
+        .border_t_0()
+        .border_color(theme.hair_2)
+        .opacity(opacity)
 }
 
-#[cfg(test)]
-mod tests {
-    use yozora_ui::Icon;
-
-    #[test]
-    fn guesses_fallback_icons() {
-        assert_eq!(super::fallback_icon("Terminal", ""), Icon::Terminal);
-        assert_eq!(super::fallback_icon("", "org.mozilla.firefox"), Icon::Globe);
-        assert_eq!(super::fallback_icon("Syncthing", ""), Icon::Sync);
-        assert_eq!(super::fallback_icon("notify-send", ""), Icon::Bell);
+/// Notifications grouped by app, groups ordered by their newest notification.
+fn groups(items: &[Notification]) -> Vec<Vec<&Notification>> {
+    let mut groups: Vec<Vec<&Notification>> = Vec::new();
+    for n in items {
+        match groups.iter_mut().find(|g| g[0].app == n.app) {
+            Some(g) => g.push(n),
+            None => groups.push(vec![n]),
+        }
     }
+    groups
+}
+
+fn card(n: &Notification, i: usize, theme: &Theme, cx: &mut Context<Popover>) -> AnyElement {
+    let id = n.id;
+    let glyph = n.icon_path.clone();
+    let fallback = yozora_ui::icons::guess_app_icon(&n.app, &n.desktop_entry);
+    let urgent = n.urgency >= 2;
+    let when = n.seen.filter(|s| *s > 0).map(super::ago);
+    let activate = n.default_action;
+    div()
+        .id(("notification", i))
+        .group("nt")
+        .relative()
+        .flex()
+        .gap(px(11.))
+        .px(px(11.))
+        .py(px(10.))
+        .mt(px(if i == 0 { 0. } else { 6. }))
+        .rounded(px(12.))
+        .bg(theme.fill)
+        .border_1()
+        .border_color(if urgent { theme.danger } else { theme.hair })
+        .when(activate, |el| {
+            el.cursor_pointer().hover(|s| s.bg(theme.fill_2)).on_click(cx.listener(move |p, _, _, cx| {
+                send(Cmd::Activate(id), cx);
+                p.close(cx);
+            }))
+        })
+        .child(
+            div()
+                .size(px(32.))
+                .flex_none()
+                .rounded(px(9.))
+                .flex()
+                .items_center()
+                .justify_center()
+                .bg(theme.fill_3)
+                .overflow_hidden()
+                .child(match glyph {
+                    Some(path) if icons::is_symbolic(&path) => {
+                        IconElement::from_path(path.to_string_lossy().into_owned(), 18.)
+                            .text_color(theme.ink)
+                            .into_any_element()
+                    }
+                    Some(path) => img(path).size(px(22.)).into_any_element(),
+                    None => icon_sized(fallback, 17.).text_color(theme.ink_2).into_any_element(),
+                }),
+        )
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .flex()
+                .flex_col()
+                .child(
+                    div()
+                        .flex()
+                        .justify_between()
+                        .text_size(px(11.5))
+                        .text_color(theme.ink_2)
+                        .child(n.app.clone())
+                        .children(when),
+                )
+                .child(div().font_weight(FontWeight::SEMIBOLD).mt(px(1.)).child(n.summary.clone()))
+                .when(!n.body.is_empty(), |el| {
+                    el.child(
+                        div()
+                            .mt(px(1.))
+                            .text_size(px(12.5))
+                            .text_color(theme.ink_2)
+                            .line_height(px(17.5))
+                            .child(super::ellipsize(&n.body, 280)),
+                    )
+                }),
+        )
+        .child(
+            div()
+                .id(("dismiss", i))
+                .absolute()
+                .top(px(-6.))
+                .left(px(-6.))
+                .size(px(20.))
+                .rounded_full()
+                .bg(theme.glass_pop)
+                .border_1()
+                .border_color(theme.hair_2)
+                .flex()
+                .items_center()
+                .justify_center()
+                .cursor_pointer()
+                .opacity(0.)
+                .group_hover("nt", |s| s.opacity(1.))
+                .child(icon_sized(Icon::Close, 11.))
+                .on_click(move |_, _, cx| {
+                    cx.stop_propagation();
+                    send(Cmd::Dismiss(id), cx);
+                }),
+        )
+        .into_any_element()
 }

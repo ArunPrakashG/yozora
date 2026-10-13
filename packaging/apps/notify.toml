@@ -1,0 +1,10 @@
+# Installed to /usr/share/yozora/apps/notify.toml. Yozora Settings finds the notification server
+# through this file.
+id          = "notify"
+name        = "Yozora Notify"
+binary      = "yozora-notify"
+icon        = "yozora-notify"
+description = "Notification toasts in the bar's style, with a history for the notification center."
+config      = "notify.toml"
+settings    = "notify.settings.toml"
+socket      = "notify.sock"

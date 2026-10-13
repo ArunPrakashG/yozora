@@ -232,7 +232,7 @@ pub fn load(dir: &Path) -> anyhow::Result<Loaded<BarSettings>> {
     Ok(Loaded { value, warnings })
 }
 
-fn merge(base: &mut toml::Table, over: toml::Table) {
+pub(crate) fn merge(base: &mut toml::Table, over: toml::Table) {
     for (key, value) in over {
         match (base.get_mut(&key), value) {
             (Some(toml::Value::Table(b)), toml::Value::Table(o)) => merge(b, o),

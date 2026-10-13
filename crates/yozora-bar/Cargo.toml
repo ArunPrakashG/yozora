@@ -15,7 +15,6 @@ async-io.workspace = true
 chrono.workspace = true
 futures-lite.workspace = true
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
-resvg = { version = "0.46", default-features = false }
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true

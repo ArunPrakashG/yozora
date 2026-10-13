@@ -5,6 +5,8 @@ Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in 
 
 - **Yozora Bar** is a top panel and Waybar alternative. It has spring-based motion, glass
   popovers and near-zero cost when idle.
+- **Yozora Notify** is the notification server. Toasts match the bar's popovers, and the bar's
+  notification center shows the history, grouped by app. It replaces mako or dunst.
 - **Yozora Settings** edits every Yozora app's configuration. It finds installed apps on its
   own, so a new tool shows up without Settings being rebuilt.
 
@@ -26,7 +28,7 @@ Expect rough edges; see [Known limitations](#known-limitations).
 | `sound` | Volume | Output and input sliders, devices | PulseAudio or pipewire-pulse |
 | `devices` | Bluetooth | Paired devices and their batteries | BlueZ |
 | `battery` | Charge | Time left, power profile | UPower, power-profiles-daemon |
-| `notifications` | A bell with a dot | History, Do Not Disturb | mako |
+| `notifications` | A bell with a dot | History grouped by app, Do Not Disturb | yozora-notify, or mako |
 | `clock` | Date and time | Calendar with ISO weeks | — |
 | `control-center` | Quick settings | Wi-Fi, Bluetooth, DND, dark mode, volume, power | — |
 | `custom/<name>` | Your command's output | — (runs `on_click` when clicked) | — |
@@ -55,27 +57,28 @@ You need Rust (the toolchain is pinned in `rust-toolchain.toml`), clang, cmake a
 xkbcommon, fontconfig and Vulkan development files.
 
 ```bash
-cargo build --release -p yozora-bar -p yozora-settings
+cargo build --release -p yozora-bar -p yozora-notify -p yozora-settings
 ```
 
-Then install the binaries and the app manifests, so Settings can find the bar:
+Then install the binaries and the app manifests, so Settings can find the apps:
 
 ```bash
-install -Dm755 target/release/yozora-bar target/release/yozora-settings -t ~/.local/bin
+install -Dm755 target/release/yozora-bar target/release/yozora-notify target/release/yozora-settings -t ~/.local/bin
 ```
 
 ```bash
-install -Dm644 packaging/apps/bar.toml packaging/apps/bar.settings.toml -t ~/.local/share/yozora/apps
+install -Dm644 packaging/apps/*.toml -t ~/.local/share/yozora/apps
 ```
 
 ## Start the bar with Hyprland
 
-Pick one.
+Only one notification server can run at a time, so stop mako or dunst first (remove its
+`exec-once`, or `systemctl --user disable --now mako`). Then pick one.
 
-- **systemd** (the PKGBUILD installs the unit):
+- **systemd** (the PKGBUILD installs the units):
 
   ```bash
-  systemctl --user enable --now yozora-bar.service
+  systemctl --user enable --now yozora-bar.service yozora-notify.service
   ```
 
 - **Hyprland autostart.** Copy [`packaging/hyprland/yozora.lua`](packaging/hyprland/yozora.lua)
@@ -89,10 +92,11 @@ To bind a key to a popover:
 hl.bind("SUPER + A", hl.dsp.exec_cmd("yozora-bar msg toggle control-center"))
 ```
 
-### Do Not Disturb with mako
+### Keeping mako
 
-The bar switches mako to a `do-not-disturb` mode. mako only hides notifications in that mode
-if your mako config says so:
+The bar also works with mako instead of yozora-notify, showing mako's history. For Do Not
+Disturb, the bar switches mako to a `do-not-disturb` mode, which only hides notifications if
+your mako config says so:
 
 ```ini
 [mode=do-not-disturb]
@@ -109,6 +113,7 @@ by hand. Comments and formatting survive edits from Settings.
 
 - `theme.toml`: theme, accent, glass, font and motion, shared by every Yozora app.
 - `bar.toml`: everything about the bar.
+- `notify.toml`: how long toasts stay, how many show at once, where, and how much history.
 
 The full reference is [docs/configuration.md](docs/configuration.md).
 
@@ -116,7 +121,7 @@ The full reference is [docs/configuration.md](docs/configuration.md).
 yozora-bar check
 ```
 
-`check` validates both files, with line numbers for anything it doesn't understand, and probes
+`check` validates the files, with line numbers for anything it doesn't understand, and probes
 each system service the enabled modules need.
 
 ## Known limitations
@@ -130,6 +135,8 @@ each system service the enabled modules need.
 - **Blur is Hyprland's.** A Wayland app can't see the pixels behind it, so the bar paints a tint
   and asks Hyprland to blur through a layer rule. Whether popovers get blurred on Hyprland
   0.56.2 hasn't been confirmed.
+- **Notifications are plain text.** Bold and links in a body are removed, and only the first
+  three lines show on a toast.
 - **The calendar has no events.** No calendar backend is chosen yet.
 - **The control center's dark mode tile lasts for the session.** To change the theme for good,
   use Settings → Appearance.

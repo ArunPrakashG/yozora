@@ -6227,7 +6227,6 @@ dependencies = [
  "gpui",
  "gpui_platform",
  "image",
- "resvg",
  "serde",
  "serde_json",
  "tracing",
@@ -6267,6 +6266,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "yozora-notify"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "async-io",
+ "futures-lite",
+ "gpui",
+ "gpui_platform",
+ "image",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "yozora-config",
+ "yozora-ipc",
+ "yozora-ui",
+ "zbus",
+]
+
+[[package]]
 name = "yozora-settings"
 version = "0.1.0"
 dependencies = [
@@ -6294,6 +6314,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "gpui",
+ "image",
+ "resvg",
  "tracing",
  "unicode-segmentation",
  "yozora-config",

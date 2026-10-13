@@ -114,7 +114,8 @@ fn check(config: Option<PathBuf>) -> ExitCode {
         line("Bluetooth", bluetooth::check().await, &mut problems);
         line("Media", media::check().await, &mut problems);
         let notif = notifications::check().await;
-        let missing_dnd = notif.as_ref().is_ok_and(|s| !s.contains(notifications::DND_MODE));
+        // Only mako needs a mode set up; yozora-notify does Do Not Disturb itself.
+        let missing_dnd = notif.as_ref().is_ok_and(|s| s.starts_with("mako") && !s.contains(notifications::DND_MODE));
         line("Notifications", notif, &mut problems);
         if missing_dnd {
             println!(

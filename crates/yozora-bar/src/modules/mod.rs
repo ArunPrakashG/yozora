@@ -183,7 +183,7 @@ impl Pop {
             Pop::Media | Pop::Sound => 320.,
             Pop::Network | Pop::Devices => 304.,
             Pop::Battery => 296.,
-            Pop::Notifications => 360.,
+            Pop::Notifications => 380.,
             Pop::Calendar => 308.,
             Pop::ControlCenter => 344.,
             Pop::Tray(_) => 260.,
@@ -253,6 +253,8 @@ pub struct PopUi {
     pub mic: SliderState,
     /// Submenu path into a tray menu.
     pub submenu: Vec<i32>,
+    /// Apps whose notifications are expanded in the center.
+    pub expanded: std::collections::BTreeSet<String>,
 }
 
 /// "3m", "2h", "4d": how long ago, from Unix seconds.
