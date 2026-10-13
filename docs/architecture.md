@@ -285,7 +285,7 @@ Targets come from the brief. The dev machine has no 120 Hz display, so budgets a
    left to tools like darkman, which set that value.
 4. **Calendar events** need a source (Evolution Data Server, CalDAV or khal). Out of scope until
    one is chosen.
-5. **Memory.** The bar's anonymous memory is within the 20 to 30 MB stretch goal (24 MB idle,
+5. **Memory.** The bar's anonymous memory is within the 20 to 30 MB stretch goal (23 MB idle,
    about 30 MB after heavy use). Total RSS is about 110 MB, because the NVIDIA Vulkan driver
    maps around 55 MB of shared libraries. Anonymous and total RSS are reported separately.
 
@@ -334,6 +334,9 @@ sent upstream, before considering another renderer.
   driver: the bar restarts, but on the test machine GL alone can't drive the surface either,
   with or without this change, so the GL path itself is untested. A GPUI change that tries
   Vulkan first would do this more cleanly.
+- **Raster images are shrunk to twice their drawn size** before GPUI sees them
+  (`services::icons::fit`). GPUI keeps images decoded at full size, so a 512 px tray icon
+  cost 1 MB. The copies are cached in `~/.cache/yozora/thumbs`.
 - **Apps fix glibc's mmap threshold at 128 KiB** (`yozora_ui::malloc`). By default it rises to
   the size of each big block freed, so render buffers end up kept in the heap. Fixing it saves
   about 4 MB of anonymous memory, with no change in frame timing.

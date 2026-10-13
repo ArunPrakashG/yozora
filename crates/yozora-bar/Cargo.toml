@@ -14,7 +14,7 @@ async-channel.workspace = true
 async-io.workspace = true
 chrono.workspace = true
 futures-lite.workspace = true
-image = { version = "0.25", default-features = false }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true

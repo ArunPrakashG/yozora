@@ -59,6 +59,8 @@ fn icon_for(n: &Notification) -> Option<PathBuf> {
                 icons::find(n.icon.strip_prefix("file://").unwrap_or(&n.icon), &[])
                     .or_else(|| icons::app_icon(&n.desktop_entry))
                     .or_else(|| icons::app_icon(&n.app))
+                    // Drawn at 22 px.
+                    .map(|p| icons::fit(&p, 48))
             })
             .clone()
     })

@@ -20,7 +20,7 @@ average between 3.7 and 7.4. Treat outliers in the frame timing with that in min
 |---|---|---|
 | CPU | 0.20 to 0.27% | 0.23 to 0.67% |
 | Wakeups | 253 to 261/s | 272 to 277/s |
-| Anonymous RSS | 24.3 MB | 25.4 to 28.5 MB |
+| Anonymous RSS | 22.7 to 24.3 MB | 25.4 to 28.5 MB |
 | Total RSS | 119 MB | 102 to 103 MB |
 
 CPU and wakeups are ranges over three runs. Memory is from the latest run, after the memory
@@ -44,9 +44,10 @@ Measured from `smaps_rollup` 12 s after start, the same configuration each time.
 |---|---|---|---|
 | Before, GL allowed (`YOZORA_GL=1`) | 146.5 to 150.7 MB | 32.9 to 38.1 MB | 102 to 104 MB |
 | GL hidden | 110.8 to 111.2 MB | 27.6 to 28.6 MB | 76 MB |
-| GL hidden, mmap threshold fixed (now) | 106.1 to 106.5 MB | 23.7 MB | 76 MB |
+| GL hidden, mmap threshold fixed | 106.1 to 106.5 MB | 23.7 MB | 76 MB |
+| Also images shrunk to their drawn size (now) | 105.9 to 106.2 MB | 22.5 to 22.7 MB | 76 MB |
 
-Two changes:
+Three changes:
 
 - **The GL stack isn't loaded.** GPUI asks wgpu for Vulkan and GL together. Asking for GL makes
   glvnd load every EGL vendor: NVIDIA's EGL and Mesa's libLLVM and Gallium. Vulkan wins, so all
@@ -56,6 +57,12 @@ Two changes:
 - **glibc keeps large blocks out of the heap.** By default its mmap threshold rises to the size
   of each big block freed, so render buffers end up kept in the heap. Fixing it at 128 KiB
   saves about 4 MB, with no change in frame timing (see below).
+- **Images are shrunk to the size they're drawn at.** GPUI keeps an image decoded at its full
+  size, and uploads it to the GPU at that size. One tray app on the test machine ships only a
+  512 px icon, which cost 1 MB for a 16 px icon. Tray and notification icons and album art
+  larger than twice their drawn size are now scaled down once and cached in
+  `~/.cache/yozora/thumbs`. On the test machine this saved 1 MB of Rust heap. With album art
+  showing, it saves more: a 1000 px cover is 4 MB decoded.
 
 What's left of the total RSS, largest first:
 
@@ -69,8 +76,31 @@ What's left of the total RSS, largest first:
 | `Inter.ttc` | 5 MB | The UI font, mapped from disk |
 
 The NVIDIA libraries and the binary are shared, file-backed pages. The kernel can drop them
-under memory pressure, and other processes using the same driver share them. Limiting glibc to
-fewer malloc arenas made no measurable difference.
+under memory pressure, and other processes using the same driver share them.
+
+The heap holds about 20 MB of live data, with only about 1.5 MB free, so `malloc_trim` returns
+nothing. About 8 MB of it is Rust and the rest is C, mostly the NVIDIA driver. Measured with a
+counting allocator and by turning things off:
+
+| Part | Anonymous memory |
+|---|---|
+| GPUI, wgpu and the driver, with only a clock | 20.0 MB |
+| All 13 modules on top | 3.8 MB |
+| The second monitor's bar | 1.1 MB |
+| The system font list (2752 faces, loaded by GPUI) | 1.3 MB |
+
+Tried and not worth it:
+
+- Fewer malloc arenas: no measurable difference.
+- One shared D-Bus connection per bus instead of one per service: four extra connections cost
+  0.1 MB. Sharing would let one slow service stall the others, because a zbus connection stops
+  reading when any of its queues is full.
+- Fat LTO: 4% less code and 0.3 MB less RSS, for a full 8-minute link on every release build.
+- `panic = "abort"`: would shrink the binary, but a panic in one service would then take down
+  the whole bar instead of that service.
+
+What's left needs changes inside GPUI: a Vulkan-only first attempt, a smaller worker pool (it
+starts one thread per CPU, 12 here), and loading the font list lazily.
 
 ## Startup
 

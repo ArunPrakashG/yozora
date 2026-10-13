@@ -173,7 +173,8 @@ async fn player(conn: &Connection, bus: &str, fetched: &mut HashMap<String, Opti
         title: dbus::string(&meta, "xesam:title"),
         artist,
         album: dbus::string(&meta, "xesam:album"),
-        art: art(&dbus::string(&meta, "mpris:artUrl"), fetched),
+        // Drawn at up to 88 px.
+        art: art(&dbus::string(&meta, "mpris:artUrl"), fetched).map(|p| super::icons::fit(&p, 176)),
         status: match dbus::string(&p, "PlaybackStatus").as_str() {
             "Playing" => Status::Playing,
             "Paused" => Status::Paused,

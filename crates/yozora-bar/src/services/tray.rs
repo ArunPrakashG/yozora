@@ -130,8 +130,9 @@ async fn item(conn: &Connection, key: &str) -> anyhow::Result<Item> {
     let name_key = if status == Status::NeedsAttention { "AttentionIconName" } else { "IconName" };
     let name = dbus::string(&p, name_key);
     let name = if name.is_empty() { dbus::string(&p, "IconName") } else { name };
+    // Drawn at 16 px; 32 covers a 2x monitor.
     let icon = super::icons::find(&name, &extra)
-        .map(Icon::File)
+        .map(|p| Icon::File(super::icons::fit(&p, 32)))
         .or_else(|| pixmap(&p).map(Icon::Pixmap));
     let title = dbus::get::<String>(&p, "Title")
         .filter(|t| !t.is_empty())

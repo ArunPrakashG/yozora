@@ -198,3 +198,73 @@ pub fn app_icon(id: &str) -> Option<PathBuf> {
     }
     find(id, &[]).or_else(|| find(&lower, &[]))
 }
+
+/// A copy of a raster image no larger than `max` px on its longer side, or the image itself
+/// if it's already small enough or isn't raster.
+///
+/// GPUI keeps an image decoded at its full size, and uploads it to the GPU at that size, no
+/// matter how small it's drawn. Some apps ship only a 512 px icon, which is 1 MB for a 16 px
+/// tray icon; album art can be 4 MB. Copies are cached in `~/.cache/yozora/thumbs`, keyed by
+/// the path, size and modification time of the original.
+pub fn fit(path: &Path, max: u32) -> PathBuf {
+    shrink(path, max, &thumbs_dir()).unwrap_or_else(|| path.to_path_buf())
+}
+
+fn shrink(path: &Path, max: u32, dir: &Path) -> Option<PathBuf> {
+    use std::hash::{Hash, Hasher};
+    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg")) {
+        return None;
+    }
+    let meta = std::fs::metadata(path).ok()?;
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    (path, meta.len(), meta.modified().ok(), max).hash(&mut h);
+    let out = dir.join(format!("{:016x}.png", h.finish()));
+    if out.exists() {
+        return Some(out);
+    }
+    let reader = image::ImageReader::open(path).ok()?.with_guessed_format().ok()?;
+    let (w, h) = reader.into_dimensions().ok()?;
+    if w.max(h) <= max {
+        return None;
+    }
+    let image = image::ImageReader::open(path).ok()?.with_guessed_format().ok()?.decode().ok()?;
+    let small = image.resize(max, max, image::imageops::FilterType::Triangle);
+    std::fs::create_dir_all(dir).ok()?;
+    let tmp = out.with_extension("part");
+    small.save_with_format(&tmp, image::ImageFormat::Png).ok()?;
+    std::fs::rename(&tmp, &out).ok()?;
+    Some(out)
+}
+
+fn thumbs_dir() -> PathBuf {
+    std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))
+        .unwrap_or_else(std::env::temp_dir)
+        .join("yozora")
+        .join("thumbs")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fit_shrinks_only_big_raster_images() {
+        let dir = std::env::temp_dir().join(format!("yozora-fit-{}", std::process::id()));
+        let thumbs = dir.join("thumbs");
+        std::fs::create_dir_all(&dir).unwrap();
+        let big = dir.join("big.png");
+        image::RgbaImage::from_pixel(512, 256, image::Rgba([10, 20, 30, 255])).save(&big).unwrap();
+        let small = dir.join("small.png");
+        image::RgbaImage::from_pixel(24, 24, image::Rgba([0, 0, 0, 255])).save(&small).unwrap();
+
+        let out = shrink(&big, 32, &thumbs).expect("a copy");
+        assert_eq!(image::image_dimensions(&out).unwrap(), (32, 16));
+        // The second call reuses the copy.
+        assert_eq!(shrink(&big, 32, &thumbs), Some(out));
+        assert_eq!(shrink(&small, 32, &thumbs), None);
+        assert_eq!(shrink(&dir.join("icon.svg"), 32, &thumbs), None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

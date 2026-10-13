@@ -135,7 +135,7 @@ each system service the enabled modules need.
   use Settings → Appearance.
 - **The first start after installing takes about 2 s to the first frame** on the test machine
   (NVIDIA, Vulkan), while the files load from disk. Later starts take 0.2 to 0.3 s.
-- **The Vulkan driver dominates memory.** The bar's own memory is about 24 MB, but total RSS is
+- **The Vulkan driver dominates memory.** The bar's own memory is about 23 MB, but total RSS is
   about 110 MB on NVIDIA, mostly the driver's shared libraries. See
   [docs/benchmarks.md](docs/benchmarks.md).
 - **Yozora apps skip OpenGL when a Vulkan driver is installed**, which saves about 40 MB. If

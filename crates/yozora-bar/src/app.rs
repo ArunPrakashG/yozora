@@ -446,6 +446,8 @@ pub fn handle_ipc(incoming: Incoming, cx: &mut App) {
                 "version": env!("CARGO_PKG_VERSION"),
                 "uptime_s": cx.global::<Shell>().started.elapsed().as_secs(),
                 "rss_kib": rss_kib(),
+                "heap_used_kib": yozora_ui::malloc::heap().map(|h| h.0 / 1024),
+                "heap_free_kib": yozora_ui::malloc::heap().map(|h| h.1 / 1024),
                 "bars": bars,
                 "frames": stats,
             }))
