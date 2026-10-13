@@ -116,8 +116,8 @@ fn check(config: Option<PathBuf>) -> ExitCode {
         if let Ok(s) = &notif {
             if !s.contains(notifications::DND_MODE) {
                 println!(
-                    "  {:<14} note: mako has no `{}` mode, so Do Not Disturb has no effect.\n  {:<14} Add `[mode={}]\\n invisible=1` to ~/.config/mako/config.",
-                    "", notifications::DND_MODE, "", notifications::DND_MODE
+                    "  {:<14} note: mako has no `{}` mode, so Do Not Disturb has no effect.\n  {:<14} Add this to ~/.config/mako/config:\n  {:<14}   [mode={}]\n  {:<14}   invisible=1",
+                    "", notifications::DND_MODE, "", "", notifications::DND_MODE, ""
                 );
             }
         }
