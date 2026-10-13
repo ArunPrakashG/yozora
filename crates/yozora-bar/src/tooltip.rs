@@ -8,8 +8,9 @@ use std::{
 };
 
 use gpui::{
-    AnyWindowHandle, App, Bounds, Context, IntoElement, ParentElement, Pixels, Render, SharedString, Styled, Window,
-    WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions, div, point, popup::*, prelude::*, px, size,
+    AnyWindowHandle, App, Bounds, Context, FontWeight, IntoElement, ParentElement, Pixels, Render, SharedString,
+    Styled, Window, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions, div, point, popup::*,
+    prelude::*, px, size,
 };
 use yozora_ui::Theme;
 
@@ -20,9 +21,14 @@ const POLL: Duration = Duration::from_millis(100);
 /// Room around the card for its shadow.
 const MARGIN: Pixels = px(14.);
 const MAX_WIDTH: f32 = 360.;
-const LINE_HEIGHT: f32 = 17.;
-const PAD_X: f32 = 10.;
-const PAD_Y: f32 = 6.;
+const LINE_HEIGHT: f32 = 18.;
+const PAD_X: f32 = 12.;
+const PAD_Y: f32 = 8.;
+/// Gap between the first line, drawn as a title, and the rest.
+const TITLE_GAP: f32 = 3.;
+/// A rough measure of the text at 12 px, right for Geist and Inter; the title is semibold.
+const CHAR: f32 = 6.8;
+const TITLE_CHAR: f32 = 7.2;
 
 struct Tooltip {
     text: SharedString,
@@ -92,15 +98,17 @@ fn open(
     text: String,
     cx: &mut App,
 ) -> anyhow::Result<AnyWindowHandle> {
-    // A rough measure of the text: 6.8 px a character at 12 px is right for Geist and Inter.
     let lines: Vec<&str> = text.lines().collect();
-    let longest = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0) as f32;
-    let width = (longest * 6.8 + PAD_X * 2. + 2.).clamp(40., MAX_WIDTH);
+    let char_width = |i: usize| if i == 0 && lines.len() > 1 { TITLE_CHAR } else { CHAR };
+    let longest = lines.iter().enumerate().map(|(i, l)| l.chars().count() as f32 * char_width(i)).fold(0., f32::max);
+    let width = (longest + PAD_X * 2. + 2.).clamp(40., MAX_WIDTH);
     let wraps: usize = lines
         .iter()
-        .map(|l| ((l.chars().count() as f32 * 6.8) / (MAX_WIDTH - PAD_X * 2.)).ceil().max(1.) as usize)
+        .enumerate()
+        .map(|(i, l)| ((l.chars().count() as f32 * char_width(i)) / (MAX_WIDTH - PAD_X * 2.)).ceil().max(1.) as usize)
         .sum();
-    let height = wraps.max(1) as f32 * LINE_HEIGHT + PAD_Y * 2. + 2.;
+    let gap = if lines.len() > 1 { TITLE_GAP } else { 0. };
+    let height = wraps.max(1) as f32 * LINE_HEIGHT + gap + PAD_Y * 2. + 2.;
     let window_size = size(px(width) + MARGIN * 2., px(height) + MARGIN * 2.);
     let handle = cx.open_window(
         WindowOptions {
@@ -131,21 +139,34 @@ fn open(
 impl Render for Tooltip {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = Theme::global(cx);
+        // One line is a plain label. More lines read as a title and its details, like the
+        // rows of a popover.
+        let mut lines = self.text.lines();
+        let first = lines.next().unwrap_or_default().to_string();
+        let rest: Vec<String> = lines.map(str::to_string).collect();
+        let titled = !rest.is_empty();
         div().size_full().p(MARGIN).child(
             div()
                 .w(self.width)
+                .flex()
+                .flex_col()
                 .px(px(PAD_X))
                 .py(px(PAD_Y))
-                .rounded(px(8.))
+                .rounded(px(10.))
                 .bg(theme.glass_pop)
                 .border_1()
                 .border_color(theme.hair_2)
                 .shadow(theme.popover_shadow())
-                .text_color(theme.ink)
                 .text_size(px(12.))
                 .line_height(px(LINE_HEIGHT))
                 .font_family(theme.font.clone())
-                .child(self.text.clone()),
+                .child(
+                    div()
+                        .text_color(theme.ink)
+                        .when(titled, |el| el.font_weight(FontWeight::SEMIBOLD).mb(px(TITLE_GAP)))
+                        .child(first),
+                )
+                .children(rest.into_iter().map(|line| div().text_color(theme.ink_2).child(line))),
         )
     }
 }
