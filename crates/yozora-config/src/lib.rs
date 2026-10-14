@@ -6,6 +6,7 @@
 
 pub mod bar;
 pub mod edit;
+pub mod idle;
 pub mod launch;
 pub mod load;
 pub mod lock;

@@ -9,11 +9,12 @@ use yozora_ipc::Request;
 use crate::{ask, out::Out};
 
 /// Every app the CLI knows by id, with Settings, which has no manifest.
-const KNOWN: [(&str, &str); 5] = [
+const KNOWN: [(&str, &str); 6] = [
     ("bar", "Yozora Bar"),
     ("notify", "Yozora Notify"),
     ("launch", "Yozora Launch"),
     ("lock", "Yozora Lock"),
+    ("idle", "Yozora Idle"),
     ("settings", "Yozora Settings"),
 ];
 
@@ -160,5 +161,18 @@ pub fn lock(out: &Out) -> anyhow::Result<()> {
     }
     spawn("yozora-lock", &[])?;
     out.done("locking", json!({ "locked": true }));
+    Ok(())
+}
+
+/// Yozora Idle's state: what it's counting down to, and what holds the screen awake.
+pub fn idle(out: &Out) -> anyhow::Result<()> {
+    out.value(&ask("idle", "status", &[])?);
+    Ok(())
+}
+
+/// Stops locking, turning the screens off and suspending, or lets them happen again.
+pub fn keep_awake(args: Vec<String>, out: &Out) -> anyhow::Result<()> {
+    let data = ask("idle", "keep-awake", &args)?;
+    out.done(format!("keep awake is {}", if data["keep_awake"] == true { "on" } else { "off" }), data);
     Ok(())
 }

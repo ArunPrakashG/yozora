@@ -1,0 +1,17 @@
+[Unit]
+Description=Yozora Idle, locks and sleeps when you're away
+Documentation=https://github.com/ArunPrakashG/yozora
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
+# hypridle does the same job; running both locks twice.
+Conflicts=hypridle.service
+
+[Service]
+ExecStart=/usr/bin/yozora-idle
+Restart=on-failure
+RestartSec=2
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target

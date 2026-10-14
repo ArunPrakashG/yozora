@@ -1,8 +1,8 @@
 //! Yozora Lock: the lock screen, through ext-session-lock-v1. If this process dies while
 //! locked, Hyprland keeps the session locked; it never unlocks by accident.
 //!
-//! Start it from hypridle (`lock_cmd = pidof yozora-lock || yozora-lock`), so
-//! `loginctl lock-session` and locking before sleep work.
+//! Yozora Idle starts it (when you're away, on `loginctl lock-session`, before sleep). hypridle
+//! works too: `lock_cmd = yozora-lock`.
 
 mod auth;
 mod background;
@@ -46,7 +46,8 @@ Options:
   -h, --help      Show this help
   -V, --version   Show the version
 
-To lock from hypridle and before sleep, set in ~/.config/hypr/hypridle.conf:
+Yozora Idle (yozora-idle) starts it when you're away and before sleep. To use hypridle instead,
+set in ~/.config/hypr/hypridle.conf:
   lock_cmd = yozora-lock
   before_sleep_cmd = loginctl lock-session
   inhibit_sleep = 3
