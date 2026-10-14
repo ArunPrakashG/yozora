@@ -43,17 +43,77 @@ impl Default for HistorySection {
     }
 }
 
+/// Sorting by Jev (TypeSafe AI): how much each notification needs attention. Off unless turned
+/// on with a key; when on, the app name, title and (with `send_body`) the body leave the machine.
+#[derive(Clone, PartialEq, Deserialize, Serialize)]
+#[serde(default)]
+pub struct JevSection {
+    pub enabled: bool,
+    pub api_key: String,
+    pub url: String,
+    /// Send the body too, not just the app and title.
+    pub send_body: bool,
+    /// Apps never sent, by name or desktop entry, ignoring case.
+    pub skip_apps: Vec<String>,
+    /// Below these odds a toast leaves early and doesn't count as unread.
+    pub quiet_below: f64,
+    /// At or above these odds a notification is shown during Do Not Disturb.
+    pub breakthrough: f64,
+}
+
+impl Default for JevSection {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            api_key: String::new(),
+            url: "https://api.typesafe.ai/v1/systemone".into(),
+            send_body: true,
+            skip_apps: Vec::new(),
+            quiet_below: 0.25,
+            breakthrough: 0.85,
+        }
+    }
+}
+
+impl JevSection {
+    /// On, with a key.
+    pub fn active(&self) -> bool {
+        self.enabled && !self.api_key.trim().is_empty()
+    }
+}
+
+// The key never goes to logs.
+impl std::fmt::Debug for JevSection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JevSection")
+            .field("enabled", &self.enabled)
+            .field("api_key", &if self.api_key.is_empty() { "" } else { "(set)" })
+            .field("url", &self.url)
+            .field("send_body", &self.send_body)
+            .field("skip_apps", &self.skip_apps)
+            .field("quiet_below", &self.quiet_below)
+            .field("breakthrough", &self.breakthrough)
+            .finish()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(default)]
 pub struct NotifyConfig {
     pub version: u32,
     pub toasts: ToastSection,
     pub history: HistorySection,
+    pub jev: JevSection,
 }
 
 impl Default for NotifyConfig {
     fn default() -> Self {
-        Self { version: 1, toasts: ToastSection::default(), history: HistorySection::default() }
+        Self {
+            version: 1,
+            toasts: ToastSection::default(),
+            history: HistorySection::default(),
+            jev: JevSection::default(),
+        }
     }
 }
 
@@ -95,6 +155,17 @@ fn validate(c: &mut NotifyConfig, warnings: &mut Vec<Warning>) {
     if c.history.limit > 2000 {
         warn("history.limit is above 2000; using 2000".into());
         c.history.limit = 2000;
+    }
+    for (name, v, default) in
+        [("jev.quiet_below", &mut c.jev.quiet_below, 0.25), ("jev.breakthrough", &mut c.jev.breakthrough, 0.85)]
+    {
+        if !(0.0..=1.0).contains(v) {
+            warn(format!("{name} {v} is outside 0–1; using {default}"));
+            *v = default;
+        }
+    }
+    if c.jev.enabled && c.jev.api_key.trim().is_empty() {
+        warn("jev.enabled is on but jev.api_key is empty; Jev stays off".into());
     }
     if c.version > 1 {
         warn(format!("version {} is newer than this version of Yozora Notify understands", c.version));

@@ -50,6 +50,9 @@ pub struct Field {
     pub max: Option<f64>,
     #[serde(default)]
     pub step: Option<f64>,
+    /// For `string`: drawn as dots, for keys and passwords.
+    #[serde(default)]
+    pub secret: bool,
 }
 
 impl Field {
@@ -120,5 +123,22 @@ help    = "Icons stay 16 px at every height."
         let field = &schema.section[0].field[0];
         assert_eq!(field.kind, FieldKind::Enum);
         assert_eq!(field.option_label(1), "34");
+    }
+
+    #[test]
+    fn the_packaged_schemas_load() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packaging/apps");
+        let mut loaded = 0;
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.to_string_lossy().ends_with(".settings.toml") {
+                Schema::load(&path).unwrap();
+                loaded += 1;
+            }
+        }
+        assert!(loaded >= 4, "{loaded} schemas in {}", dir.display());
+        let notify = Schema::load(&dir.join("notify.settings.toml")).unwrap();
+        let key = notify.section.iter().flat_map(|s| &s.field).find(|f| f.key == "jev.api_key").unwrap();
+        assert!(key.secret && key.kind == FieldKind::String);
     }
 }

@@ -96,6 +96,7 @@ crates/
                          notifications (mako), custom; each with a fake
   yozora-notify/       bin
     src/server.rs        the freedesktop interface, the bar's dev.yozora.Notify1, commands
+    src/jev.rs           optional urgency odds from Jev over curl, off the main thread
     src/store.rs         notifications, history on disk, Do Not Disturb
     src/toasts.rs        the toast window: stack, springs, timers, inline reply
     src/hypr.rs          which monitor toasts open on; the blur rule
@@ -234,7 +235,7 @@ Files live in `~/.config/yozora/`:
 |---|---|---|
 | `theme.toml` | shared by every Yozora app | theme, accent, glass, motion |
 | `bar.toml` | `yozora-bar` | bar style, height, reserve space, modules per zone, per-monitor sections; may override `[theme]` keys for the bar only |
-| `notify.toml` | `yozora-notify` | toast timeout, how many at once, monitor, history limit |
+| `notify.toml` | `yozora-notify` | toast timeout, how many at once, monitor, history limit, Jev sorting |
 | `<id>.toml` | each future app | its own settings |
 
 Precedence: built-in defaults, then `theme.toml`, then the app's own file.
@@ -448,6 +449,7 @@ checks that Hyprland reports it as active, and only then closes.
 | 2026-10-13 | Theme, accent, glass and motion are shared across apps in `theme.toml` |
 | 2026-10-13 | Phase 1 verdict: GPUI is a go ([spike report](spike-report.md)) |
 | 2026-10-13 | Our own notification server, yozora-notify, replaces mako; the bar still works with mako |
+| 2026-10-14 | Jev sorting in yozora-notify is opt-in and never delays a toast: the answer only shortens a toast or lets one through Do Not Disturb. Not used in the launcher, where it would be slower than search and would send every query away |
 | 2026-10-13 | Audio through `pactl subscribe` instead of a client library |
 | 2026-10-13 | Popovers grab only when opened by a click |
 | 2026-10-13 | Custom modules speak plain text or JSON lines with `text` |

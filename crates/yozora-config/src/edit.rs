@@ -102,6 +102,7 @@ fn split(dotted: &str) -> Vec<String> {
     parts
 }
 
+/// Writes `bytes` to `path` through a temp file, keeping the old file's permissions.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
@@ -109,6 +110,9 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
     let tmp = path.with_extension(format!("tmp.{}", std::process::id()));
     {
         let mut file = std::fs::File::create(&tmp)?;
+        if let Ok(old) = std::fs::metadata(path) {
+            file.set_permissions(old.permissions())?;
+        }
         file.write_all(bytes)?;
         file.sync_all()?;
     }
@@ -116,9 +120,29 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Makes `path` readable by its owner only, for files that hold a key.
+pub fn restrict(path: &Path) -> anyhow::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn saves_keep_a_private_file_private() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = std::env::temp_dir().join(format!("yozora-private-{}.toml", std::process::id()));
+        std::fs::write(&path, "[jev]\n").unwrap();
+        restrict(&path).unwrap();
+        let mut file = ConfigFile::open(&path).unwrap();
+        file.set("jev.api_key", "k");
+        file.save().unwrap();
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+        std::fs::remove_file(&path).unwrap();
+    }
 
     #[test]
     fn edits_keep_comments() {

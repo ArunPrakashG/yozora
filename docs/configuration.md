@@ -180,6 +180,15 @@ show_low    = false      # also show low-urgency notifications as toasts
 
 [history]
 limit = 200              # notifications kept in the center, up to 2000
+
+[jev]                    # off unless enabled with a key
+enabled      = false
+api_key      = ""        # TypeSafe AI key; Settings makes the file owner-only when you save one
+url          = "https://api.typesafe.ai/v1/systemone"
+send_body    = true      # false sends only the app and title
+skip_apps    = []        # app names or desktop entries never sent
+quiet_below  = 0.25      # odds of needing attention below this: a quiet notification
+breakthrough = 0.85      # odds at or above this show the toast during Do Not Disturb
 ```
 
 Critical notifications stay until you dismiss them, and still show during Do Not Disturb.
@@ -188,6 +197,13 @@ toasts on screen to it. Like `bar.toml`, `notify.toml` can have a `[theme]` tabl
 
 History is kept in `$XDG_STATE_HOME/yozora/notify.json`, and images apps send in
 `~/.cache/yozora/notify/`.
+
+With `[jev]` on, each notification's app, title, urgency, category and (with `send_body`) the
+first 1000 characters of its text go to TypeSafe AI's Jev, through `curl`, which asks how likely
+it is you want to see it now. The toast doesn't wait for the answer. A quiet one leaves after
+1.5 seconds and isn't counted as unread; during Do Not Disturb one past `breakthrough` is shown.
+Critical, transient, progress and volume-style notifications are never sent, and answers are
+remembered by content, so a repeat isn't asked about twice.
 
 `yozora-notify` has its own commands:
 

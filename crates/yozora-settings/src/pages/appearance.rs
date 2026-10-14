@@ -72,7 +72,7 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
         "theme-font",
         "Geist",
         false,
-        InputTarget::String { file: THEME_FILE.into(), key: "font".into() },
+        InputTarget::String { file: THEME_FILE.into(), key: "font".into(), secret: false },
         &font_value,
         window,
         cx,

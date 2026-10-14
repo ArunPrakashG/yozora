@@ -15,7 +15,7 @@ use anyhow::Context as _;
 use async_channel::{Receiver, Sender};
 use futures_lite::{FutureExt, StreamExt};
 use serde_json::json;
-use yozora_config::notify::NotifyConfig;
+use yozora_config::notify::{JevSection, NotifyConfig};
 use yozora_ipc::{Incoming, Response};
 use yozora_ui::icon_theme as icons;
 use zbus::{
@@ -24,7 +24,10 @@ use zbus::{
     zvariant::{OwnedValue, Value},
 };
 
-use crate::store::{Added, Notification, Store, Urgency, strip_markup};
+use crate::{
+    jev,
+    store::{Added, Notification, Store, Urgency, strip_markup},
+};
 
 pub const NAME: &str = "org.freedesktop.Notifications";
 pub const FDO_PATH: &str = "/org/freedesktop/Notifications";
@@ -47,6 +50,8 @@ pub enum UiEvent {
     CloseAll,
     /// The center opened: toasts that can time out go to it now.
     ExpireAll,
+    /// It can wait: the toast leaves soon.
+    Shorten(u32),
     Quit,
 }
 
@@ -57,6 +62,8 @@ pub enum Cmd {
     Action(u32, String),
     Reply(u32, String),
     Ipc(Incoming),
+    /// Jev's odds for a notification, and the fingerprint of the content they're for.
+    Verdict(u32, u64, f64),
 }
 
 pub struct Inner {
@@ -79,6 +86,42 @@ impl Shared {
     fn ui(&self, event: UiEvent) {
         let _ = self.ui.try_send(event);
     }
+
+    /// Asks Jev about notification `id` if it's on and the notification may be sent.
+    fn ask_jev(&self, id: u32) {
+        let (n, cfg) = {
+            let inner = self.lock();
+            let Some(n) = inner.store.get(id).filter(|n| jev::eligible(n, &inner.config.jev)).cloned() else {
+                return;
+            };
+            (n, inner.config.jev.clone())
+        };
+        let cmds = self.cmds.clone();
+        jev::ask(&n, &cfg, move |print, odds| {
+            let _ = cmds.try_send(Cmd::Verdict(id, print, odds));
+        });
+    }
+}
+
+/// What Jev's answer does to the toasts.
+#[derive(Debug, PartialEq)]
+pub enum Effect {
+    Nothing,
+    /// It can wait: its toast leaves early.
+    Shorten,
+    /// Do Not Disturb hid it, but it can't wait.
+    Show,
+}
+
+/// Whether the notification can wait, and what that does.
+pub fn verdict(odds: f64, dnd: bool, cfg: &JevSection) -> (bool, Effect) {
+    let quiet = odds < cfg.quiet_below;
+    let effect = match (dnd, quiet) {
+        (true, _) if odds >= cfg.breakthrough => Effect::Show,
+        (false, true) => Effect::Shorten,
+        _ => Effect::Nothing,
+    };
+    (quiet, effect)
 }
 
 struct Fdo {
@@ -121,6 +164,7 @@ impl Fdo {
             (added, show.then_some(stored).flatten())
         };
         tracing::debug!("notification {:?}{}", added, if show.is_some() { "" } else { " (no toast)" });
+        self.shared.ask_jev(added.id());
         if let Some(n) = show {
             self.shared.ui(UiEvent::Show(Box::new(n)));
         } else if let Added::Replaced(id) = added {
@@ -238,6 +282,8 @@ fn to_dict(n: &Notification) -> HashMap<String, OwnedValue> {
     put("category", n.category.as_str().into());
     put("urgency", n.urgency.byte().into());
     put("time", n.time.into());
+    put("attention", n.attention.unwrap_or(-1.0).into());
+    put("quiet", n.quiet.into());
     put("icon", path(&n.icon).into());
     put("image", path(&n.image).into());
     put("default-action", n.has_action("default").into());
@@ -321,6 +367,8 @@ pub fn build(
         tag,
         expire_ms,
         time: 0,
+        attention: None,
+        quiet: false,
     }
 }
 
@@ -487,6 +535,22 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
                 let response = ipc(&incoming.request, &shared);
                 incoming.reply(response);
             }
+            Cmd::Verdict(id, print, odds) => {
+                let (n, effect) = {
+                    let mut inner = shared.lock();
+                    let send_body = inner.config.jev.send_body;
+                    let (quiet, effect) = verdict(odds, inner.store.dnd, &inner.config.jev);
+                    let n = inner.store.set_attention(id, odds, quiet, |n| jev::fingerprint(n, send_body) == print);
+                    (n, effect)
+                };
+                let Some(n) = n else { continue };
+                tracing::debug!("jev: notification {id} needs attention at odds {odds:.2}: {effect:?}");
+                match effect {
+                    Effect::Show if n.urgency != Urgency::Critical => shared.ui(UiEvent::Show(Box::new(n))),
+                    Effect::Shorten => shared.ui(UiEvent::Shorten(id)),
+                    _ => {}
+                }
+            }
         }
         changed(&conn).await;
     }
@@ -529,6 +593,8 @@ fn ipc(request: &yozora_ipc::Request, shared: &Shared) -> Response {
                         "body": n.body,
                         "urgency": n.urgency,
                         "time": n.time,
+                        "attention": n.attention,
+                        "quiet": n.quiet,
                     })
                 })
                 .collect();
@@ -564,6 +630,18 @@ mod tests {
         assert_eq!(pixels_to_png(4, 4, 16, true, 8, 4, &data, &dir), None);
         assert_eq!(pixels_to_png(2, 2, 8, true, 8, 3, &data, &dir), None);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn jev_answers_decide() {
+        let cfg = JevSection::default();
+        assert_eq!(verdict(0.1, false, &cfg), (true, Effect::Shorten));
+        assert_eq!(verdict(0.5, false, &cfg), (false, Effect::Nothing));
+        assert_eq!(verdict(0.95, false, &cfg), (false, Effect::Nothing));
+        // Do Not Disturb: only what can't wait shows.
+        assert_eq!(verdict(0.95, true, &cfg), (false, Effect::Show));
+        assert_eq!(verdict(0.5, true, &cfg), (false, Effect::Nothing));
+        assert_eq!(verdict(0.1, true, &cfg), (true, Effect::Nothing));
     }
 
     #[test]
