@@ -382,7 +382,7 @@ pub fn args_row(i: usize, sc: &Script) -> Row {
         .collect();
     Row {
         hl: Vec::new(),
-        title: format!("Run {}", sc.title),
+        title: sc.title.clone(),
         sub: format!("Type {} · Esc to go back", wants.join(" ")),
         visual: match &sc.icon {
             Some(scripts::Icon::Image(p)) => Visual::Image(Arc::new(p.clone())),
@@ -861,24 +861,22 @@ fn everything(q: &str, f: &mut Fuzzy, s: &Sources) -> Vec<Section> {
         out.push(Section { title: "Commands", rows: cmd_rows });
     }
 
-    let rows: Vec<Row> =
-        rank(s.projects, f, q, score_project, |p| project_bonus(p) + usage_boost(s, &p.key()), |sc| strong(sc, q))
-            .into_iter()
-            .take(2)
-            .map(|(_, _, p)| project_row(p, f, s))
-            .collect();
-    if !rows.is_empty() {
-        out.push(Section { title: "Projects", rows });
+    // Projects and hosts, the section with the better match first.
+    let projects =
+        rank(s.projects, f, q, score_project, |p| project_bonus(p) + usage_boost(s, &p.key()), |sc| strong(sc, q));
+    let hosts = rank(s.hosts, f, q, score_host, |h| usage_boost(s, &h.key()), |sc| strong(sc, q));
+    let hosts_first = hosts.first().map_or(0, |x| x.0) > projects.first().map_or(0, |x| x.0);
+    let mut pair = [
+        Section {
+            title: "Projects",
+            rows: projects.into_iter().take(2).map(|(_, _, p)| project_row(p, f, s)).collect(),
+        },
+        Section { title: "SSH hosts", rows: hosts.into_iter().take(2).map(|(_, _, h)| host_row(h, f)).collect() },
+    ];
+    if hosts_first {
+        pair.reverse();
     }
-
-    let rows: Vec<Row> = rank(s.hosts, f, q, score_host, |h| usage_boost(s, &h.key()), |sc| strong(sc, q))
-        .into_iter()
-        .take(2)
-        .map(|(_, _, h)| host_row(h, f))
-        .collect();
-    if !rows.is_empty() {
-        out.push(Section { title: "SSH hosts", rows });
-    }
+    out.extend(pair.into_iter().filter(|sec| !sec.rows.is_empty()));
 
     if s.files_in_search && q.chars().count() >= 3 {
         let rows: Vec<Row> = files(q, f, s, 2, true);
@@ -1023,6 +1021,23 @@ mod tests {
         assert!(titles(&r).contains(&("Projects", vec!["yozora".to_string()])), "{:?}", titles(&r));
         let r = run_with("homelab", &apps, &u, &[], &x);
         assert!(titles(&r).contains(&("SSH hosts", vec!["homelab".to_string()])));
+        // A host named for the query comes before a project whose folder only contains it.
+        let mut x2 = extra();
+        x2.hosts.push(Host {
+            alias: "web-prod".into(),
+            hostname: String::new(),
+            user: String::new(),
+            port: String::new(),
+        });
+        x2.projects.push(Project {
+            path: PathBuf::from("/home/u/src/website/blog"),
+            name: "blog".into(),
+            recent: None,
+        });
+        x2.projects.retain(|p| p.name != "website");
+        let r = run_with("web", &apps, &u, &[], &x2);
+        let first = r.iter().find(|sec| sec.title == "SSH hosts" || sec.title == "Projects").unwrap();
+        assert_eq!(first.title, "SSH hosts", "{:?}", titles(&r));
         let r = run_with("notifications", &apps, &u, &[], &x);
         assert!(titles(&r).contains(&("Browser", vec!["Notifications".to_string()])), "{:?}", titles(&r));
 

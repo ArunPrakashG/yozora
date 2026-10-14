@@ -74,6 +74,16 @@ enum Act {
 
 const PLACEHOLDER: &str = "Search apps, windows, files and more";
 
+/// A query given whole, from `open QUERY`, is finished: a bare `@code` becomes the chip, as if a
+/// space followed.
+fn whole(query: &str) -> String {
+    let spaced = format!("{query} ");
+    match search::committed_prefix(&spaced) {
+        Some((_, "")) => spaced,
+        _ => query.to_string(),
+    }
+}
+
 #[derive(Clone, Copy, PartialEq)]
 enum Modifier {
     None,
@@ -147,7 +157,7 @@ impl LaunchView {
     }
 
     pub fn open(&mut self, query: &str, window: &mut Window, cx: &mut Context<Self>) {
-        self.input.update(cx, |i, cx| i.set_text(query.to_string(), cx));
+        self.input.update(cx, |i, cx| i.set_text(whole(query), cx));
         self.query = String::from("\0");
         self.chip = None;
         self.leave_args(cx);
@@ -169,7 +179,7 @@ impl LaunchView {
     pub fn set_query(&mut self, query: &str, window: &mut Window, cx: &mut Context<Self>) {
         self.chip = None;
         self.leave_args(cx);
-        self.input.update(cx, |i, cx| i.set_text(query.to_string(), cx));
+        self.input.update(cx, |i, cx| i.set_text(whole(query), cx));
         self.requery(cx);
         let focus = self.input.focus_handle(cx);
         window.focus(&focus, cx);
@@ -1307,6 +1317,15 @@ mod tests {
         assert_eq!(byte_ranges("Firefox", &[4, 5, 6]), vec![4..7]);
         assert_eq!(byte_ranges("Visual Studio Code", &[0, 7, 14]), vec![0..1, 7..8, 14..15]);
         assert_eq!(byte_ranges("Café Noir", &[3, 4, 5]), vec![3..7]);
+    }
+
+    #[test]
+    fn whole_queries_commit_the_prefix() {
+        assert_eq!(whole("@code"), "@code ");
+        assert_eq!(whole("@s"), "@s ");
+        assert_eq!(whole("@code yoz"), "@code yoz");
+        assert_eq!(whole("@codex"), "@codex");
+        assert_eq!(whole("firefox"), "firefox");
     }
 
     #[test]
