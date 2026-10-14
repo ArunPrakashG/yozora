@@ -53,6 +53,8 @@ pub struct Popover {
     window: AnyWindowHandle,
     opened: Instant,
     closing: Option<Instant>,
+    /// The close animation finished and the window goes after this frame.
+    removing: bool,
     /// The open animation's drop, as a spring so it shares the design's feel.
     drop: Spring,
     open_settled: bool,
@@ -124,6 +126,7 @@ impl Popover {
                         window: handle,
                         opened: Instant::now(),
                         closing: None,
+                        removing: false,
                         drop,
                         open_settled: false,
                         stats: FrameStats::default(),
@@ -252,8 +255,11 @@ impl Popover {
                 (1.0 - o * o, -DROP * s * s, t >= SLIDE_OUT)
             };
             if done {
-                self.settled("popover close", window, cx);
-                window.remove_window();
+                if !self.removing {
+                    self.removing = true;
+                    self.settled("popover close", window, cx);
+                    yozora_ui::close_after_frame(window, cx);
+                }
             } else {
                 window.request_animation_frame();
             }

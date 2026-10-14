@@ -365,7 +365,7 @@ impl OsdView {
                         osd.window = None;
                     }
                 });
-                window.remove_window();
+                yozora_ui::close_after_frame(window, cx);
                 return (0.0, 0.0);
             }
             window.request_animation_frame();

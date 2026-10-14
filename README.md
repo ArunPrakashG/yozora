@@ -264,8 +264,6 @@ each system service the enabled modules need.
 - **The launcher keeps about 120 MB resident**, most of it the Vulkan driver, so that it never
   starts cold. Each monitor's window waits under everything, empty and taking no input, so it
   doesn't block a fullscreen game's direct scanout.
-- **The log shows `ERROR gpui::window: window not found` each time a popover closes.** It's
-  harmless: Wayland sends one last event for a window GPUI has already dropped.
 - **Tested on one machine:** Hyprland 0.56.2, a GTX 1650 Super, a 144 Hz and a 75 Hz rotated
   monitor. Battery and Bluetooth were tested against fake backends (`--fake`), because that
   machine has neither.

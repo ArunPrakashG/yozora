@@ -117,10 +117,15 @@ pub struct SettingsView {
 impl SettingsView {
     pub fn new(opts: Options, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let search = cx.new(|cx| TextInput::new("Search settings", window, cx));
-        let subscription = cx.subscribe(&search, |this: &mut Self, input, event, cx| {
+        let subscription = cx.subscribe_in(&search, window, |this: &mut Self, input, event, window, cx| {
             if matches!(event, InputEvent::Changed) {
                 this.query = input.read(cx).text().trim().to_string();
                 cx.notify();
+            }
+            if matches!(event, InputEvent::Submit)
+                && let Some(first) = this.search_results().into_iter().next()
+            {
+                this.open_result(first.page, window, cx);
             }
             if matches!(event, InputEvent::Cancel) {
                 input.update(cx, |i, cx| i.set_text("", cx));
@@ -658,13 +663,29 @@ impl SettingsView {
             .children(children)
     }
 
-    fn render_search_results(&mut self, theme: &Theme, cx: &mut Context<Self>) -> impl IntoElement {
+    /// Settings matching the search, best first.
+    fn search_results(&self) -> Vec<pages::SearchEntry> {
         let query = self.query.to_lowercase();
-        let results: Vec<pages::SearchEntry> = pages::search_entries(self)
+        if query.is_empty() {
+            return Vec::new();
+        }
+        pages::search_entries(self)
             .into_iter()
             .filter(|e| e.title.to_lowercase().contains(&query) || e.help.to_lowercase().contains(&query))
             .take(14)
-            .collect();
+            .collect()
+    }
+
+    /// Leaves the search for the page a result is on.
+    fn open_result(&mut self, page: Page, window: &mut Window, cx: &mut Context<Self>) {
+        self.search.update(cx, |s, cx| s.set_text("", cx));
+        self.query.clear();
+        window.focus(&self.focus, cx);
+        self.go(page, cx);
+    }
+
+    fn render_search_results(&mut self, theme: &Theme, cx: &mut Context<Self>) -> impl IntoElement {
+        let results = self.search_results();
         div()
             .flex()
             .flex_col()
@@ -674,7 +695,6 @@ impl SettingsView {
             })
             .children(results.into_iter().enumerate().map(|(i, entry)| {
                 let page = entry.page.clone();
-                let search = self.search.clone();
                 div()
                     .id(("result", i))
                     .flex()
@@ -684,15 +704,12 @@ impl SettingsView {
                     .py(px(7.))
                     .rounded(px(9.))
                     .cursor_pointer()
+                    // The first is what Enter opens.
+                    .when(i == 0, |el| el.bg(theme.fill))
                     .hover(|s| s.bg(theme.fill))
                     .child(div().text_size(px(13.)).child(entry.title))
                     .child(div().text_size(px(11.5)).text_color(theme.ink_3).child(entry.place))
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        search.update(cx, |s, cx| s.set_text("", cx));
-                        this.query.clear();
-                        window.focus(&this.focus, cx);
-                        this.go(page.clone(), cx);
-                    }))
+                    .on_click(cx.listener(move |this, _, window, cx| this.open_result(page.clone(), window, cx)))
             }))
     }
 
