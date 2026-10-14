@@ -43,6 +43,30 @@ label   = "Web search"
 help    = "The search URL, with {} where the query goes."
 default = "https://duckduckgo.com/?q={}"
 
+[[section.field]]
+key     = "editor"
+kind    = "string"
+label   = "Editor"
+help    = "Opens projects. Empty uses the first of Zed, VS Code and others that is installed, then $VISUAL or $EDITOR."
+default = ""
+
+[[section]]
+title = "Sources"
+
+[[section.field]]
+key     = "browser"
+kind    = "bool"
+label   = "Browser bookmarks and history"
+help    = "Search pages from Chromium-based browsers and Firefox. Read on this machine only."
+default = true
+
+[[section.field]]
+key     = "currency"
+kind    = "bool"
+label   = "Currency conversion"
+help    = "Fetch the European Central Bank's daily rates, at most twice a day, for answers like `100 usd to inr`."
+default = true
+
 [[section]]
 title = "Commands"
 

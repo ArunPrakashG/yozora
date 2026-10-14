@@ -19,9 +19,14 @@ use yozora_config::launch::LaunchSettings;
 use yozora_ui::hypr;
 
 use crate::{
+    browser::{self, Page},
     matcher::Fuzzy,
+    money::{self, Rates},
+    projects::{self, Project},
+    scripts::{self, Script},
     search::{self, Entry, Section, Sources},
     sources::{self, Clip, Cmd, Emoji, FileHit, Win},
+    ssh::{self, Host},
     usage::{self, Usage},
     view::LaunchView,
 };
@@ -43,6 +48,13 @@ pub struct Core {
     pub home: PathBuf,
     locating: Option<Task<()>>,
     clips_task: Option<Task<()>>,
+    pub scripts: Vec<Script>,
+    pub hosts: Vec<Host>,
+    pub projects: Arc<Vec<Project>>,
+    pub pages: Arc<Vec<Page>>,
+    pub rates: Option<Rates>,
+    /// When projects and browser pages were last read; they're slow, so not on every open.
+    slow_at: Option<Instant>,
     /// Bumped whenever data a search reads changes, so an open view searches again.
     pub generation: u64,
 }
@@ -65,6 +77,12 @@ impl Core {
             home: std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| "/".into()),
             locating: None,
             clips_task: None,
+            scripts: Vec::new(),
+            hosts: Vec::new(),
+            projects: Arc::new(Vec::new()),
+            pages: Arc::new(Vec::new()),
+            rates: None,
+            slow_at: None,
             generation: 0,
         }
     }
@@ -104,6 +122,11 @@ impl Core {
             files_in_search: launch.files_in_search,
             home: &self.home,
             web_name: &web_name,
+            scripts: &self.scripts,
+            hosts: &self.hosts,
+            projects: &self.projects,
+            pages: if launch.browser { &self.pages } else { &[] },
+            rates: if launch.currency { self.rates.as_ref() } else { None },
         };
         let out = search::search(query, &mut self.fuzzy, &s);
         tracing::trace!("searched {query:?} in {:?}", started.elapsed());
@@ -141,14 +164,52 @@ impl Core {
     pub fn refresh(&mut self, cx: &mut Context<Self>) {
         self.clips.clear();
         self.located = (String::new(), Vec::new());
+        let dirs = self.settings.launch.script_dirs.clone();
         cx.spawn(async move |this, cx| {
-            let (windows, dnd, recent) =
-                cx.background_spawn(async { (sources::windows(), sources::dnd(), sources::recent_files()) }).await;
+            let (windows, dnd, recent, scripts, hosts) = cx
+                .background_spawn(async move {
+                    (sources::windows(), sources::dnd(), sources::recent_files(), scripts::scan(&dirs), ssh::hosts())
+                })
+                .await;
             let _ = this.update(cx, |core, cx| {
                 core.windows = windows;
                 core.dnd = dnd;
                 core.recent = recent;
+                core.scripts = scripts;
+                core.hosts = hosts;
                 core.commands = sources::commands(&core.settings.launch, dnd);
+                core.changed(cx);
+            });
+        })
+        .detach();
+        if self.slow_at.is_none_or(|t| t.elapsed() > Duration::from_secs(600)) {
+            self.load_slow(cx);
+        }
+    }
+
+    /// Reads projects, browser pages and currency rates in the background. At startup, and
+    /// again on opening once they're ten minutes old.
+    pub fn load_slow(&mut self, cx: &mut Context<Self>) {
+        self.slow_at = Some(Instant::now());
+        let launch = self.settings.launch.clone();
+        if launch.currency && self.rates.is_none() {
+            self.rates = money::cached();
+        }
+        cx.spawn(async move |this, cx| {
+            let (projects, pages, rates) = cx
+                .background_spawn(async move {
+                    let projects = projects::scan(&launch.project_roots);
+                    let pages = if launch.browser { browser::pages() } else { Vec::new() };
+                    let rates = if launch.currency { money::refresh() } else { None };
+                    (projects, pages, rates)
+                })
+                .await;
+            let _ = this.update(cx, |core, cx| {
+                core.projects = Arc::new(projects);
+                core.pages = Arc::new(pages);
+                if rates.is_some() {
+                    core.rates = rates;
+                }
                 core.changed(cx);
             });
         })
@@ -338,7 +399,12 @@ impl Launcher {
         let core = cx.global::<Launcher>().core.clone();
         core.update(cx, |c, cx| {
             c.commands = sources::commands(&settings.launch, c.dnd);
+            let slow = (&c.settings.launch.project_roots, c.settings.launch.browser, c.settings.launch.currency)
+                != (&settings.launch.project_roots, settings.launch.browser, settings.launch.currency);
             c.settings = settings;
+            if slow {
+                c.load_slow(cx);
+            }
             c.changed(cx);
         });
     }

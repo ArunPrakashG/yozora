@@ -91,6 +91,15 @@ impl TextInput {
         }
     }
 
+    /// Changes the hint shown while the field is empty.
+    pub fn set_placeholder(&mut self, placeholder: impl Into<SharedString>, cx: &mut Context<Self>) {
+        let placeholder = placeholder.into();
+        if placeholder != self.placeholder {
+            self.placeholder = placeholder;
+            cx.notify();
+        }
+    }
+
     /// Drops the box, fill and border, at `size` px, for a field that is a row of its own.
     pub fn bare(mut self, size: f32) -> Self {
         self.bare = Some(size);

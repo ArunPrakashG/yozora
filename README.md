@@ -160,15 +160,19 @@ or the commented lines in the Hyprland snippets), then bind a key:
 hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("yozora-launch toggle"))
 ```
 
-Type to search apps, then open windows, commands such as Lock or Restart, and files. A math
-expression or a conversion (`12% of 340`, `5 km to mi`, `0xff to bin`) shows its answer first. A
-prefix searches one thing only:
+Type to search apps, then open windows, commands and script commands, projects, SSH hosts, files
+and pages from your browser. A math expression or a conversion (`12% of 340`, `5 km to mi`,
+`0xff to bin`), a currency (`100 usd to inr`, using the ECB's daily rates) or a time (`time in
+tokyo`, `3pm ist to pst`) shows its answer first. A prefix searches one thing only:
 
 | Prefix | Searches |
 |---|---|
 | `@win` or `@w` | Open windows; Enter focuses one |
 | `@clip` or `@c` | Clipboard history, from cliphist |
 | `@files` or `@f` | Recent files, then your home folder through plocate |
+| `@code` or `@p` | Git repositories and the folders Zed or VS Code opened recently; Enter opens the editor, Shift+Enter a terminal there |
+| `@ssh` or `@s` | Hosts in `~/.ssh/config`; Enter connects in your terminal |
+| `@browser` or `@b` | Bookmarks and history from Chromium-based browsers and Firefox |
 | `@emoji`, `@e` or `:` | Emoji; Enter copies one |
 | `=` | Math only |
 | `$` | A shell command, run in your terminal (Shift+Enter runs it without one) |
@@ -178,6 +182,11 @@ Up and Down (or Ctrl+N and Ctrl+K) move, Enter opens, Tab shows the other action
 selected row (an app's own actions, pin, hide, close a window, open a file's folder), Ctrl+P pins
 an app to the empty view, and Ctrl+Enter searches the web for what's typed. Escape backs out one
 step at a time; clicking outside closes it.
+
+Script commands in the Raycast or Vicinae format (`# @raycast.title …` header lines) in
+`~/.config/yozora/scripts` or `~/.local/share/vicinae/scripts` show up like commands. One with
+arguments asks for them in the field before it runs; silent ones show their last line of output
+as a notification, and `fullOutput` ones run in your terminal.
 
 Apps you open often, and at this time of day, rank higher. That history stays on your machine in
 `~/.local/state/yozora/launch.json`.
