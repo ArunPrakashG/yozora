@@ -2,12 +2,18 @@
 //! field. It stays resident, so opening it is drawing one frame.
 
 mod app;
+mod browser;
 mod calc;
+mod clock;
 mod desktop;
 mod matcher;
+mod money;
+mod projects;
+mod scripts;
 mod search;
 mod sources;
 mod spawn;
+mod ssh;
 mod usage;
 mod view;
 
@@ -288,6 +294,8 @@ fn run(dir: PathBuf, open: Option<String>) -> ExitCode {
         cx.background_spawn(async { apply_blur_rule() }).detach();
         let core = cx.new(|_| Core::new(settings));
         Launcher::init(core.clone(), cx);
+        // Windows, scripts, hosts, projects and pages, so the first open has them.
+        core.update(cx, |c, cx| c.refresh(cx));
 
         let index_core = core.clone();
         cx.spawn(async move |cx| {

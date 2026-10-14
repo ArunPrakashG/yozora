@@ -4,13 +4,19 @@
 
 use std::{path::PathBuf, sync::Arc};
 
+use gpui::SharedString;
 use yozora_ui::Icon;
 
 use crate::{
-    calc,
+    browser::Page,
+    calc, clock,
     desktop::App,
     matcher::Fuzzy,
+    money::{self, Rates},
+    projects::Project,
+    scripts::{self, Script},
     sources::{self, Clip, Cmd, Emoji, FileHit, Win},
+    ssh::Host,
     usage::Usage,
 };
 
@@ -24,6 +30,9 @@ pub enum Mode {
     Calc,
     Shell,
     Web,
+    Projects,
+    Ssh,
+    Browser,
 }
 
 impl Mode {
@@ -37,6 +46,9 @@ impl Mode {
             Mode::Calc => "Math",
             Mode::Shell => "Shell",
             Mode::Web => "Web",
+            Mode::Projects => "Projects",
+            Mode::Ssh => "SSH",
+            Mode::Browser => "Browser",
         }
     }
 
@@ -50,6 +62,9 @@ impl Mode {
             Mode::Calc => Icon::Calculator,
             Mode::Shell => Icon::Shell,
             Mode::Web => Icon::Globe,
+            Mode::Projects => Icon::Code,
+            Mode::Ssh => Icon::Terminal,
+            Mode::Browser => Icon::Star,
         }
     }
 }
@@ -59,6 +74,9 @@ pub const PREFIXES: &[(&str, Mode)] = &[
     ("@win", Mode::Windows),
     ("@clip", Mode::Clipboard),
     ("@files", Mode::Files),
+    ("@code", Mode::Projects),
+    ("@ssh", Mode::Ssh),
+    ("@browser", Mode::Browser),
     ("@emoji", Mode::Emoji),
     ("=", Mode::Calc),
     ("$", Mode::Shell),
@@ -66,8 +84,16 @@ pub const PREFIXES: &[(&str, Mode)] = &[
 ];
 
 /// Short forms that also work.
-const ALIASES: &[(&str, Mode)] =
-    &[("@w", Mode::Windows), ("@c", Mode::Clipboard), ("@f", Mode::Files), ("@e", Mode::Emoji), (":", Mode::Emoji)];
+const ALIASES: &[(&str, Mode)] = &[
+    ("@w", Mode::Windows),
+    ("@c", Mode::Clipboard),
+    ("@f", Mode::Files),
+    ("@e", Mode::Emoji),
+    (":", Mode::Emoji),
+    ("@p", Mode::Projects),
+    ("@s", Mode::Ssh),
+    ("@b", Mode::Browser),
+];
 
 /// Splits a mode prefix off the query.
 pub fn parse_mode(query: &str) -> (Mode, &str) {
@@ -104,7 +130,7 @@ pub enum Visual {
     /// An app or file icon, already sized.
     Image(Arc<PathBuf>),
     Glyph(Icon),
-    Emoji(&'static str),
+    Emoji(SharedString),
     /// The first letter of an app with no icon.
     Letter(char),
 }
@@ -119,6 +145,10 @@ pub enum Target {
     File(PathBuf),
     Shell(String),
     Web(String),
+    Script(usize),
+    Ssh(String),
+    Project(PathBuf),
+    Url(String),
 }
 
 impl Target {
@@ -130,6 +160,9 @@ impl Target {
             Target::Command(_) | Target::Shell(_) => "Run",
             Target::Copy(_) | Target::Clip(_) => "Copy",
             Target::Web(_) => "Search",
+            Target::Script(_) => "Run",
+            Target::Ssh(_) => "Connect",
+            Target::Project(_) | Target::Url(_) => "Open",
         }
     }
 }
@@ -231,6 +264,11 @@ pub struct Sources<'a> {
     pub files_in_search: bool,
     pub home: &'a std::path::Path,
     pub web_name: &'a str,
+    pub scripts: &'a [Script],
+    pub hosts: &'a [Host],
+    pub projects: &'a [Project],
+    pub pages: &'a [Page],
+    pub rates: Option<&'a Rates>,
 }
 
 /// Window icons come from the app with the same class.
@@ -316,6 +354,167 @@ fn file_row(h: &FileHit, f: &mut Fuzzy, home: &std::path::Path) -> Row {
     }
 }
 
+fn script_row(i: usize, sc: &Script, f: &mut Fuzzy, s: &Sources) -> Row {
+    let key = sc.key();
+    Row {
+        hl: f.indices(&sc.title),
+        title: sc.title.clone(),
+        sub: sc.sub(),
+        visual: match &sc.icon {
+            Some(scripts::Icon::Image(p)) => Visual::Image(Arc::new(p.clone())),
+            Some(scripts::Icon::Text(t)) => Visual::Emoji(t.clone().into()),
+            None => Visual::Glyph(Icon::Shell),
+        },
+        badge: None,
+        pinned: s.usage.is_pinned(&key),
+        top: false,
+        target: Target::Script(i),
+        key: Some(key),
+    }
+}
+
+/// The one row shown while a script's arguments are typed: Enter runs it.
+pub fn args_row(i: usize, sc: &Script) -> Row {
+    let wants: Vec<String> = sc
+        .args
+        .iter()
+        .map(|a| if a.optional { format!("[{}]", a.placeholder) } else { a.placeholder.clone() })
+        .collect();
+    Row {
+        hl: Vec::new(),
+        title: format!("Run {}", sc.title),
+        sub: format!("Type {} · Esc to go back", wants.join(" ")),
+        visual: match &sc.icon {
+            Some(scripts::Icon::Image(p)) => Visual::Image(Arc::new(p.clone())),
+            Some(scripts::Icon::Text(t)) => Visual::Emoji(t.clone().into()),
+            None => Visual::Glyph(Icon::Shell),
+        },
+        badge: None,
+        pinned: false,
+        top: false,
+        target: Target::Script(i),
+        key: Some(sc.key()),
+    }
+}
+
+fn host_row(h: &Host, f: &mut Fuzzy) -> Row {
+    Row {
+        hl: f.indices(&h.alias),
+        title: h.alias.clone(),
+        sub: h.sub(),
+        visual: Visual::Glyph(Icon::Terminal),
+        badge: None,
+        pinned: false,
+        top: false,
+        target: Target::Ssh(h.alias.clone()),
+        key: Some(h.key()),
+    }
+}
+
+fn project_row(p: &Project, f: &mut Fuzzy, s: &Sources) -> Row {
+    let key = p.key();
+    let dir = sources::tilde(&p.path, s.home);
+    Row {
+        hl: f.indices(&p.name),
+        title: p.name.clone(),
+        sub: match p.recent {
+            Some(app) => format!("{dir} · recent in {app}"),
+            None => dir,
+        },
+        visual: Visual::Glyph(Icon::Code),
+        badge: None,
+        pinned: s.usage.is_pinned(&key),
+        top: false,
+        target: Target::Project(p.path.clone()),
+        key: Some(key),
+    }
+}
+
+fn page_row(p: &Page, f: &mut Fuzzy) -> Row {
+    let title: String = p.title.chars().take(120).collect();
+    let url = p.url.split_once("://").map(|(_, r)| r).unwrap_or(&p.url);
+    Row {
+        hl: f.indices(&title),
+        title,
+        sub: format!("{} · {}", url.chars().take(90).collect::<String>(), p.browser),
+        visual: Visual::Glyph(if p.bookmark { Icon::Star } else { Icon::Clock }),
+        badge: None,
+        pinned: false,
+        top: false,
+        target: Target::Url(p.url.clone()),
+        key: None,
+    }
+}
+
+fn score_script(sc: &Script, f: &mut Fuzzy) -> Option<u32> {
+    f.score(&sc.title).max(f.score_words(&sc.sub()).map(|x| x * 3 / 5))
+}
+
+fn score_host(h: &Host, f: &mut Fuzzy) -> Option<u32> {
+    f.score(&h.alias).max(f.score_words(&h.hostname).map(|x| x * 4 / 5))
+}
+
+fn score_project(p: &Project, f: &mut Fuzzy) -> Option<u32> {
+    let path = p.path.to_string_lossy();
+    f.score(&p.name).max(f.score_words(&path).map(|x| x * 3 / 5))
+}
+
+fn score_page(p: &Page, f: &mut Fuzzy) -> Option<u32> {
+    f.score_words(&p.title).max(f.score_words(&p.words).map(|x| x * 4 / 5))
+}
+
+/// Recent projects and bookmarks, and what's visited often, rank higher.
+fn project_bonus(p: &Project) -> u32 {
+    if p.recent.is_some() { 30 } else { 0 }
+}
+
+fn page_bonus(p: &Page) -> u32 {
+    (if p.bookmark { 40 } else { 0 }) + (8.0 * (1.0 + f64::from(p.visits)).ln()) as u32
+}
+
+/// Ranks `items` by text score plus `bonus`, keeping those `keep` accepts.
+fn rank<'a, T>(
+    items: &'a [T],
+    f: &mut Fuzzy,
+    q: &str,
+    score: impl Fn(&T, &mut Fuzzy) -> Option<u32>,
+    bonus: impl Fn(&T) -> u32,
+    keep: impl Fn(u32) -> bool,
+) -> Vec<(u32, usize, &'a T)> {
+    let mut out: Vec<(u32, usize, &T)> = items
+        .iter()
+        .enumerate()
+        .filter_map(|(i, x)| {
+            let sc = score(x, f)?;
+            keep(sc).then(|| (sc + bonus(x), i, x))
+        })
+        .collect();
+    if !q.is_empty() {
+        out.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    }
+    out
+}
+
+/// A calculation, a conversion, a currency or a time, with its section's title.
+fn answer(q: &str, s: &Sources, forced: bool) -> Option<(&'static str, Row)> {
+    if let Some(a) = calc::answer(q, forced) {
+        let title = if a.detail.contains('→') { "Convert" } else { "Math" };
+        return Some((title, calc_row(a)));
+    }
+    if let Some(a) = s.rates.and_then(|r| money::answer(q, r)) {
+        let copy = money::plain(&a.value);
+        let mut row = calc_row(a);
+        row.target = Target::Copy(copy);
+        return Some(("Convert", row));
+    }
+    let now = chrono::DateTime::from_timestamp(s.now.0, 0)?;
+    let a = clock::answer(q, now)?;
+    let mut row = calc_row(a);
+    row.title = row.title.trim_start_matches("= ").to_string();
+    row.visual = Visual::Glyph(Icon::Clock);
+    Some(("Time", row))
+}
+
 fn web_row(q: &str, web_name: &str) -> Row {
     Row {
         title: format!("Search the web for “{q}”"),
@@ -341,6 +540,11 @@ fn score_app(e: &Entry, f: &mut Fuzzy) -> Option<u32> {
     let by_name = f.score(&e.app.name);
     let by_extra = if e.extra.is_empty() { None } else { f.score_words(&e.extra).map(|s| s * 3 / 5) };
     by_name.max(by_extra)
+}
+
+fn usage_boost(s: &Sources, key: &str) -> u32 {
+    let (now, hour) = s.now;
+    boost(s.usage.score(key, now, hour), s.usage.is_pinned(key))
 }
 
 /// Whether a match is good enough to show in a section that isn't the one being searched:
@@ -416,7 +620,7 @@ pub fn search(query: &str, f: &mut Fuzzy, s: &Sources) -> Vec<Section> {
                     hl: f.indices(e.name),
                     title: e.name.to_string(),
                     sub: "Copy to the clipboard".into(),
-                    visual: Visual::Emoji(e.glyph),
+                    visual: Visual::Emoji(SharedString::new_static(e.glyph)),
                     badge: None,
                     pinned: false,
                     top: false,
@@ -430,10 +634,34 @@ pub fn search(query: &str, f: &mut Fuzzy, s: &Sources) -> Vec<Section> {
             let rows = files(q, f, s, max * 2, false);
             vec![Section { title: if q.is_empty() { "Recent files" } else { "Files" }, rows }]
         }
-        Mode::Calc => match calc::answer(q, true) {
-            Some(a) => vec![Section { title: "Math", rows: vec![calc_row(a)] }],
+        Mode::Calc => match answer(q, s, true) {
+            Some((title, row)) => vec![Section { title, rows: vec![row] }],
             None => Vec::new(),
         },
+        Mode::Projects => {
+            let rows = rank(s.projects, f, q, score_project, |p| project_bonus(p) + usage_boost(s, &p.key()), |_| true)
+                .into_iter()
+                .take(max * 2)
+                .map(|(_, _, p)| project_row(p, f, s))
+                .collect();
+            vec![Section { title: "Projects", rows }]
+        }
+        Mode::Ssh => {
+            let rows = rank(s.hosts, f, q, score_host, |h| usage_boost(s, &h.key()), |_| true)
+                .into_iter()
+                .take(max * 2)
+                .map(|(_, _, h)| host_row(h, f))
+                .collect();
+            vec![Section { title: "SSH hosts", rows }]
+        }
+        Mode::Browser => {
+            let rows = rank(s.pages, f, q, score_page, page_bonus, |_| true)
+                .into_iter()
+                .take(max * 2)
+                .map(|(_, _, p)| page_row(p, f))
+                .collect();
+            vec![Section { title: if q.is_empty() { "Recent pages" } else { "Bookmarks and history" }, rows }]
+        }
         Mode::Shell if q.is_empty() => Vec::new(),
         Mode::Shell => vec![Section {
             title: "Shell",
@@ -512,9 +740,21 @@ fn empty(f: &mut Fuzzy, s: &Sources) -> Vec<Section> {
                     r.sub = why(s.usage, k, now, hour);
                     return Some(r);
                 }
-                let id = k.strip_prefix("cmd:")?;
-                let i = s.commands.iter().position(|c| c.id == id)?;
-                Some(cmd_row(i, &s.commands[i], f))
+                let mut r = if let Some(id) = k.strip_prefix("cmd:") {
+                    let i = s.commands.iter().position(|c| c.id == id)?;
+                    cmd_row(i, &s.commands[i], f)
+                } else if k.starts_with("script:") {
+                    let i = s.scripts.iter().position(|x| x.key() == k)?;
+                    script_row(i, &s.scripts[i], f, s)
+                } else if k.starts_with("ssh:") {
+                    host_row(s.hosts.iter().find(|h| h.key() == k)?, f)
+                } else if k.starts_with("proj:") {
+                    project_row(s.projects.iter().find(|p| p.key() == k)?, f, s)
+                } else {
+                    return None;
+                };
+                r.sub = why(s.usage, k, now, hour);
+                Some(r)
             })
             .take(4)
             .collect();
@@ -544,8 +784,8 @@ fn why(usage: &Usage, key: &str, now: i64, hour: u8) -> String {
 fn everything(q: &str, f: &mut Fuzzy, s: &Sources) -> Vec<Section> {
     let (now, hour) = s.now;
     let mut out = Vec::new();
-    if let Some(a) = calc::answer(q, false) {
-        out.push(Section { title: if a.detail.contains('→') { "Convert" } else { "Math" }, rows: vec![calc_row(a)] });
+    if let Some((title, row)) = answer(q, s, false) {
+        out.push(Section { title, rows: vec![row] });
     }
 
     let mut apps: Vec<(u32, usize)> = s
@@ -563,7 +803,8 @@ fn everything(q: &str, f: &mut Fuzzy, s: &Sources) -> Vec<Section> {
         .collect();
     apps.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| s.apps[a.1].app.name.len().cmp(&s.apps[b.1].app.name.len())));
 
-    let mut cmds: Vec<(u32, usize)> = s
+    // Commands and script commands, together.
+    let mut cmds: Vec<(u32, Row)> = s
         .commands
         .iter()
         .enumerate()
@@ -571,17 +812,19 @@ fn everything(q: &str, f: &mut Fuzzy, s: &Sources) -> Vec<Section> {
             let sc = f.score(c.name).max(f.score_words(c.keywords).map(|x| x * 3 / 5))?;
             strong(sc, q).then(|| (sc + boost(s.usage.score(&cmd_key(c.id), now, hour), false), i))
         })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .map(|(sc, i)| (sc, cmd_row(i, &s.commands[i], f)))
         .collect();
+    for (sc, i, script) in rank(s.scripts, f, q, score_script, |x| usage_boost(s, &x.key()), |sc| strong(sc, q)) {
+        cmds.push((sc, script_row(i, script, f, s)));
+    }
     cmds.sort_by_key(|c| std::cmp::Reverse(c.0));
 
     // The top hit is the best app, unless a command clearly wins.
-    let top = match (apps.first(), cmds.first()) {
-        (Some(a), Some(c)) if c.0 > a.0 => Some(cmd_row(c.1, &s.commands[c.1], f)),
-        (Some(a), _) => Some(app_row(a.1, &s.apps[a.1], f, s)),
-        (None, Some(c)) => Some(cmd_row(c.1, &s.commands[c.1], f)),
-        (None, None) => None,
-    };
-    let top_is_cmd = matches!(top, Some(Row { target: Target::Command(_), .. }));
+    let top_is_cmd = matches!((apps.first(), cmds.first()), (Some(a), Some(c)) if c.0 > a.0)
+        || (apps.is_empty() && !cmds.is_empty());
+    let top = if top_is_cmd { Some(cmds[0].1.clone()) } else { apps.first().map(|a| app_row(a.1, &s.apps[a.1], f, s)) };
     if let Some(mut t) = top {
         t.top = out.is_empty();
         out.push(Section { title: "Top hit", rows: vec![t] });
@@ -613,16 +856,45 @@ fn everything(q: &str, f: &mut Fuzzy, s: &Sources) -> Vec<Section> {
         });
     }
 
-    let cmd_rows: Vec<Row> =
-        cmds.iter().skip(usize::from(top_is_cmd)).take(2).map(|(_, i)| cmd_row(*i, &s.commands[*i], f)).collect();
+    let cmd_rows: Vec<Row> = cmds.into_iter().skip(usize::from(top_is_cmd)).take(2).map(|(_, r)| r).collect();
     if !cmd_rows.is_empty() {
         out.push(Section { title: "Commands", rows: cmd_rows });
+    }
+
+    let rows: Vec<Row> =
+        rank(s.projects, f, q, score_project, |p| project_bonus(p) + usage_boost(s, &p.key()), |sc| strong(sc, q))
+            .into_iter()
+            .take(2)
+            .map(|(_, _, p)| project_row(p, f, s))
+            .collect();
+    if !rows.is_empty() {
+        out.push(Section { title: "Projects", rows });
+    }
+
+    let rows: Vec<Row> = rank(s.hosts, f, q, score_host, |h| usage_boost(s, &h.key()), |sc| strong(sc, q))
+        .into_iter()
+        .take(2)
+        .map(|(_, _, h)| host_row(h, f))
+        .collect();
+    if !rows.is_empty() {
+        out.push(Section { title: "SSH hosts", rows });
     }
 
     if s.files_in_search && q.chars().count() >= 3 {
         let rows: Vec<Row> = files(q, f, s, 2, true);
         if !rows.is_empty() {
             out.push(Section { title: "Files", rows });
+        }
+    }
+
+    if q.chars().count() >= 3 {
+        let rows: Vec<Row> = rank(s.pages, f, q, score_page, page_bonus, |sc| strong(sc, q))
+            .into_iter()
+            .take(2)
+            .map(|(_, _, p)| page_row(p, f))
+            .collect();
+        if !rows.is_empty() {
+            out.push(Section { title: "Browser", rows });
         }
     }
 
@@ -666,6 +938,19 @@ mod tests {
     }
 
     fn run(q: &str, apps: &[Entry], usage: &Usage, windows: &[Win]) -> Vec<Section> {
+        run_with(q, apps, usage, windows, &Extra::default())
+    }
+
+    #[derive(Default)]
+    struct Extra {
+        scripts: Vec<Script>,
+        hosts: Vec<Host>,
+        projects: Vec<Project>,
+        pages: Vec<Page>,
+        rates: Option<Rates>,
+    }
+
+    fn run_with(q: &str, apps: &[Entry], usage: &Usage, windows: &[Win], x: &Extra) -> Vec<Section> {
         let cmds = sources::commands(&Default::default(), None);
         let home = PathBuf::from("/home/u");
         let s = Sources {
@@ -683,8 +968,85 @@ mod tests {
             files_in_search: true,
             home: &home,
             web_name: "DuckDuckGo",
+            scripts: &x.scripts,
+            hosts: &x.hosts,
+            projects: &x.projects,
+            pages: &x.pages,
+            rates: x.rates.as_ref(),
         };
         search(q, &mut Fuzzy::new(), &s)
+    }
+
+    fn extra() -> Extra {
+        let script = scripts::parse(
+            std::path::Path::new("/s/update.sh"),
+            "# @raycast.title Update System\n# @raycast.mode silent\n",
+        )
+        .unwrap();
+        let host =
+            |a: &str, h: &str| Host { alias: a.into(), hostname: h.into(), user: String::new(), port: String::new() };
+        let project =
+            |p: &str, recent| Project { path: PathBuf::from(p), name: p.rsplit('/').next().unwrap().into(), recent };
+        let page = |url: &str, title: &str, visits, bookmark| Page {
+            url: url.into(),
+            title: title.into(),
+            visits,
+            bookmark,
+            browser: "Chrome",
+            words: url.split("://").nth(1).unwrap().replace(['.', '/'], " "),
+        };
+        Extra {
+            scripts: vec![script],
+            hosts: vec![host("homelab", "10.0.0.2"), host("vps", "example.net")],
+            projects: vec![project("/home/u/src/yozora", Some("Zed")), project("/home/u/src/website", None)],
+            pages: vec![
+                page("https://github.com/notifications", "Notifications", 40, false),
+                page("https://docs.rs/gpui", "gpui - Rust", 2, true),
+            ],
+            rates: money::Rates::parse(
+                "<Cube time='2026-10-13'><Cube currency='USD' rate='1.1'/><Cube currency='INR' rate='92.4'/>",
+            ),
+        }
+    }
+
+    #[test]
+    fn new_sources_join_results() {
+        let apps = apps();
+        let x = extra();
+        let u = Usage::default();
+        let r = run_with("update sys", &apps, &u, &[], &x);
+        assert_eq!(r[0].title, "Top hit");
+        assert_eq!(r[0].rows[0].title, "Update System");
+        assert!(matches!(r[0].rows[0].target, Target::Script(0)));
+
+        let r = run_with("yozora", &apps, &u, &[], &x);
+        assert!(titles(&r).contains(&("Projects", vec!["yozora".to_string()])), "{:?}", titles(&r));
+        let r = run_with("homelab", &apps, &u, &[], &x);
+        assert!(titles(&r).contains(&("SSH hosts", vec!["homelab".to_string()])));
+        let r = run_with("notifications", &apps, &u, &[], &x);
+        assert!(titles(&r).contains(&("Browser", vec!["Notifications".to_string()])), "{:?}", titles(&r));
+
+        // Each prefix lists its own, with no query too.
+        let r = run_with("@ssh ", &apps, &u, &[], &x);
+        assert_eq!(titles(&r), vec![("SSH hosts", vec!["homelab".to_string(), "vps".to_string()])]);
+        let r = run_with("@code web", &apps, &u, &[], &x);
+        assert_eq!(r[0].rows[0].title, "website");
+        let r = run_with("@b rust", &apps, &u, &[], &x);
+        assert_eq!(r[0].rows[0].title, "gpui - Rust");
+    }
+
+    #[test]
+    fn money_and_time_answers() {
+        let apps = apps();
+        let x = extra();
+        let r = run_with("100 usd to inr", &apps, &Usage::default(), &[], &x);
+        assert_eq!(r[0].title, "Convert");
+        assert_eq!(r[0].rows[0].title, "= 8,400.00 INR");
+        assert_eq!(r[0].rows[0].target, Target::Copy("8400.00".into()));
+        // 1_000_000 s after the epoch is 13:46 UTC.
+        let r = run_with("time in utc", &apps, &Usage::default(), &[], &x);
+        assert_eq!(r[0].title, "Time");
+        assert_eq!(r[0].rows[0].title, "13:46");
     }
 
     fn titles(sections: &[Section]) -> Vec<(&'static str, Vec<String>)> {

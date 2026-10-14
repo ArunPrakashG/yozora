@@ -12,7 +12,7 @@ use std::{
 
 use crate::desktop::{self, App};
 
-fn in_path(program: &str) -> bool {
+pub fn in_path(program: &str) -> bool {
     std::env::var_os("PATH").is_some_and(|p| std::env::split_paths(&p).any(|d| d.join(program).is_file()))
 }
 

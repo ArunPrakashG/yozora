@@ -116,6 +116,12 @@ crates/
     src/desktop.rs       .desktop parsing and the Exec field codes
     src/sources.rs       windows, commands, cliphist, emoji, recent files and plocate
     src/calc.rs          the calculator and unit conversion
+    src/money.rs         currency conversion with the ECB's cached daily rates
+    src/clock.rs         times in other zones, through chrono-tz
+    src/scripts.rs       Raycast and Vicinae script commands: headers, arguments, running
+    src/projects.rs      git repositories and the folders Zed and VS Code opened recently
+    src/ssh.rs           hosts from ~/.ssh/config, following Include
+    src/browser.rs       bookmarks and history from Chromium-based browsers and Firefox
     src/usage.rs         frecency, the hour-of-day boost, pins
     src/spawn.rs         launching into a systemd scope, terminals
   yozora-settings/     bin
@@ -421,6 +427,14 @@ recent files. Opening refreshes windows and recent files in the background. A se
 of it takes about 0.1 ms, so every keystroke searches again from scratch. Only `plocate` runs
 outside the process, 90 ms after typing stops, and its results join when they arrive.
 
+Scripts and SSH hosts are re-read on every open; they're a few small files. Projects (a walk of
+`project_roots`, four levels deep and capped at 40,000 folders, about 5 ms on the dev machine),
+browser pages (about 40 ms for 2,000 pages) and currency rates load in the background at start
+and again at most every ten minutes. Other apps' SQLite databases are opened read-only with
+`immutable=1`, so the launcher never waits on a browser's or an editor's lock. A currency or time
+answer never waits on the network: the ECB rates are fetched by `curl` into a cache and used
+from there.
+
 Ranking is nucleo's fuzzy score plus bonuses: the name starting with the query, the query
 spelling the initials (`vsc`), a later word starting with it. Generic names, keywords and
 descriptions only match when every typed word starts one of their words, so letters scattered
@@ -455,3 +469,5 @@ checks that Hyprland reports it as active, and only then closes.
 | 2026-10-13 | The lock checks passwords through PAM's `yozora-lock` service, falling back to `login` |
 | 2026-10-14 | The launcher keeps a window mapped per monitor and switches its layer, rather than opening one each time |
 | 2026-10-14 | Launched apps run in their own systemd scope, not as the launcher's children |
+| 2026-10-14 | Script commands use the Raycast/Vicinae header format, so existing scripts work unchanged |
+| 2026-10-14 | Browser history and editor recents are read in place with SQLite `immutable=1`, not copied |

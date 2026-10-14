@@ -20,6 +20,7 @@ use yozora_ui::{
 
 use crate::{
     app::Core,
+    projects, scripts,
     search::{self, Mode, Row, Section, Target, Visual},
     sources, spawn,
 };
@@ -66,7 +67,12 @@ enum Act {
     OpenFolder,
     CopyPath,
     Background,
+    OpenTerminal,
+    /// Runs a script that asks for confirmation.
+    Confirmed,
 }
+
+const PLACEHOLDER: &str = "Search apps, windows, files and more";
 
 #[derive(Clone, Copy, PartialEq)]
 enum Modifier {
@@ -84,6 +90,8 @@ pub struct LaunchView {
     query: String,
     /// A mode prefix shown as a chip in front of the field rather than typed in it.
     chip: Option<&'static str>,
+    /// The script whose arguments are being typed, by index into the core's scripts.
+    args_for: Option<usize>,
     sections: Vec<Section>,
     sel: usize,
     actions: Option<Actions>,
@@ -98,7 +106,7 @@ pub struct LaunchView {
 
 impl LaunchView {
     pub fn new(core: Entity<Core>, monitor: String, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let input = cx.new(|cx| TextInput::new("Search apps, windows, files and more", window, cx).bare(19.));
+        let input = cx.new(|cx| TextInput::new(PLACEHOLDER, window, cx).bare(19.));
         let subs = vec![
             cx.subscribe_in(&input, window, |this, _, event: &InputEvent, window, cx| match event {
                 InputEvent::Changed => this.requery(cx),
@@ -120,6 +128,7 @@ impl LaunchView {
             focus: cx.focus_handle(),
             query: String::new(),
             chip: None,
+            args_for: None,
             sections: Vec::new(),
             sel: 0,
             actions: None,
@@ -141,6 +150,7 @@ impl LaunchView {
         self.input.update(cx, |i, cx| i.set_text(query.to_string(), cx));
         self.query = String::from("\0");
         self.chip = None;
+        self.leave_args(cx);
         self.actions = None;
         self.error = None;
         self.requery(cx);
@@ -158,6 +168,7 @@ impl LaunchView {
 
     pub fn set_query(&mut self, query: &str, window: &mut Window, cx: &mut Context<Self>) {
         self.chip = None;
+        self.leave_args(cx);
         self.input.update(cx, |i, cx| i.set_text(query.to_string(), cx));
         self.requery(cx);
         let focus = self.input.focus_handle(cx);
@@ -184,6 +195,7 @@ impl LaunchView {
         // Under everything, so it never blocks direct scanout of a fullscreen game.
         window.set_layer(Layer::Background);
         self.chip = None;
+        self.leave_args(cx);
         self.input.update(cx, |i, cx| i.set_text("", cx));
         self.sections.clear();
         self.actions = None;
@@ -192,6 +204,14 @@ impl LaunchView {
 
     fn requery(&mut self, cx: &mut Context<Self>) {
         let mut typed = self.input.read(cx).text().to_string();
+        if let Some(i) = self.args_for {
+            let row = self.core.read(cx).scripts.get(i).map(|sc| search::args_row(i, sc));
+            self.sections = row.map(|r| vec![Section { title: "Arguments", rows: vec![r] }]).unwrap_or_default();
+            self.sel = 0;
+            self.query = typed;
+            cx.notify();
+            return;
+        }
         if self.chip.is_none()
             && let Some((prefix, rest)) = search::committed_prefix(&typed)
         {
@@ -219,6 +239,37 @@ impl LaunchView {
         self.query = text;
         tracing::debug!("{} results in {:?}", count, started.elapsed());
         cx.notify();
+    }
+
+    /// Asks for a script's arguments in the field.
+    fn enter_args(&mut self, i: usize, cx: &mut Context<Self>) {
+        let hint = self.core.read(cx).scripts.get(i).map(|sc| {
+            sc.args
+                .iter()
+                .map(|a| if a.optional { format!("{} (optional)", a.placeholder) } else { a.placeholder.clone() })
+                .collect::<Vec<_>>()
+                .join(", ")
+        });
+        self.args_for = Some(i);
+        self.chip = None;
+        self.actions = None;
+        self.error = None;
+        self.input.update(cx, |input, cx| {
+            input.set_placeholder(hint.unwrap_or_default(), cx);
+            input.set_text("", cx);
+        });
+        self.requery(cx);
+    }
+
+    fn leave_args(&mut self, cx: &mut Context<Self>) {
+        if self.args_for.take().is_some() {
+            self.input.update(cx, |i, cx| i.set_placeholder(PLACEHOLDER, cx));
+        }
+    }
+
+    /// Nothing typed and no script waiting for arguments: the empty view.
+    fn idle(&self) -> bool {
+        self.query.trim().is_empty() && self.args_for.is_none()
     }
 
     fn rows(&self) -> impl Iterator<Item = &Row> {
@@ -259,7 +310,7 @@ impl LaunchView {
         let mut child = 0;
         let mut row = 0;
         for s in &self.sections {
-            if s.title == "Pinned" && self.query.trim().is_empty() {
+            if s.title == "Pinned" && self.idle() {
                 // Tiles: one header and one grid.
                 if self.sel < row + s.rows.len() {
                     self.scroll.scroll_to_item(child + 1);
@@ -284,8 +335,14 @@ impl LaunchView {
     fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.actions.take().is_some() {
             cx.notify();
+        } else if self.args_for.is_some() {
+            self.leave_args(cx);
+            self.input.update(cx, |i, cx| i.set_text("", cx));
+            self.query = String::from("\0");
+            self.requery(cx);
         } else if !self.query.is_empty() {
             self.chip = None;
+            self.leave_args(cx);
             self.input.update(cx, |i, cx| i.set_text("", cx));
             self.requery(cx);
         } else {
@@ -309,6 +366,9 @@ impl LaunchView {
             (Modifier::Shift, Target::Shell(_)) => Act::Background,
             (Modifier::Shift, Target::File(_)) => Act::CopyPath,
             (Modifier::Alt, Target::File(_)) => Act::OpenFolder,
+            (Modifier::Shift, Target::Project(_)) => Act::OpenTerminal,
+            (Modifier::Alt, Target::Project(_)) => Act::OpenFolder,
+            (Modifier::Shift, Target::Url(_) | Target::Ssh(_)) => Act::CopyPath,
             _ => Act::Primary,
         };
         self.perform(&row, act, window, cx);
@@ -415,6 +475,62 @@ impl LaunchView {
                 }
                 (Act::Primary, Target::Shell(cmd)) => spawn::shell_in_terminal(cmd, &terminal)?,
                 (Act::Background, Target::Shell(cmd)) => spawn::shell(cmd)?,
+                (Act::Primary | Act::Confirmed, Target::Script(i)) => {
+                    let sc = self
+                        .core
+                        .read(cx)
+                        .scripts
+                        .get(*i)
+                        .cloned()
+                        .ok_or_else(|| anyhow::anyhow!("that script is gone"))?;
+                    if !sc.args.is_empty() && self.args_for != Some(*i) {
+                        self.enter_args(*i, cx);
+                        return Ok(false);
+                    }
+                    if sc.confirm && act != Act::Confirmed {
+                        self.actions = Some(Actions {
+                            row: row.clone(),
+                            items: vec![(format!("Run {}", sc.title).into(), "↵", Act::Confirmed)],
+                            sel: 0,
+                        });
+                        return Ok(false);
+                    }
+                    let typed =
+                        if self.args_for.is_some() { self.input.read(cx).text().to_string() } else { String::new() };
+                    let args = scripts::split_args(&typed, sc.args.len());
+                    if let Some(a) =
+                        sc.args.iter().zip(&args).find(|(a, v)| !a.optional && v.is_empty()).map(|(a, _)| a)
+                    {
+                        anyhow::bail!("{} needs a value", a.placeholder);
+                    }
+                    scripts::run(&sc, &args, &terminal)?;
+                }
+                (Act::OpenFolder, Target::Script(i)) => {
+                    let path = self.core.read(cx).scripts.get(*i).map(|s| s.path.clone()).unwrap_or_default();
+                    spawn::open(&path.parent().unwrap_or(&path).to_string_lossy())?;
+                }
+                (Act::Primary, Target::Ssh(alias)) => {
+                    spawn::run("ssh", &spawn::in_terminal(&terminal, vec!["ssh".into(), alias.clone()]), None)?;
+                }
+                (Act::CopyPath, Target::Ssh(alias)) => {
+                    let text = format!("ssh {alias}");
+                    cx.background_spawn(async move { sources::copy_text(&text) }).detach();
+                }
+                (Act::Primary, Target::Project(path)) => {
+                    let editor = self.core.read(cx).settings.launch.editor.clone();
+                    projects::open(path, &editor, &terminal)?;
+                }
+                (Act::OpenTerminal, Target::Project(path)) => projects::terminal_in(path, &terminal)?,
+                (Act::OpenFolder, Target::Project(path)) => spawn::open(&path.to_string_lossy())?,
+                (Act::CopyPath, Target::Project(path)) => {
+                    let text = path.to_string_lossy().into_owned();
+                    cx.background_spawn(async move { sources::copy_text(&text) }).detach();
+                }
+                (Act::Primary, Target::Url(url)) => spawn::open(url)?,
+                (Act::CopyPath, Target::Url(url)) => {
+                    let text = url.clone();
+                    cx.background_spawn(async move { sources::copy_text(&text) }).detach();
+                }
                 (Act::Primary, Target::Web(q)) => {
                     let url = self.core.read(cx).settings.launch.web_search.replace("{}", &encode(q));
                     spawn::open(&url)?;
@@ -481,6 +597,24 @@ impl LaunchView {
             }
             Target::Copy(_) => items.push(("Copy".into(), "↵", Act::Primary)),
             Target::Web(_) => items.push(("Search".into(), "↵", Act::Primary)),
+            Target::Script(_) => {
+                items.push(("Run".into(), "↵", Act::Primary));
+                items.push(("Open the script's folder".into(), "", Act::OpenFolder));
+            }
+            Target::Ssh(_) => {
+                items.push(("Connect in a terminal".into(), "↵", Act::Primary));
+                items.push(("Copy the ssh command".into(), "Shift ↵", Act::CopyPath));
+            }
+            Target::Project(_) => {
+                items.push(("Open in the editor".into(), "↵", Act::Primary));
+                items.push(("Open a terminal here".into(), "Shift ↵", Act::OpenTerminal));
+                items.push(("Open the folder".into(), "Alt ↵", Act::OpenFolder));
+                items.push(("Copy the path".into(), "", Act::CopyPath));
+            }
+            Target::Url(_) => {
+                items.push(("Open".into(), "↵", Act::Primary));
+                items.push(("Copy the link".into(), "Shift ↵", Act::CopyPath));
+            }
         }
         self.actions = Some(Actions { row, items, sel: 0 });
         cx.notify();
@@ -645,7 +779,7 @@ fn visual(v: &Visual, size: f32, theme: &Theme) -> AnyElement {
             .items_center()
             .justify_center()
             .text_size(px((size * 0.72).round()))
-            .child(SharedString::from(*e))
+            .child(e.clone())
             .into_any_element(),
         Visual::Letter(c) => div()
             .size(px(size))
@@ -898,7 +1032,7 @@ impl LaunchView {
             return out;
         }
 
-        let empty = self.query.trim().is_empty();
+        let empty = self.idle();
         let mut i = 0;
         for s in &self.sections {
             out.push(section_title(s.title, theme).into_any_element());
@@ -918,6 +1052,9 @@ impl LaunchView {
                 Mode::Calc => "Type a calculation, like 12*(3+4) or 5 km to mi".to_string(),
                 Mode::Shell => "Type a command to run in a terminal".to_string(),
                 Mode::Web => "Type what to search the web for".to_string(),
+                Mode::Ssh if q.is_empty() => "No hosts in ~/.ssh/config".to_string(),
+                Mode::Projects if q.is_empty() => "No repositories found; add folders to project_roots".to_string(),
+                Mode::Browser if q.is_empty() => "No bookmarks or history found".to_string(),
                 _ if q.is_empty() => String::new(),
                 _ => format!("Nothing matches “{q}”"),
             };
@@ -974,7 +1111,7 @@ impl LaunchView {
     }
 
     fn footer(&self, theme: &Theme) -> impl IntoElement {
-        let empty = self.query.trim().is_empty();
+        let empty = self.idle();
         let current = self.selected();
         let left: SharedString = if let Some(e) = &self.error {
             e.clone().into()
@@ -1136,7 +1273,12 @@ impl Render for LaunchView {
             .on_key_down(cx.listener(|this, e: &KeyDownEvent, window, cx| this.key(e, window, cx)))
             // Before the field sees it: Backspace in an empty field drops the mode chip.
             .capture_action(cx.listener(|this, _: &Backspace, _, cx| {
-                if this.chip.is_some() && this.input.read(cx).text().is_empty() {
+                if this.args_for.is_some() && this.input.read(cx).text().is_empty() {
+                    this.leave_args(cx);
+                    this.query = String::from("\0");
+                    this.requery(cx);
+                    cx.stop_propagation();
+                } else if this.chip.is_some() && this.input.read(cx).text().is_empty() {
                     this.chip = None;
                     this.requery(cx);
                     cx.stop_propagation();

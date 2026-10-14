@@ -26,6 +26,17 @@ pub struct LaunchConfig {
     pub suggestions: bool,
     /// Search files as well as apps once three letters are typed.
     pub files_in_search: bool,
+    /// Opens projects. Empty picks the first installed of Zed, VS Code and a few others, then
+    /// `$VISUAL` or `$EDITOR` in the terminal.
+    pub editor: String,
+    /// Folders searched for git repositories, four levels deep. `~` is the home folder.
+    pub project_roots: Vec<String>,
+    /// Folders of script commands, in Raycast's format (`# @raycast.title …`, or `@vicinae.`).
+    pub script_dirs: Vec<String>,
+    /// Search the browsers' bookmarks and history.
+    pub browser: bool,
+    /// Convert currencies, with the European Central Bank's daily rates, fetched twice a day.
+    pub currency: bool,
     /// Commands behind the built-in actions. Run through `sh -c`.
     pub commands: Commands,
 }
@@ -39,6 +50,11 @@ impl Default for LaunchConfig {
             max_results: 6,
             suggestions: true,
             files_in_search: true,
+            editor: String::new(),
+            project_roots: vec!["~".into()],
+            script_dirs: vec!["~/.config/yozora/scripts".into(), "~/.local/share/vicinae/scripts".into()],
+            browser: true,
+            currency: true,
             commands: Commands::default(),
         }
     }
