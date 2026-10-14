@@ -53,6 +53,9 @@ pub enum InputEvent {
     Blur,
 }
 
+/// What a secret field draws for each character.
+const DOT: &str = "•";
+
 pub struct TextInput {
     focus: FocusHandle,
     content: SharedString,
@@ -60,6 +63,8 @@ pub struct TextInput {
     mono: bool,
     /// Text size when drawn without a box, for a search field that is the whole row.
     bare: Option<f32>,
+    /// Drawn as dots and never copied, for keys and passwords.
+    secret: bool,
     selected_range: Range<usize>,
     selection_reversed: bool,
     marked_range: Option<Range<usize>>,
@@ -79,6 +84,7 @@ impl TextInput {
             focus,
             content: SharedString::default(),
             placeholder: placeholder.into(),
+            secret: false,
             mono: false,
             bare: None,
             selected_range: 0..0,
@@ -110,6 +116,27 @@ impl TextInput {
     pub fn mono(mut self) -> Self {
         self.mono = true;
         self
+    }
+
+    /// Draws the text as dots and turns off copying, for keys and passwords.
+    pub fn set_secret(&mut self, secret: bool, cx: &mut Context<Self>) {
+        if self.secret != secret {
+            self.secret = secret;
+            cx.notify();
+        }
+    }
+
+    /// Where offset `i` in the text falls in what is drawn.
+    fn shown(&self, i: usize) -> usize {
+        if self.secret { self.content[..i].chars().count() * DOT.len() } else { i }
+    }
+
+    /// The offset in the text for offset `d` in what is drawn.
+    fn actual(&self, d: usize) -> usize {
+        if !self.secret {
+            return d;
+        }
+        self.content.char_indices().nth(d.div_ceil(DOT.len())).map_or(self.content.len(), |(i, _)| i)
     }
 
     pub fn text(&self) -> &str {
@@ -230,13 +257,13 @@ impl TextInput {
     }
 
     fn copy(&mut self, _: &Copy, _: &mut Window, cx: &mut Context<Self>) {
-        if !self.selected_range.is_empty() {
+        if !self.selected_range.is_empty() && !self.secret {
             cx.write_to_clipboard(ClipboardItem::new_string(self.content[self.selected_range.clone()].to_string()));
         }
     }
 
     fn cut(&mut self, _: &Cut, window: &mut Window, cx: &mut Context<Self>) {
-        if !self.selected_range.is_empty() {
+        if !self.selected_range.is_empty() && !self.secret {
             cx.write_to_clipboard(ClipboardItem::new_string(self.content[self.selected_range.clone()].to_string()));
             self.replace_text_in_range(None, "", window, cx)
         }
@@ -264,7 +291,7 @@ impl TextInput {
         if position.y > bounds.bottom() {
             return self.content.len();
         }
-        line.closest_index_for_x(position.x - bounds.left() + self.scroll_x)
+        self.actual(line.closest_index_for_x(position.x - bounds.left() + self.scroll_x))
     }
 
     fn select_to(&mut self, offset: usize, cx: &mut Context<Self>) {
@@ -409,8 +436,8 @@ impl EntityInputHandler for TextInput {
         let range = self.range_from_utf16(&range_utf16);
         let left = bounds.left() - self.scroll_x;
         Some(Bounds::from_corners(
-            point(left + last_layout.x_for_index(range.start), bounds.top()),
-            point(left + last_layout.x_for_index(range.end), bounds.bottom()),
+            point(left + last_layout.x_for_index(self.shown(range.start)), bounds.top()),
+            point(left + last_layout.x_for_index(self.shown(range.end)), bounds.bottom()),
         ))
     }
 
@@ -422,7 +449,7 @@ impl EntityInputHandler for TextInput {
     ) -> Option<usize> {
         let bounds = self.last_bounds?;
         let last_layout = self.last_layout.as_ref()?;
-        let utf8_index = last_layout.index_for_x(point.x - bounds.left() + self.scroll_x)?;
+        let utf8_index = self.actual(last_layout.index_for_x(point.x - bounds.left() + self.scroll_x)?);
         Some(self.offset_to_utf16(utf8_index))
     }
 }
@@ -483,9 +510,13 @@ impl Element for TextElement {
         let theme = Theme::global(cx);
         let (accent, accent_soft, ink_3) = (theme.accent, theme.accent_soft, theme.ink_3);
         let input = self.input.read(cx);
-        let content = input.content.clone();
-        let selected_range = input.selected_range.clone();
-        let cursor = input.cursor_offset();
+        let content = if input.secret {
+            SharedString::from(DOT.repeat(input.content.chars().count()))
+        } else {
+            input.content.clone()
+        };
+        let selected_range = input.shown(input.selected_range.start)..input.shown(input.selected_range.end);
+        let cursor = input.shown(input.cursor_offset());
         let style = window.text_style();
 
         let (display_text, text_color) =
@@ -498,7 +529,8 @@ impl Element for TextElement {
             underline: None,
             strikethrough: None,
         };
-        let runs = if let Some(marked_range) = input.marked_range.as_ref() {
+        let marked = input.marked_range.as_ref().filter(|_| !input.secret);
+        let runs = if let Some(marked_range) = marked {
             vec![
                 TextRun { len: marked_range.start, ..run.clone() },
                 TextRun {

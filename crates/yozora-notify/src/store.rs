@@ -72,6 +72,10 @@ pub struct Notification {
     pub expire_ms: i32,
     /// Unix seconds when it arrived.
     pub time: u64,
+    /// Jev's odds that it needs attention now, once it has answered.
+    pub attention: Option<f64>,
+    /// It can wait, by Jev's answer: its toast left early and it isn't counted as unread.
+    pub quiet: bool,
 }
 
 impl Notification {
@@ -203,7 +207,23 @@ impl Store {
     }
 
     pub fn unread(&self) -> bool {
-        self.list().any(|n| n.id > self.last_read)
+        self.list().any(|n| n.id > self.last_read && !n.quiet)
+    }
+
+    /// Records Jev's answer on `id`, if it still has the content the answer is for.
+    pub fn set_attention(
+        &mut self,
+        id: u32,
+        odds: f64,
+        quiet: bool,
+        is_for: impl Fn(&Notification) -> bool,
+    ) -> Option<Notification> {
+        let n = self.items.iter_mut().find(|n| n.id == id && is_for(n))?;
+        n.attention = Some(odds);
+        n.quiet = quiet;
+        let n = n.clone();
+        self.save();
+        Some(n)
     }
 
     /// Adds `n`, replacing the notification with id `replaces` or with the same tag.
@@ -307,6 +327,22 @@ mod tests {
         assert_eq!(s.add(n("c"), 99), Added::New(3));
         let summaries: Vec<_> = s.list().map(|n| n.summary.as_str()).collect();
         assert_eq!(summaries, ["c", "b2", "a"]);
+    }
+
+    #[test]
+    fn quiet_ones_are_not_unread() {
+        let mut s = Store::empty(10);
+        s.mark_read();
+        let id = s.add(n("sale"), 0).id();
+        assert!(s.unread());
+        // An answer for other content (it was replaced since) changes nothing.
+        assert!(s.set_attention(id, 0.1, true, |n| n.summary == "old").is_none());
+        assert!(s.unread());
+        let got = s.set_attention(id, 0.1, true, |n| n.summary == "sale").unwrap();
+        assert_eq!((got.attention, got.quiet), (Some(0.1), true));
+        assert!(!s.unread());
+        s.add(n("Sam: are you coming?"), 0);
+        assert!(s.unread());
     }
 
     #[test]

@@ -48,3 +48,55 @@ default = 200
 min     = 0
 max     = 2000
 step    = 50
+
+[[section]]
+title       = "Smart sorting (Jev)"
+description = "Asks Jev, TypeSafe AI's classifier, how urgent each notification is. Toasts that can wait leave early and aren't counted as unread, and during Do Not Disturb the urgent ones still show. Each notification's app, title and (if allowed) text are sent to TypeSafe AI. Critical, progress and transient notifications are never sent."
+
+[[section.field]]
+key     = "jev.enabled"
+kind    = "bool"
+label   = "Sort with Jev"
+default = false
+
+[[section.field]]
+key     = "jev.api_key"
+kind    = "string"
+label   = "API key"
+help    = "Your TypeSafe AI key. Saving it makes notify.toml readable only by you."
+default = ""
+secret  = true
+
+[[section.field]]
+key     = "jev.send_body"
+kind    = "bool"
+label   = "Send the text"
+help    = "Off sends only the app and title."
+default = true
+
+[[section.field]]
+key     = "jev.skip_apps"
+kind    = "list"
+label   = "Never send from"
+help    = "App names or desktop entries, such as a password manager or a chat app you keep private."
+default = []
+
+[[section.field]]
+key     = "jev.quiet_below"
+kind    = "float"
+label   = "Quiet below"
+help    = "Odds of needing attention below this make a notification quiet."
+default = 0.25
+min     = 0
+max     = 1
+step    = 0.05
+
+[[section.field]]
+key     = "jev.breakthrough"
+kind    = "float"
+label   = "Break through Do Not Disturb at"
+help    = "Odds at or above this show the toast even during Do Not Disturb."
+default = 0.85
+min     = 0
+max     = 1
+step    = 0.05

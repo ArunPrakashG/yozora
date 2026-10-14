@@ -18,7 +18,7 @@ optdepends=(
   'cliphist: clipboard history in the launcher'
   'plocate: file search in the launcher'
   'xdg-utils: opening files and web searches from the launcher'
-  'curl: currency rates in the launcher'
+  'curl: currency rates in the launcher, Jev sorting in notifications'
   'libnotify: output of silent script commands in the launcher'
   'openssh: SSH hosts in the launcher'
 )

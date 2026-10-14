@@ -126,6 +126,29 @@ pub fn changed_lines(old: &str, new: &str) -> Vec<usize> {
     (prefix..new.len() - suffix).collect()
 }
 
+/// The preview's lines, with the values of `secrets` (dotted keys, such as `jev.api_key`) hidden.
+pub fn masked_lines(text: &str, secrets: &[String]) -> Vec<String> {
+    let mut table = String::new();
+    text.lines()
+        .map(|line| {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with('[') {
+                table = trimmed.trim_matches(|c| c == '[' || c == ']').split(']').next().unwrap_or("").trim().into();
+                return line.to_string();
+            }
+            let Some((key, value)) = line.split_once('=') else { return line.to_string() };
+            let key_name = key.trim().trim_matches('"');
+            let full = if table.is_empty() { key_name.to_string() } else { format!("{table}.{key_name}") };
+            let empty = matches!(value.trim(), "\"\"" | "''");
+            if !empty && !trimmed.starts_with('#') && secrets.contains(&full) {
+                format!("{key}= \"••••••••\"")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect()
+}
+
 /// `toml::Value` to `toml_edit::Value`, for writing values a schema describes.
 pub fn to_edit_value(value: &toml::Value) -> Option<toml_edit::Value> {
     let text = format!("v = {value}");
@@ -147,6 +170,18 @@ pub fn string_array<S: AsRef<str>>(items: &[S]) -> toml_edit::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn secrets_are_hidden_in_the_preview() {
+        let text = "api_key = \"top\"\n[jev]\napi_key = \"k-123\" # mine\nurl = \"u\"\n[other]\napi_key = \"x\"\n";
+        let lines = masked_lines(text, &["jev.api_key".into()]);
+        assert_eq!(lines[2], "api_key = \"••••••••\"");
+        assert_eq!(lines[0], "api_key = \"top\"");
+        assert_eq!(lines[3], "url = \"u\"");
+        assert_eq!(lines[5], "api_key = \"x\"");
+        assert_eq!(masked_lines("jev.api_key = \"k\"\n", &["jev.api_key".into()])[0], "jev.api_key = \"••••••••\"");
+        assert_eq!(masked_lines("[jev]\napi_key = \"\"\n", &["jev.api_key".into()])[1], "api_key = \"\"");
+    }
 
     #[test]
     fn changed_lines_finds_the_edit() {

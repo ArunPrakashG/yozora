@@ -36,6 +36,8 @@ const WIDTH: Pixels = px(380.);
 const SHADOW: Pixels = px(28.);
 /// From the bar and from the screen's right edge.
 const EDGE: Pixels = px(12.);
+/// What is left of a toast once Jev says it can wait.
+const QUIET_LEFT: Duration = Duration::from_millis(1500);
 const GAP: f32 = 12.;
 /// How far a card slides while it arrives or leaves.
 const SLIDE: f32 = 28.;
@@ -107,6 +109,18 @@ impl Stack {
                     t.items.iter().filter(|i| i.n.urgency != Urgency::Critical).map(|i| i.n.id).collect();
                 for id in ids {
                     t.leave(id, Some(Cmd::Expired(id)), cx);
+                }
+            });
+        }
+    }
+
+    /// A toast that can wait leaves in a moment, unless it is being read.
+    pub fn shorten(id: u32, cx: &mut App) {
+        if let Some((_, view)) = Self::view(cx) {
+            view.update(cx, |t, cx| {
+                if let Some(t) = t.items.iter_mut().find(|t| t.n.id == id && t.active()) {
+                    t.left = t.left.map(|left| left.min(QUIET_LEFT));
+                    cx.notify();
                 }
             });
         }

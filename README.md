@@ -6,7 +6,9 @@ Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in 
 - **Yozora Bar** is a top panel and Waybar alternative. It has spring-based motion, glass
   popovers and near-zero cost when idle.
 - **Yozora Notify** is the notification server. Toasts match the bar's popovers, and the bar's
-  notification center shows the history, grouped by app. It replaces mako or dunst.
+  notification center shows the history, grouped by app. It replaces mako or dunst. Optionally,
+  with your own TypeSafe AI key, Jev sorts out the notifications that can wait; this sends their
+  app, title and text to TypeSafe AI, so it's off by default.
 - **Yozora Lock** is the lock screen: the blurred wallpaper, a clock, the password field, what's
   playing and the power buttons. It locks through `ext-session-lock-v1`, so if it crashes the
   session stays locked. It replaces hyprlock or swaylock.
@@ -212,7 +214,8 @@ by hand. Comments and formatting survive edits from Settings.
 
 - `theme.toml`: theme, accent, glass, font and motion, shared by every Yozora app.
 - `bar.toml`: everything about the bar.
-- `notify.toml`: how long toasts stay, how many show at once, where, and how much history.
+- `notify.toml`: how long toasts stay, how many show at once, where, how much history, and Jev
+  sorting.
 - `lock.toml`: the lock screen's background, clock format, what it shows, and how long wrong
   passwords make it wait.
 - `launch.toml`: the launcher's terminal, web search, results per section, and the commands

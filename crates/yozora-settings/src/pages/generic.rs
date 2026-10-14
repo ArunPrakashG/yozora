@@ -177,11 +177,14 @@ fn field_row(
                 &format!("{file}:{}", field.key),
                 &placeholder,
                 true,
-                InputTarget::String { file: file.into(), key: field.key.clone() },
+                InputTarget::String { file: file.into(), key: field.key.clone(), secret: field.secret },
                 if set { &current } else { "" },
                 window,
                 cx,
             );
+            if field.secret {
+                input.update(cx, |i, cx| i.set_secret(true, cx));
+            }
             div().w(px(280.)).child(input).into_any_element()
         }
         FieldKind::List => {

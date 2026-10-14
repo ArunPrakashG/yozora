@@ -84,7 +84,8 @@ impl AppPage {
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputTarget {
     /// Sets a string value. An empty field removes the key, falling back to the default.
-    String { file: String, key: String },
+    /// `secret` values also make the file readable by its owner only.
+    String { file: String, key: String, secret: bool },
     /// Appends to a list of strings, then clears the field.
     Append { file: String, key: String },
     /// Sets a number, if the text parses and is in range.
@@ -364,12 +365,21 @@ impl SettingsView {
             return;
         };
         match target {
-            InputTarget::String { file, key } => {
+            InputTarget::String { file, key, secret } => {
                 let unchanged = self.doc(&file).value(&key).and_then(|v| v.as_str().map(String::from));
                 if unchanged.as_deref() == Some(text.as_str()) || (unchanged.is_none() && text.is_empty()) {
                     return;
                 }
+                let path = self.doc(&file).path.clone();
+                // Before the save too, so the key is never in a file others can read; saves keep
+                // the mode.
+                if secret && path.exists() {
+                    let _ = yozora_config::edit::restrict(&path);
+                }
                 self.edit(&file, cx, |doc| if text.is_empty() { doc.remove(&[&key]) } else { doc.set(&key, text) });
+                if secret && let Err(e) = yozora_config::edit::restrict(&path) {
+                    self.error = Some(format!("couldn't make {file} private: {e:#}"));
+                }
             }
             InputTarget::Append { file, key } => {
                 let text = text.trim().to_string();
@@ -761,6 +771,16 @@ impl SettingsView {
 
     fn render_toml(&mut self, theme: &Theme) -> Option<impl IntoElement + use<>> {
         let file = self.page_file()?;
+        let secrets: Vec<String> = self
+            .apps
+            .iter()
+            .filter(|a| a.manifest.config == file)
+            .filter_map(|a| a.schema.as_ref())
+            .flat_map(|s| &s.section)
+            .flat_map(|s| &s.field)
+            .filter(|f| f.secret)
+            .map(|f| f.key.clone())
+            .collect();
         let doc = self.doc(&file);
         let code_bg = if theme.dark { rgba(0x00000038) } else { rgba(0x0F16260A) };
         let label = match (&doc.error, doc.saves) {
@@ -775,7 +795,7 @@ impl SettingsView {
         let lines: Vec<String> = if doc.text.trim().is_empty() {
             vec!["# Nothing set yet: every value is".into(), "# the default. Changes land here.".into()]
         } else {
-            doc.text.lines().map(String::from).collect()
+            crate::doc::masked_lines(&doc.text, &secrets)
         };
         let file_key = file.clone();
         let hl = with_alpha(theme.accent, 0x4D);
