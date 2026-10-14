@@ -6,6 +6,7 @@
 
 pub mod audio;
 pub mod bluetooth;
+pub mod brightness;
 pub mod custom;
 pub mod dbus;
 pub mod hyprland;

@@ -25,6 +25,18 @@ pub struct State {
     pub monitors: Vec<Monitor>,
     pub workspaces: Vec<Workspace>,
     pub window: Option<Window>,
+    /// The main keyboard's layout, for the on-screen display.
+    pub keyboard: Option<Keyboard>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Keyboard {
+    /// Like "English (US)".
+    pub layout: String,
+    /// The layout's short name, like "US".
+    pub code: String,
+    pub index: usize,
+    pub count: usize,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -139,7 +151,28 @@ pub fn snapshot() -> anyhow::Result<State> {
         class: active["class"].as_str().unwrap_or_default().to_string(),
         workspace: int(&active["workspace"], "id"),
     });
-    Ok(State { monitors, workspaces, window })
+    Ok(State { monitors, workspaces, window, keyboard: None })
+}
+
+/// The main keyboard's active layout.
+pub fn keyboard() -> anyhow::Result<Option<Keyboard>> {
+    let devices = query("devices")?;
+    let keyboards = devices["keyboards"].as_array().cloned().unwrap_or_default();
+    let main = keyboards.iter().find(|k| k["main"].as_bool() == Some(true)).or(keyboards.first());
+    Ok(main.map(|k| {
+        let index = k["active_layout_index"].as_u64().unwrap_or(0) as usize;
+        let codes: Vec<&str> = k["layout"].as_str().unwrap_or_default().split(',').map(str::trim).collect();
+        Keyboard {
+            layout: k["active_keymap"].as_str().unwrap_or_default().to_string(),
+            code: codes.get(index).copied().unwrap_or_default().to_uppercase(),
+            index,
+            count: codes.len().max(1),
+        }
+    }))
+}
+
+fn is_layout_event(line: &str) -> bool {
+    line.starts_with("activelayout>>")
 }
 
 /// Events that change anything we show.
@@ -160,6 +193,7 @@ fn relevant(line: &str) -> bool {
         "monitorremoved",
         "activespecial",
         "configreloaded",
+        "activelayout",
     ];
     let event = line.split(">>").next().unwrap_or_default();
     let event = event.strip_suffix("v2").unwrap_or(event);
@@ -178,25 +212,38 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
     let mut lines = BufReader::new(events).lines();
     let mut lua = true;
     let mut last = None;
-    publish(link, &mut last)?;
+    let mut kbd = keyboard().unwrap_or_else(|e| {
+        tracing::debug!("keyboard layout: {e:#}");
+        None
+    });
+    publish(link, &mut last, &kbd)?;
 
     loop {
         let wake = async { Wake::Line(lines.next().await) }.or(async { Wake::Cmd(link.cmds.recv().await.ok()) }).await;
         match wake {
             Wake::Line(None) => anyhow::bail!("Hyprland closed the event socket"),
             Wake::Line(Some(line)) => {
-                if !relevant(&line?) {
+                let line = line?;
+                if !relevant(&line) {
                     continue;
                 }
+                let mut layout_changed = is_layout_event(&line);
                 // Events come in bursts (a workspace switch sends five or six). Take what
                 // arrives in the next 2 ms, then query once.
-                let burst = async { while let Some(Ok(_)) = lines.next().await {} };
+                let burst = async {
+                    while let Some(Ok(l)) = lines.next().await {
+                        layout_changed |= is_layout_event(&l);
+                    }
+                };
                 burst
                     .or(async {
                         Timer::after(Duration::from_millis(2)).await;
                     })
                     .await;
-                publish(link, &mut last)?;
+                if layout_changed {
+                    kbd = keyboard().unwrap_or(kbd);
+                }
+                publish(link, &mut last, &kbd)?;
             }
             Wake::Cmd(None) => return Ok(()),
             Wake::Cmd(Some(Cmd::Workspace(id))) => dispatch_workspace(id, &mut lua),
@@ -204,12 +251,12 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
     }
 }
 
-fn publish(
-    link: &Link<State, Cmd>,
-    last: &mut Option<(Vec<Monitor>, Vec<Workspace>, Option<Window>)>,
-) -> anyhow::Result<()> {
-    let state = snapshot()?;
-    let key = (state.monitors.clone(), state.workspaces.clone(), state.window.clone());
+type Key = (Vec<Monitor>, Vec<Workspace>, Option<Window>, Option<Keyboard>);
+
+fn publish(link: &Link<State, Cmd>, last: &mut Option<Key>, kbd: &Option<Keyboard>) -> anyhow::Result<()> {
+    let mut state = snapshot()?;
+    state.keyboard = kbd.clone();
+    let key = (state.monitors.clone(), state.workspaces.clone(), state.window.clone(), state.keyboard.clone());
     if last.as_ref() != Some(&key) {
         *last = Some(key);
         link.publish(state);
@@ -251,6 +298,8 @@ mod tests {
     fn filters_events() {
         assert!(super::relevant("workspacev2>>3,3"));
         assert!(super::relevant("activewindow>>kitty,~"));
-        assert!(!super::relevant("activelayout>>kbd,English"));
+        assert!(super::relevant("activelayout>>kbd,English"));
+        assert!(super::is_layout_event("activelayout>>kbd,English"));
+        assert!(!super::relevant("urgent>>5a3f"));
     }
 }

@@ -121,4 +121,17 @@ help    = "Icons stay 16 px at every height."
         assert_eq!(field.kind, FieldKind::Enum);
         assert_eq!(field.option_label(1), "34");
     }
+
+    #[test]
+    fn shipped_schemas_load() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packaging/apps");
+        let mut n = 0;
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            if entry.file_name().to_string_lossy().ends_with(".settings.toml") {
+                Schema::load(&entry.path()).unwrap();
+                n += 1;
+            }
+        }
+        assert!(n >= 3);
+    }
 }

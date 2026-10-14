@@ -61,6 +61,41 @@ max     = 120
 step    = 2
 
 [[section]]
+title       = "On-screen display"
+description = "The capsule that shows volume, brightness and keyboard layout changes."
+
+[[section.field]]
+key     = "osd.enabled"
+kind    = "bool"
+label   = "Show the OSD"
+default = true
+
+[[section.field]]
+key     = "osd.position"
+kind    = "enum"
+options = ["bottom", "top"]
+label   = "Position"
+help    = "Above the bottom of the screen, or under the bar."
+default = "bottom"
+
+[[section.field]]
+key     = "osd.timeout_ms"
+kind    = "int"
+label   = "Stays for"
+help    = "Milliseconds after the last change."
+default = 1400
+min     = 500
+max     = 10000
+step    = 100
+
+[[section.field]]
+key     = "osd.keyboard_layout"
+kind    = "bool"
+label   = "Keyboard layout"
+help    = "Show when the keyboard layout switches."
+default = true
+
+[[section]]
 title       = "Session"
 description = "Commands behind the menu and the control center. Run through sh -c."
 

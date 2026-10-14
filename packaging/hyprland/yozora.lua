@@ -22,6 +22,16 @@ hl.window_rule({
     center = true,
 })
 
+-- Volume, mute and brightness keys. The bar shows its OSD for any change it sees, so plain
+-- pactl is enough; there is no pipe to feed. Brightness has no change events, so its keys go
+-- through the bar. Remove wob or swayosd if you used them.
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_SINK@ +5%"), { repeating = true, locked = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_SINK@ -5%"), { repeating = true, locked = true })
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("pactl set-sink-mute @DEFAULT_SINK@ toggle"), { locked = true })
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("pactl set-source-mute @DEFAULT_SOURCE@ toggle"), { locked = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("yozora-bar osd brightness +5%"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("yozora-bar osd brightness -5%"), { repeating = true, locked = true })
+
 -- The lock screen runs from hypridle: in ~/.config/hypr/hypridle.conf, set
 -- `lock_cmd = yozora-lock`, `before_sleep_cmd = loginctl lock-session` and `inhibit_sleep = 3`.
 -- Then this key locks too:

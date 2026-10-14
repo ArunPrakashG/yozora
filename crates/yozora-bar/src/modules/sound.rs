@@ -55,7 +55,7 @@ pub fn send(cmd: Cmd, cx: &App) {
     }
 }
 
-fn kind_icon(kind: DeviceKind) -> Icon {
+pub fn kind_icon(kind: DeviceKind) -> Icon {
     match kind {
         DeviceKind::Speakers => Icon::Speaker,
         DeviceKind::Headphones => Icon::Headphones,

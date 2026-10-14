@@ -10,6 +10,7 @@ Yozora Bar — a top panel for Hyprland
 USAGE
     yozora-bar [run] [--config DIR] [--fake[=LIST]]
     yozora-bar msg COMMAND [ARGS…]
+    yozora-bar osd brightness [+N%|-N%|N%]
     yozora-bar check [--config DIR]
     yozora-bar --version
 
@@ -23,7 +24,11 @@ COMMANDS
                 stats                     frame timing and memory
                 bench [workspaces|popover] [N]
                                           animate N times and report frame timing
+                osd brightness|volume|mic|layout
+                                          show the OSD (same as `yozora-bar osd`)
                 quit
+    osd       Change the brightness and show it, or show the volume, mic or keyboard
+              layout. Bind brightness keys to `yozora-bar osd brightness +5%`.
     check     Validate the configuration and probe system services.
 
 OPTIONS
@@ -52,7 +57,7 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Command, String> 
     let mut fakes = Fakes::default();
     let mut rest = Vec::new();
     while let Some(arg) = args.next() {
-        if sub.as_deref() == Some("msg") {
+        if matches!(sub.as_deref(), Some("msg" | "osd")) {
             rest.push(arg);
             continue;
         }
@@ -80,7 +85,7 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Command, String> 
                 }
                 fakes = Fakes(set);
             }
-            "run" | "msg" | "check" if sub.is_none() => sub = Some(arg),
+            "run" | "msg" | "osd" | "check" if sub.is_none() => sub = Some(arg),
             a if a.starts_with('-') => return Err(format!("unknown option {a}")),
             a => return Err(format!("unexpected argument {a:?}")),
         }
@@ -93,6 +98,8 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Command, String> 
             let cmd = rest.next().ok_or("msg needs a command; try `yozora-bar msg reload`")?;
             Ok(Command::Msg { cmd, args: rest.collect() })
         }
+        Some("osd") if rest.is_empty() => Err("osd needs brightness, volume, mic or layout".into()),
+        Some("osd") => Ok(Command::Msg { cmd: "osd".into(), args: rest }),
         Some(other) => Err(format!("unknown command {other}")),
     }
 }
@@ -116,6 +123,13 @@ mod tests {
             Ok(Command::Msg { cmd, args }) => assert_eq!((cmd.as_str(), args.len()), ("toggle", 2)),
             other => panic!("{other:?}"),
         }
+        match p(&["osd", "brightness", "-5%"]) {
+            Ok(Command::Msg { cmd, args }) => {
+                assert_eq!((cmd.as_str(), args), ("osd", vec!["brightness".into(), "-5%".into()]))
+            }
+            other => panic!("{other:?}"),
+        }
+        assert!(p(&["osd"]).is_err());
         assert!(p(&["--fake=wifi"]).is_err());
         assert!(matches!(p(&["check", "--config", "/tmp"]), Ok(Command::Check { config: Some(_) })));
     }
