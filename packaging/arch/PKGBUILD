@@ -2,7 +2,7 @@
 pkgname=yozora-git
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="Yozora: a top bar, notifications, a lock screen, a launcher and settings for Hyprland, built with GPUI"
+pkgdesc="Yozora: a top bar, notifications, a lock screen, a launcher and settings for Hyprland, built with GPUI, with a CLI and skill for AI agents"
 arch=('x86_64' 'aarch64')
 url="https://github.com/ArunPrakashG/yozora"
 license=('MIT')
@@ -26,6 +26,7 @@ provides=('yozora' 'notification-daemon')
 conflicts=('yozora')
 backup=('etc/pam.d/yozora-lock')
 options=('!lto')
+install=yozora.install
 source=("yozora::git+${url}.git")
 sha256sums=('SKIP')
 
@@ -42,12 +43,12 @@ prepare() {
 build() {
   cd yozora
   export CARGO_TARGET_DIR=target
-  cargo build --frozen --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-launch -p yozora-settings
+  cargo build --frozen --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-launch -p yozora-settings -p yozora-cli
 }
 
 check() {
   cd yozora
-  cargo test --frozen -p yozora-config -p yozora-ipc -p yozora-notify -p yozora-lock -p yozora-launch
+  cargo test --frozen -p yozora-config -p yozora-ipc -p yozora-notify -p yozora-lock -p yozora-launch -p yozora-cli
 }
 
 package() {
@@ -57,6 +58,7 @@ package() {
   install -Dm755 target/release/yozora-lock -t "$pkgdir/usr/bin"
   install -Dm755 target/release/yozora-launch -t "$pkgdir/usr/bin"
   install -Dm755 target/release/yozora-settings -t "$pkgdir/usr/bin"
+  install -Dm755 target/release/yozora -t "$pkgdir/usr/bin"
 
   install -Dm644 packaging/apps/bar.toml -t "$pkgdir/usr/share/yozora/apps"
   install -Dm644 packaging/apps/bar.settings.toml -t "$pkgdir/usr/share/yozora/apps"
@@ -79,6 +81,11 @@ package() {
   install -Dm644 packaging/systemd/yozora-bar.service -t "$pkgdir/usr/lib/systemd/user"
   install -Dm644 packaging/systemd/yozora-notify.service -t "$pkgdir/usr/lib/systemd/user"
   install -Dm644 packaging/systemd/yozora-launch.service -t "$pkgdir/usr/lib/systemd/user"
+  # Links the agent skill at every login, for every user, without anyone enabling it.
+  install -Dm644 packaging/systemd/yozora-agent-skill.service -t "$pkgdir/usr/lib/systemd/user"
+  install -dm755 "$pkgdir/usr/lib/systemd/user/default.target.wants"
+  ln -s ../yozora-agent-skill.service "$pkgdir/usr/lib/systemd/user/default.target.wants/yozora-agent-skill.service"
+  install -Dm644 packaging/agent/yozora/SKILL.md -t "$pkgdir/usr/share/yozora/agent/skills/yozora"
   install -Dm644 packaging/hyprland/yozora.lua -t "$pkgdir/usr/share/yozora/hyprland"
   install -Dm644 packaging/hyprland/yozora.conf -t "$pkgdir/usr/share/yozora/hyprland"
 

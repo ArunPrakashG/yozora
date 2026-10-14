@@ -131,13 +131,20 @@ crates/
     src/doc.rs           one config file being edited
     src/view.rs          sidebar, header, page, TOML preview, footer
     src/pages/           appearance, motion, bar, modules, monitors, about, and generic
+  yozora-cli/          bin `yozora`
+    src/main.rs          commands, help, and the socket client
+    src/notify.rs        notifications through yozora-notify's socket; sending over D-Bus
+    src/desktop.rs       the bar's state and controls
+    src/config.rs        settings through each app's schema, secrets masked
+    src/apps.rs          status, apps, launcher, Settings and lock
+    src/agent.rs         the agent skill: written once, linked into each harness
   yozora-config/       bar.toml, notify.toml, lock.toml, launch.toml and theme.toml types, loading with warnings, editing, watching,
                        manifests and settings schemas
   yozora-ipc/          the one-line JSON control socket
   yozora-ui/           theme tokens, icons, icon theme lookup, springs, frame timing, controls, text input,
                        Hyprland's socket and monitors
   yz-pointer/          virtual-pointer clicks and drags for scripted UI tests
-packaging/             manifests, PKGBUILD, systemd unit, Hyprland snippets, desktop files
+packaging/             manifests, PKGBUILD, systemd units, Hyprland snippets, desktop files, the agent skill
 scripts/               click.sh, drag.sh, bench.sh
 docs/
 ```
@@ -291,6 +298,12 @@ one JSON object per line, request and reply.
 | `reload` | Re-read config now |
 | `stats` | Frame-time histogram, frame count, RSS |
 | `focus` | Settings only: raise the existing window |
+| `state [section…]` | Bar: the services' snapshots as JSON, starting any the bar doesn't run yet |
+| `media`, `volume`, `profile` | Bar: playback, volume and the power profile, answering with the result |
+| `list`, `get`, `dismiss`, `pin`, `snooze`, `action`, `dnd`, `status`, `clear` | Notify: the center, as the bar's D-Bus interface has it |
+
+The `yozora` command is the client for all of these. It is what scripts and AI agents use, through
+the skill in `packaging/agent/yozora/SKILL.md`.
 
 ## Performance and measurement
 
@@ -484,3 +497,4 @@ checks that Hyprland reports it as active, and only then closes.
 | 2026-10-14 | Launched apps run in their own systemd scope, not as the launcher's children |
 | 2026-10-14 | Script commands use the Raycast/Vicinae header format, so existing scripts work unchanged |
 | 2026-10-14 | Browser history and editor recents are read in place with SQLite `immutable=1`, not copied |
+| 2026-10-14 | One `yozora` command for scripts and AI agents, over the existing control sockets, not a second API. Its skill is linked into each harness's skills folder at login by a user service, only for harnesses that are installed, and dismissals it makes don't count toward Jev's habits |

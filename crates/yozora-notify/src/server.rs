@@ -63,6 +63,9 @@ pub enum UiEvent {
 pub enum Cmd {
     Expired(u32),
     Dismissed(u32),
+    /// Closed by a script or an agent: like `Dismissed`, but it says nothing about the app's
+    /// habits.
+    Closed(u32),
     Action(u32, String),
     Reply(u32, String),
     Ipc(Incoming),
@@ -569,6 +572,12 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
                     let _ = Fdo::notification_closed(&fdo, id, Reason::Dismissed as u32).await;
                 }
             }
+            Cmd::Closed(id) => {
+                if shared.lock().store.remove(id).is_some() {
+                    shared.ui(UiEvent::Close(id));
+                    let _ = Fdo::notification_closed(&fdo, id, Reason::Closed as u32).await;
+                }
+            }
             Cmd::Action(id, key) => {
                 let resident = {
                     let mut inner = shared.lock();
@@ -674,29 +683,82 @@ fn ipc(request: &yozora_ipc::Request, shared: &Shared) -> Response {
         }
         "list" => {
             let inner = shared.lock();
-            let items: Vec<_> = inner
-                .store
-                .list()
-                .map(|n| {
-                    json!({
-                        "id": n.id,
-                        "app": n.app,
-                        "summary": n.summary,
-                        "body": n.body,
-                        "urgency": n.urgency,
-                        "time": n.time,
-                        "attention": n.attention,
-                        "quiet": n.quiet,
-                        "private": n.private,
-                        "kind": n.kind,
-                        "needs_action": n.needs_action,
-                        "pinned": n.pinned,
-                        "snoozed_until": n.snoozed_until,
-                        "reminded": n.reminded,
-                    })
-                })
-                .collect();
-            Response::data(json!(items))
+            let urgent = inner.config.jev.breakthrough;
+            Response::data(json!(inner.store.list().map(|n| to_json(n, urgent)).collect::<Vec<_>>()))
+        }
+        "get" => {
+            let inner = shared.lock();
+            match id(arg).map(|id| inner.store.get(id)) {
+                Ok(Some(n)) => Response::data(to_json(n, inner.config.jev.breakthrough)),
+                Ok(None) => Response::error(format!("no notification {}", arg.unwrap_or_default())),
+                Err(e) => e,
+            }
+        }
+        "dismiss" => {
+            if request.args.is_empty() {
+                return Response::error("dismiss needs one or more ids");
+            }
+            let mut closed = Vec::new();
+            for a in &request.args {
+                let id = match id(Some(a)) {
+                    Ok(id) => id,
+                    Err(e) => return e,
+                };
+                if shared.lock().store.get(id).is_some() {
+                    let _ = shared.cmds.try_send(Cmd::Closed(id));
+                    closed.push(id);
+                }
+            }
+            Response::data(json!({ "dismissed": closed }))
+        }
+        "pin" => {
+            let id = match id(arg) {
+                Ok(id) => id,
+                Err(e) => return e,
+            };
+            let on = match request.args.get(1).map(String::as_str) {
+                None | Some("on") => true,
+                Some("off") => false,
+                Some(other) => return Response::error(format!("pin takes on or off, not {other:?}")),
+            };
+            if shared.lock().store.pin(id, on) {
+                Response::data(json!({ "id": id, "pinned": on }))
+            } else {
+                Response::error(format!("no notification {id}"))
+            }
+        }
+        "snooze" => {
+            let id = match id(arg) {
+                Ok(id) => id,
+                Err(e) => return e,
+            };
+            let Some(minutes) = request.args.get(1).and_then(|m| m.parse::<u32>().ok()).filter(|m| *m > 0) else {
+                return Response::error("snooze needs an id and a number of minutes");
+            };
+            let minutes = minutes.min(7 * 24 * 60);
+            let until = now() + u64::from(minutes) * 60;
+            if shared.lock().store.snooze(id, until) {
+                shared.ui(UiEvent::Close(id));
+                Response::data(json!({ "id": id, "until": until }))
+            } else {
+                Response::error(format!("no notification {id}"))
+            }
+        }
+        "action" => {
+            let id = match id(arg) {
+                Ok(id) => id,
+                Err(e) => return e,
+            };
+            let key = request.args.get(1).cloned().unwrap_or_else(|| "default".into());
+            let known = shared.lock().store.get(id).map(|n| n.has_action(&key) && key != "inline-reply");
+            match known {
+                Some(true) => {
+                    let _ = shared.cmds.try_send(Cmd::Action(id, key.clone()));
+                    Response::data(json!({ "id": id, "action": key }))
+                }
+                Some(false) => Response::error(format!("notification {id} has no action {key:?}")),
+                None => Response::error(format!("no notification {id}")),
+            }
         }
         "clear" => {
             shared.lock().store.clear();
@@ -707,8 +769,37 @@ fn ipc(request: &yozora_ipc::Request, shared: &Shared) -> Response {
             shared.ui(UiEvent::Quit);
             Response::ok()
         }
-        other => Response::error(format!("unknown command {other:?}; try dnd, status, list, clear or quit")),
+        other => Response::error(format!(
+            "unknown command {other:?}; try dnd, status, list, get, dismiss, pin, snooze, action, clear or quit"
+        )),
     }
+}
+
+fn id(arg: Option<&str>) -> Result<u32, Response> {
+    arg.and_then(|a| a.parse().ok()).ok_or_else(|| Response::error("needs a notification id, a number"))
+}
+
+/// `n` for the control socket.
+fn to_json(n: &Notification, urgent: f64) -> serde_json::Value {
+    json!({
+        "id": n.id,
+        "app": n.app,
+        "summary": n.summary,
+        "body": n.body,
+        "urgency": n.urgency,
+        "time": n.time,
+        "actions": n.actions.iter().filter(|(k, _)| k != "inline-reply")
+            .map(|(k, l)| json!({ "key": k, "label": l })).collect::<Vec<_>>(),
+        "attention": n.attention,
+        "urgent": n.attention.is_some_and(|a| a >= urgent),
+        "quiet": n.quiet,
+        "private": n.private,
+        "kind": n.kind,
+        "needs_action": n.needs_action,
+        "pinned": n.pinned,
+        "snoozed_until": n.snoozed_until,
+        "reminded": n.reminded,
+    })
 }
 
 #[cfg(test)]

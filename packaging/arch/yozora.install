@@ -1,0 +1,4 @@
+post_install() {
+  echo ":: The Yozora skill for AI agents (Claude Code, Codex, opencode) is linked at your next"
+  echo "   login. To link it now: yozora agent install. To never link it: yozora agent uninstall."
+}

@@ -1,0 +1,11 @@
+[Unit]
+Description=Link the Yozora skill into AI agent harnesses (Claude Code, Codex, opencode)
+Documentation=https://github.com/ArunPrakashG/yozora
+# Only for harnesses that are installed; `yozora agent uninstall` turns this off for good.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/yozora agent install --auto
+
+[Install]
+WantedBy=default.target

@@ -3,6 +3,7 @@
 mod app;
 mod bar;
 mod cli;
+mod desktop;
 mod modules;
 mod osd;
 mod popover;

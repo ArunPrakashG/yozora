@@ -43,3 +43,18 @@ pub fn data_dirs() -> Vec<PathBuf> {
 pub fn manifest_dirs() -> Vec<PathBuf> {
     data_dirs().into_iter().map(|d| d.join("yozora/apps")).collect()
 }
+
+/// `$XDG_DATA_HOME`, where per-user data that isn't config goes.
+pub fn data_home() -> PathBuf {
+    xdg("XDG_DATA_HOME", ".local/share")
+}
+
+/// `$XDG_STATE_HOME/yozora`, for history and markers.
+pub fn state_dir() -> PathBuf {
+    xdg("XDG_STATE_HOME", ".local/state").join("yozora")
+}
+
+/// The home directory.
+pub fn home_dir() -> PathBuf {
+    home()
+}
