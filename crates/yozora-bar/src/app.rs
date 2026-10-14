@@ -479,6 +479,13 @@ pub fn handle_ipc(incoming: Incoming, cx: &mut App) {
             osd_command(args, incoming, cx);
             return;
         }
+        "state" => {
+            crate::desktop::state(args, incoming, cx);
+            return;
+        }
+        "media" => crate::desktop::media(&args, cx),
+        "volume" => crate::desktop::volume(&args, cx),
+        "profile" => crate::desktop::profile(&args, cx),
         "quit" => {
             incoming.reply(Response::ok());
             cx.quit();

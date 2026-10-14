@@ -9,6 +9,7 @@ members = [
     "crates/yozora-lock",
     "crates/yozora-notify",
     "crates/yozora-launch",
+    "crates/yozora-cli",
     "crates/yz-pointer",
 ]
 

@@ -6336,6 +6336,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "yozora-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-io",
+ "serde_json",
+ "toml 0.8.23",
+ "toml_edit 0.22.27",
+ "yozora-config",
+ "yozora-ipc",
+ "zbus",
+]
+
+[[package]]
 name = "yozora-config"
 version = "0.1.0"
 dependencies = [
