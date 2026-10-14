@@ -2,7 +2,7 @@
 pkgname=yozora-git
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="Yozora: a top bar, notifications, a lock screen and settings for Hyprland, built with GPUI"
+pkgdesc="Yozora: a top bar, notifications, a lock screen, a launcher and settings for Hyprland, built with GPUI"
 arch=('x86_64' 'aarch64')
 url="https://github.com/ArunPrakashG/yozora"
 license=('MIT')
@@ -14,6 +14,10 @@ optdepends=(
   'upower: battery module'
   'bluez: bluetooth module'
   'ttf-geist: the default font'
+  'wl-clipboard: copying from the launcher'
+  'cliphist: clipboard history in the launcher'
+  'plocate: file search in the launcher'
+  'xdg-utils: opening files and web searches from the launcher'
 )
 provides=('yozora' 'notification-daemon')
 conflicts=('yozora')
@@ -35,12 +39,12 @@ prepare() {
 build() {
   cd yozora
   export CARGO_TARGET_DIR=target
-  cargo build --frozen --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-settings
+  cargo build --frozen --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-launch -p yozora-settings
 }
 
 check() {
   cd yozora
-  cargo test --frozen -p yozora-config -p yozora-ipc -p yozora-notify -p yozora-lock
+  cargo test --frozen -p yozora-config -p yozora-ipc -p yozora-notify -p yozora-lock -p yozora-launch
 }
 
 package() {
@@ -48,6 +52,7 @@ package() {
   install -Dm755 target/release/yozora-bar -t "$pkgdir/usr/bin"
   install -Dm755 target/release/yozora-notify -t "$pkgdir/usr/bin"
   install -Dm755 target/release/yozora-lock -t "$pkgdir/usr/bin"
+  install -Dm755 target/release/yozora-launch -t "$pkgdir/usr/bin"
   install -Dm755 target/release/yozora-settings -t "$pkgdir/usr/bin"
 
   install -Dm644 packaging/apps/bar.toml -t "$pkgdir/usr/share/yozora/apps"
@@ -56,17 +61,21 @@ package() {
   install -Dm644 packaging/apps/notify.settings.toml -t "$pkgdir/usr/share/yozora/apps"
   install -Dm644 packaging/apps/lock.toml -t "$pkgdir/usr/share/yozora/apps"
   install -Dm644 packaging/apps/lock.settings.toml -t "$pkgdir/usr/share/yozora/apps"
+  install -Dm644 packaging/apps/launch.toml -t "$pkgdir/usr/share/yozora/apps"
+  install -Dm644 packaging/apps/launch.settings.toml -t "$pkgdir/usr/share/yozora/apps"
   install -Dm644 packaging/pam/yozora-lock -t "$pkgdir/etc/pam.d"
 
   install -Dm644 packaging/desktop/yozora-settings.desktop -t "$pkgdir/usr/share/applications"
   install -Dm644 packaging/desktop/yozora-bar.desktop -t "$pkgdir/usr/share/applications"
   install -Dm644 packaging/icons/yozora-bar.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
+  install -Dm644 packaging/icons/yozora-launch.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
   install -Dm644 packaging/icons/yozora-lock.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
   install -Dm644 packaging/icons/yozora-notify.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
   install -Dm644 packaging/icons/yozora-settings.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
 
   install -Dm644 packaging/systemd/yozora-bar.service -t "$pkgdir/usr/lib/systemd/user"
   install -Dm644 packaging/systemd/yozora-notify.service -t "$pkgdir/usr/lib/systemd/user"
+  install -Dm644 packaging/systemd/yozora-launch.service -t "$pkgdir/usr/lib/systemd/user"
   install -Dm644 packaging/hyprland/yozora.lua -t "$pkgdir/usr/share/yozora/hyprland"
   install -Dm644 packaging/hyprland/yozora.conf -t "$pkgdir/usr/share/yozora/hyprland"
 

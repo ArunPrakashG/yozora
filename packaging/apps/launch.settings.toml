@@ -1,0 +1,77 @@
+# Settings schema for Yozora Launch, rendered as its page in Yozora Settings.
+
+[[section]]
+title = "Results"
+
+[[section.field]]
+key     = "max_results"
+kind    = "int"
+label   = "Results per section"
+help    = "The most rows in each section, such as Apps or Files."
+default = 6
+min     = 1
+max     = 20
+
+[[section.field]]
+key     = "suggestions"
+kind    = "bool"
+label   = "Suggest apps for this hour"
+help    = "With nothing typed, show the apps you usually open around now."
+default = true
+
+[[section.field]]
+key     = "files_in_search"
+kind    = "bool"
+label   = "Search files too"
+help    = "Mix files from your home folder into results once three letters are typed. `@files` searches them either way."
+default = true
+
+[[section]]
+title = "Programs"
+
+[[section.field]]
+key     = "terminal"
+kind    = "string"
+label   = "Terminal"
+help    = "Runs terminal apps and `$` commands. Empty uses $TERMINAL, then the first common terminal that is installed."
+default = ""
+
+[[section.field]]
+key     = "web_search"
+kind    = "string"
+label   = "Web search"
+help    = "The search URL, with {} where the query goes."
+default = "https://duckduckgo.com/?q={}"
+
+[[section]]
+title = "Commands"
+
+[[section.field]]
+key     = "commands.lock"
+kind    = "string"
+label   = "Lock"
+default = "loginctl lock-session"
+
+[[section.field]]
+key     = "commands.logout"
+kind    = "string"
+label   = "Log out"
+default = "uwsm stop || loginctl terminate-session \"$XDG_SESSION_ID\""
+
+[[section.field]]
+key     = "commands.suspend"
+kind    = "string"
+label   = "Suspend"
+default = "systemctl suspend"
+
+[[section.field]]
+key     = "commands.reboot"
+kind    = "string"
+label   = "Restart"
+default = "systemctl reboot"
+
+[[section.field]]
+key     = "commands.poweroff"
+kind    = "string"
+label   = "Shut down"
+default = "systemctl poweroff"

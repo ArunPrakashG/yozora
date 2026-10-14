@@ -1,0 +1,10 @@
+# Installed to /usr/share/yozora/apps/launch.toml. Yozora Settings finds the launcher through
+# this file.
+id          = "launch"
+name        = "Yozora Launch"
+binary      = "yozora-launch"
+icon        = "yozora-launch"
+description = "The launcher: apps, open windows, files, clipboard, emoji, math and the web from one field."
+config      = "launch.toml"
+settings    = "launch.settings.toml"
+socket      = "launch.sock"

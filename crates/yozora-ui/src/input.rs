@@ -58,6 +58,8 @@ pub struct TextInput {
     content: SharedString,
     placeholder: SharedString,
     mono: bool,
+    /// Text size when drawn without a box, for a search field that is the whole row.
+    bare: Option<f32>,
     selected_range: Range<usize>,
     selection_reversed: bool,
     marked_range: Option<Range<usize>>,
@@ -78,6 +80,7 @@ impl TextInput {
             content: SharedString::default(),
             placeholder: placeholder.into(),
             mono: false,
+            bare: None,
             selected_range: 0..0,
             selection_reversed: false,
             marked_range: None,
@@ -86,6 +89,12 @@ impl TextInput {
             scroll_x: px(0.),
             is_selecting: false,
         }
+    }
+
+    /// Drops the box, fill and border, at `size` px, for a field that is a row of its own.
+    pub fn bare(mut self, size: f32) -> Self {
+        self.bare = Some(size);
+        self
     }
 
     /// Uses the monospace font, for commands and formats.
@@ -589,14 +598,18 @@ impl Render for TextInput {
             .flex()
             .items_center()
             .w_full()
-            .h(px(32.))
-            .px(px(10.))
-            .rounded(RADIUS_ROW)
-            .bg(theme.fill)
-            .border_1()
-            .border_color(if focused { theme.accent } else { theme.hair_2 })
-            .text_size(px(if self.mono { 12. } else { 13. }))
-            .line_height(px(18.))
+            .map(|el| match self.bare {
+                Some(size) => el.h(px(size * 1.4)).text_size(px(size)).line_height(px(size * 1.4)),
+                None => el
+                    .h(px(32.))
+                    .px(px(10.))
+                    .rounded(RADIUS_ROW)
+                    .bg(theme.fill)
+                    .border_1()
+                    .border_color(if focused { theme.accent } else { theme.hair_2 })
+                    .text_size(px(if self.mono { 12. } else { 13. }))
+                    .line_height(px(18.)),
+            })
             .when(self.mono, |el| el.font_family(theme.mono.clone()))
             .text_color(theme.ink)
             .child(TextElement { input: cx.entity() })
