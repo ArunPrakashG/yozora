@@ -245,6 +245,45 @@ account for 10 minutes after 3 failures within 15 minutes.
 | `yozora-lock --preview` | Shows the lock screen without locking; Escape closes it |
 | `status` | `{"locked": true}` or `false` |
 
+## launch.toml
+
+```toml
+version = 1
+
+terminal        = ""                              # empty: $TERMINAL, then the first common terminal installed
+web_search      = "https://duckduckgo.com/?q={}"  # {} is where the query goes
+max_results     = 6                               # 1–20 rows in each section
+suggestions     = true                            # apps you usually open at this hour, when nothing is typed
+files_in_search = true                            # mix files into results from the third letter
+
+[commands]                                        # each runs through `sh -c`
+lock     = "loginctl lock-session"
+logout   = "uwsm stop || loginctl terminate-session \"$XDG_SESSION_ID\""
+suspend  = "systemctl suspend"
+reboot   = "systemctl reboot"
+poweroff = "systemctl poweroff"
+```
+
+Changes apply the next time the launcher opens. Like `bar.toml`, `launch.toml` can have a
+`[theme]` table. Apps come from the `.desktop` files in `$XDG_DATA_HOME/applications` and
+`$XDG_DATA_DIRS`, re-read when one changes; `NoDisplay`, `Hidden`, `OnlyShowIn` and `NotShowIn`
+are honoured. What you open, and pins and hidden apps, are kept in
+`~/.local/state/yozora/launch.json`; deleting it starts over.
+
+Apps start in their own systemd scope (`app-yozora-<id>-<random>.scope` in `app.slice`), so
+they keep running if the launcher restarts and show up per app in `systemd-cgtop`.
+
+`yozora-launch` has these commands:
+
+| Command | Does |
+|---|---|
+| `yozora-launch [--config DIR]` | Runs the launcher, with nothing shown until it's opened |
+| `toggle [QUERY]` | Opens it on the focused monitor, or closes it; starts it if it isn't running |
+| `open [QUERY]` | Opens it with QUERY typed, such as `open @win` or `open "="` |
+| `close` | Closes it |
+| `status` | `{"open": true}` or `false` |
+| `quit` | Stops it |
+
 ## The control socket
 
 Each running app listens on `$XDG_RUNTIME_DIR/yozora/<id>.sock`. The bar's commands, also

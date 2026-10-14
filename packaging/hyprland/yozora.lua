@@ -9,7 +9,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("yozora-notify")
 end)
 
--- Blur behind the bar, its popovers and toasts. The bar and yozora-notify add these at runtime too, but rules added at
+-- Blur behind the bar, its popovers, toasts and the launcher. The bar and yozora-notify add these at runtime too, but rules added at
 -- runtime are lost when Hyprland reloads its config.
 hl.layer_rule({ match = { namespace = "^yozora-" }, blur = true, blur_popups = true, ignore_alpha = 0.2, no_anim = true })
 
@@ -26,6 +26,11 @@ hl.window_rule({
 -- `lock_cmd = yozora-lock`, `before_sleep_cmd = loginctl lock-session` and `inhibit_sleep = 3`.
 -- Then this key locks too:
 -- hl.bind("SUPER + L", hl.dsp.exec_cmd("loginctl lock-session"))
+
+-- The launcher. It starts on login and stays ready, so it opens on the next frame. With the systemd unit, enable
+-- yozora-launch too; otherwise start it here. Then pick a key (SUPER + Space here; drop any other launcher's bind):
+-- hl.on("hyprland.start", function() hl.exec_cmd("yozora-launch") end)
+-- hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("yozora-launch toggle"))
 
 -- Optional keys for the bar's popovers.
 -- hl.bind("SUPER + N", hl.dsp.exec_cmd("yozora-bar msg toggle notifications"))

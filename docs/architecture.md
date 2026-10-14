@@ -28,7 +28,8 @@ of truth.
 | `yozora-settings` | GPUI app, one normal window | Only while open |
 | `yozora-notify` | GPUI app and D-Bus server (`org.freedesktop.Notifications`); one layer-shell window for the toasts, only while there are any | Session-long, autostarted |
 | `yozora-lock` | GPUI app, one `ext-session-lock-v1` surface per monitor | While locked; started by hypridle |
-| Future: Launch, Studio, … | One binary each | Their own |
+| `yozora-launch` | GPUI app, one layer-shell window per monitor, kept mapped and empty while closed | Session-long, autostarted |
+| Future: Studio, … | One binary each | Their own |
 
 `yozora-bar` is a single process for all monitors. Services (Hyprland, PulseAudio, D-Bus) are
 shared by every bar window, so a second monitor costs one more window, not more connections.
@@ -106,13 +107,24 @@ crates/
     src/system.rs        the user, battery, network, keyboard layout, each monitor's wallpaper
     src/background.rs    the blurred wallpaper, made once and cached
     src/services.rs      MPRIS, the notification count, logind power and LockedHint
+  yozora-launch/       bin
+    src/main.rs          run, the client commands, the socket, watching .desktop folders
+    src/app.rs           the search state shared by every monitor; a window per monitor
+    src/view.rs          the launcher: field, sections, actions, keys, open and close
+    src/search.rs        modes, rows and ranking across every source
+    src/matcher.rs       nucleo, plus prefix and initials bonuses and highlighting
+    src/desktop.rs       .desktop parsing and the Exec field codes
+    src/sources.rs       windows, commands, cliphist, emoji, recent files and plocate
+    src/calc.rs          the calculator and unit conversion
+    src/usage.rs         frecency, the hour-of-day boost, pins
+    src/spawn.rs         launching into a systemd scope, terminals
   yozora-settings/     bin
     src/app.rs           window, file and manifest watching, status polling, portal theme
     src/apps.rs          discovered apps and whether they're running
     src/doc.rs           one config file being edited
     src/view.rs          sidebar, header, page, TOML preview, footer
     src/pages/           appearance, motion, bar, modules, monitors, about, and generic
-  yozora-config/       bar.toml, notify.toml, lock.toml and theme.toml types, loading with warnings, editing, watching,
+  yozora-config/       bar.toml, notify.toml, lock.toml, launch.toml and theme.toml types, loading with warnings, editing, watching,
                        manifests and settings schemas
   yozora-ipc/          the one-line JSON control socket
   yozora-ui/           theme tokens, icons, icon theme lookup, springs, frame timing, controls, text input,
@@ -370,8 +382,8 @@ stays locked. On Hyprland that means a red screen until another locker takes ove
 Upstream GPUI has layer-shell windows but no session lock, so Yozora builds against a fork:
 [ArunPrakashG/zed, branch `yozora`](https://github.com/ArunPrakashG/zed/tree/yozora). It is Zed
 `main` plus [zed#65055](https://github.com/zed-industries/zed/pull/65055) (lock surfaces, no
-commit before the first buffer, closing the windows on `finished`) and one commit exporting the
-namespace. A layer-shell window opened with `gpui::layer_shell::SESSION_LOCK_NAMESPACE` becomes a
+commit before the first buffer, closing the windows on `finished`), one commit exporting the namespace, and one letting a
+layer-shell window change its layer and keyboard interactivity after it opens, for the launcher. A layer-shell window opened with `gpui::layer_shell::SESSION_LOCK_NAMESPACE` becomes a
 lock surface on the window's display. The first one locks the session and closing the last one
 unlocks it. When the PR lands upstream, the workspace goes back to Zed `main`.
 
@@ -388,6 +400,37 @@ PAM runs on a background thread. The password is kept in a `Zeroizing` buffer, c
 into PAM's reply, and that copy is wiped before it's freed. Tests use `pam_start_confdir` with
 `pam_permit` and `pam_deny` services in a temporary directory, never the real stack, because
 `pam_faillock` would lock the account after three wrong tries.
+
+## The launcher
+
+The launcher is opened all the time, so opening it must cost nothing. `yozora-launch` runs for
+the whole session and keeps a layer-shell window mapped on every monitor, on the background
+layer, with no keyboard focus, an empty input region and nothing drawn. Opening one moves it to
+the overlay layer, takes the keyboard exclusively and draws; closing does the reverse. There is
+no surface to create, no buffer to allocate and no font to load on the way, so the first frame is
+ready about 40 µs after the request (0.2 ms for the whole command, socket included). The
+compositor shows it on the next vblank.
+
+The fork exposes the two calls this needs, `Window::set_layer` and
+`Window::set_keyboard_interactivity`, on top of the session-lock work. Upstream GPUI fixes both
+when the window opens.
+
+Everything searchable is in memory before the launcher opens: the app index (about 60 ms for
+87 apps, icons resolved and sized on a background thread), the windows, the commands and the
+recent files. Opening refreshes windows and recent files in the background. A search over all
+of it takes about 0.1 ms, so every keystroke searches again from scratch. Only `plocate` runs
+outside the process, 90 ms after typing stops, and its results join when they arrive.
+
+Ranking is nucleo's fuzzy score plus bonuses: the name starting with the query, the query
+spelling the initials (`vsc`), a later word starting with it. Generic names, keywords and
+descriptions only match when every typed word starts one of their words, so letters scattered
+through a sentence don't surface an app. Use adds `25·ln(1 + frecency)`, where frecency halves
+each week and rises up to 1.6 times for apps usually opened at this hour, and a pin adds 60.
+Windows, commands and files join the app results only when they match strongly.
+
+Closing a window goes through Hyprland's focus. Hyprland's `window.close` dispatcher ignores
+arguments it doesn't know and closes the focused window, so the launcher focuses the target,
+checks that Hyprland reports it as active, and only then closes.
 
 ## Decisions
 
@@ -410,3 +453,5 @@ into PAM's reply, and that copy is wiped before it's freed. Tests use `pam_start
 | 2026-10-13 | Custom modules speak plain text or JSON lines with `text` |
 | 2026-10-13 | Our own lock screen on a GPUI fork with `ext-session-lock-v1`, until upstream has it |
 | 2026-10-13 | The lock checks passwords through PAM's `yozora-lock` service, falling back to `login` |
+| 2026-10-14 | The launcher keeps a window mapped per monitor and switches its layer, rather than opening one each time |
+| 2026-10-14 | Launched apps run in their own systemd scope, not as the launcher's children |

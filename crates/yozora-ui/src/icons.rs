@@ -83,6 +83,15 @@ pub enum Icon {
     Clock,
     Alert,
     Window,
+    Folder,
+    Clipboard,
+    Calculator,
+    Smile,
+    Logout,
+    Star,
+    Shell,
+    Link,
+    Image,
 }
 
 const ALL: &[Icon] = &[
@@ -156,6 +165,15 @@ const ALL: &[Icon] = &[
     Icon::Clock,
     Icon::Alert,
     Icon::Window,
+    Icon::Folder,
+    Icon::Clipboard,
+    Icon::Calculator,
+    Icon::Smile,
+    Icon::Logout,
+    Icon::Star,
+    Icon::Shell,
+    Icon::Link,
+    Icon::Image,
 ];
 
 const ARC3: &str = r#"<path d="M2.5 9.2a14 14 0 0 1 19 0"/>"#;
@@ -236,6 +254,15 @@ impl Icon {
             Icon::Clock => "clock",
             Icon::Alert => "alert",
             Icon::Window => "window",
+            Icon::Folder => "folder",
+            Icon::Clipboard => "clipboard",
+            Icon::Calculator => "calculator",
+            Icon::Smile => "smile",
+            Icon::Logout => "logout",
+            Icon::Star => "star",
+            Icon::Shell => "shell",
+            Icon::Link => "link",
+            Icon::Image => "image",
         }
     }
 
@@ -395,6 +422,31 @@ impl Icon {
             }
             Icon::Window => {
                 r#"<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 8.5h17M6.5 6.5h.01M9 6.5h.01"/>"#
+            }
+            Icon::Folder => {
+                r#"<path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"/>"#
+            }
+            Icon::Clipboard => {
+                r#"<rect x="6" y="4.5" width="12" height="16" rx="2"/><path d="M9.5 3.5h5v2.5h-5zM9 11h6M9 14.5h4"/>"#
+            }
+            Icon::Calculator => {
+                r#"<rect x="5" y="3.5" width="14" height="17" rx="2.4"/><path d="M8 7.5h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/>"#
+            }
+            Icon::Smile => {
+                r#"<circle cx="12" cy="12" r="8.5"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9.5 10h.01M14.5 10h.01"/>"#
+            }
+            Icon::Logout => {
+                r#"<path d="M14 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5H14M10.5 12h10M17 8.5l3.5 3.5-3.5 3.5"/>"#
+            }
+            Icon::Star => {
+                r#"<path class="f" d="M12 3.8l2.5 5.2 5.6.7-4.1 3.9 1 5.6L12 16.5l-5 2.7 1-5.6-4.1-3.9 5.6-.7z"/>"#
+            }
+            Icon::Shell => r#"<path d="M5 8l4 4-4 4M12 16h7"/>"#,
+            Icon::Link => {
+                r#"<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>"#
+            }
+            Icon::Image => {
+                r#"<rect x="3.5" y="5" width="17" height="14" rx="2.2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 2.5-2 5 3.5"/>"#
             }
         };
         Cow::Borrowed(s)

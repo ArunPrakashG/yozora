@@ -10,6 +10,9 @@ Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in 
 - **Yozora Lock** is the lock screen: the blurred wallpaper, a clock, the password field, what's
   playing and the power buttons. It locks through `ext-session-lock-v1`, so if it crashes the
   session stays locked. It replaces hyprlock or swaylock.
+- **Yozora Launch** is the launcher: apps, open windows, files, clipboard history, emoji, math
+  and unit conversion, shell commands and web search, from one field. It stays running with a
+  window ready on each monitor, so it shows on the next frame. It replaces rofi, wofi or fuzzel.
 - **Yozora Settings** edits every Yozora app's configuration. It finds installed apps on its
   own, so a new tool shows up without Settings being rebuilt.
 
@@ -60,13 +63,13 @@ You need Rust (the toolchain is pinned in `rust-toolchain.toml`), clang, cmake a
 xkbcommon, fontconfig and Vulkan development files.
 
 ```bash
-cargo build --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-settings
+cargo build --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-launch -p yozora-settings
 ```
 
 Then install the binaries and the app manifests, so Settings can find the apps:
 
 ```bash
-install -Dm755 target/release/yozora-bar target/release/yozora-notify target/release/yozora-lock target/release/yozora-settings -t ~/.local/bin
+install -Dm755 target/release/yozora-bar target/release/yozora-notify target/release/yozora-lock target/release/yozora-launch target/release/yozora-settings -t ~/.local/bin
 ```
 
 ```bash
@@ -121,6 +124,37 @@ While locked, wrong passwords in a row (5 by default) make the field wait 30 s, 
 long each time. Media controls and the power buttons work without the password; the
 notification pill only counts what arrived, never what it says.
 
+## Open the launcher
+
+Start `yozora-launch` with the session (`systemctl --user enable --now yozora-launch.service`,
+or the commented lines in the Hyprland snippets), then bind a key:
+
+```lua
+hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("yozora-launch toggle"))
+```
+
+Type to search apps, then open windows, commands such as Lock or Restart, and files. A math
+expression or a conversion (`12% of 340`, `5 km to mi`, `0xff to bin`) shows its answer first. A
+prefix searches one thing only:
+
+| Prefix | Searches |
+|---|---|
+| `@win` or `@w` | Open windows; Enter focuses one |
+| `@clip` or `@c` | Clipboard history, from cliphist |
+| `@files` or `@f` | Recent files, then your home folder through plocate |
+| `@emoji`, `@e` or `:` | Emoji; Enter copies one |
+| `=` | Math only |
+| `$` | A shell command, run in your terminal (Shift+Enter runs it without one) |
+| `?` | The web |
+
+Up and Down (or Ctrl+N and Ctrl+K) move, Enter opens, Tab shows the other actions for the
+selected row (an app's own actions, pin, hide, close a window, open a file's folder), Ctrl+P pins
+an app to the empty view, and Ctrl+Enter searches the web for what's typed. Escape backs out one
+step at a time; clicking outside closes it.
+
+Apps you open often, and at this time of day, rank higher. That history stays on your machine in
+`~/.local/state/yozora/launch.json`.
+
 ### Keeping mako
 
 The bar also works with mako instead of yozora-notify, showing mako's history. For Do Not
@@ -145,6 +179,8 @@ by hand. Comments and formatting survive edits from Settings.
 - `notify.toml`: how long toasts stay, how many show at once, where, and how much history.
 - `lock.toml`: the lock screen's background, clock format, what it shows, and how long wrong
   passwords make it wait.
+- `launch.toml`: the launcher's terminal, web search, results per section, and the commands
+  behind Lock, Log out, Suspend, Restart and Shut down.
 
 The full reference is [docs/configuration.md](docs/configuration.md).
 
@@ -185,6 +221,9 @@ each system service the enabled modules need.
 - **The lock screen needs a GPUI fork.** Upstream GPUI has no `ext-session-lock-v1` yet; Yozora
   pins a fork with [zed#65055](https://github.com/zed-industries/zed/pull/65055) applied. See
   [docs/architecture.md](docs/architecture.md#the-gpui-fork).
+- **The launcher keeps about 120 MB resident**, most of it the Vulkan driver, so that it never
+  starts cold. Each monitor's window waits under everything, empty and taking no input, so it
+  doesn't block a fullscreen game's direct scanout.
 - **The log shows `ERROR gpui::window: window not found` each time a popover closes.** It's
   harmless: Wayland sends one last event for a window GPUI has already dropped.
 - **Tested on one machine:** Hyprland 0.56.2, a GTX 1650 Super, a 144 Hz and a 75 Hz rotated

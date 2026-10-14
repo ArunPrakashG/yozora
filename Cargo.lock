@@ -806,7 +806,7 @@ dependencies = [
 [[package]]
 name = "collections"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "gpui_util",
  "indexmap",
@@ -1085,7 +1085,7 @@ dependencies = [
 [[package]]
 name = "derive_refineable"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1218,6 +1218,15 @@ dependencies = [
  "toml 1.1.8+spec-1.1.0",
  "vswhom",
  "winreg",
+]
+
+[[package]]
+name = "emojis"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b1514ced566c94991ed9563258ecf61e311fd773bf0a3f20606830386bf66e3"
+dependencies = [
+ "phf",
 ]
 
 [[package]]
@@ -1760,7 +1769,7 @@ dependencies = [
 [[package]]
 name = "gpui"
 version = "0.2.2"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "accesskit",
  "anyhow",
@@ -1824,7 +1833,7 @@ dependencies = [
 [[package]]
 name = "gpui_apple"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "anyhow",
  "async-task",
@@ -1861,7 +1870,7 @@ dependencies = [
 [[package]]
 name = "gpui_linux"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -1901,7 +1910,7 @@ dependencies = [
 [[package]]
 name = "gpui_macos"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "accesskit",
  "accesskit_macos",
@@ -1940,7 +1949,7 @@ dependencies = [
 [[package]]
 name = "gpui_macros"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
@@ -1951,7 +1960,7 @@ dependencies = [
 [[package]]
 name = "gpui_platform"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -1965,7 +1974,7 @@ dependencies = [
 [[package]]
 name = "gpui_shared_string"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "schemars",
  "serde",
@@ -1975,7 +1984,7 @@ dependencies = [
 [[package]]
 name = "gpui_util"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "anyhow",
  "log",
@@ -1985,7 +1994,7 @@ dependencies = [
 [[package]]
 name = "gpui_web"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -2014,7 +2023,7 @@ dependencies = [
 [[package]]
 name = "gpui_wgpu"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -2040,7 +2049,7 @@ dependencies = [
 [[package]]
 name = "gpui_windows"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "accesskit",
  "accesskit_windows",
@@ -2207,7 +2216,7 @@ dependencies = [
 [[package]]
 name = "http_client"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2959,6 +2968,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
  "windows-sys",
+]
+
+[[package]]
+name = "nucleo-matcher"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf33f538733d1a5a3494b836ba913207f14d9d4a1d3cd67030c5061bdd2cac85"
+dependencies = [
+ "memchr",
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -4049,7 +4068,7 @@ dependencies = [
 [[package]]
 name = "refineable"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "derive_refineable",
 ]
@@ -4212,7 +4231,7 @@ dependencies = [
 [[package]]
 name = "scheduler"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "async-task",
  "backtrace",
@@ -4642,7 +4661,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "sum_tree"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "heapless",
  "rayon",
@@ -6266,6 +6285,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "yozora-launch"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "async-io",
+ "chrono",
+ "emojis",
+ "futures-lite",
+ "gpui",
+ "gpui_platform",
+ "inotify",
+ "nucleo-matcher",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "yozora-config",
+ "yozora-ipc",
+ "yozora-ui",
+ "zbus",
+]
+
+[[package]]
 name = "yozora-lock"
 version = "0.1.0"
 dependencies = [
@@ -6619,7 +6662,7 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 [[package]]
 name = "ztracing"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 dependencies = [
  "tracing",
  "ztracing_macro",
@@ -6628,7 +6671,7 @@ dependencies = [
 [[package]]
 name = "ztracing_macro"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/zed?rev=b1ae934ca242b3dedc1a534fe64833fc26e3792b#b1ae934ca242b3dedc1a534fe64833fc26e3792b"
+source = "git+https://github.com/ArunPrakashG/zed?rev=7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4#7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4"
 
 [[package]]
 name = "zune-core"
