@@ -433,7 +433,7 @@ impl Toasts {
             // The last one has gone: close the window, and forget it so the next toast opens a
             // new one on whichever monitor is focused then.
             cx.defer(|cx| cx.global_mut::<Stack>().window = None);
-            window.remove_window();
+            yozora_ui::close_after_frame(window, cx);
         }
         (moving, timing)
     }
