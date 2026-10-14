@@ -74,6 +74,7 @@ package() {
   install -Dm644 packaging/icons/yozora-launch.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
   install -Dm644 packaging/icons/yozora-lock.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
   install -Dm644 packaging/icons/yozora-notify.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
+  install -Dm644 packaging/icons/yozora.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
   install -Dm644 packaging/icons/yozora-settings.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
 
   install -Dm644 packaging/systemd/yozora-bar.service -t "$pkgdir/usr/lib/systemd/user"

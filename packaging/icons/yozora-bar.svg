@@ -4,6 +4,7 @@
       <stop offset="0" stop-color="#1A2747"/>
       <stop offset="1" stop-color="#070B14"/>
     </linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#8BBEFF" stop-opacity=".9"/><stop offset="1" stop-color="#8BBEFF" stop-opacity="0"/></radialGradient>
   </defs>
   <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#sky)"/>
   <rect x="4.5" y="4.5" width="119" height="119" rx="27.5" fill="none" stroke="#AAC8FF" stroke-opacity=".18"/>
@@ -11,8 +12,18 @@
   <rect x="24" y="23" width="12" height="4" rx="2" fill="#8BBEFF"/>
   <rect x="40" y="23" width="6" height="4" rx="2" fill="#E8F1FF" fill-opacity=".45"/>
   <rect x="80" y="23" width="24" height="4" rx="2" fill="#E8F1FF" fill-opacity=".45"/>
-  <g transform="translate(26 40) scale(4.6)">
-    <path fill="#8BBEFF" d="M6.43 2.6A6 6 0 1 0 13.4 9.57A5 5 0 0 1 6.43 2.6Z"/>
-    <path fill="#E8F1FF" d="M13.2 0.9l.55 1.55 1.55.55-1.55.55-.55 1.55-.55-1.55-1.55-.55 1.55-.55z"/>
+  <g transform="translate(22 34) scale(0.84)">
+  <line x1="27" y1="25" x2="50" y2="53" stroke="#E8F1FF" stroke-opacity=".45" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="75" y1="29" x2="50" y2="53" stroke="#E8F1FF" stroke-opacity=".45" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="50" y1="53" x2="48" y2="81" stroke="#E8F1FF" stroke-opacity=".45" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="27" cy="25" r="8.84" fill="url(#glow)" opacity="0.55"/>
+  <circle cx="27" cy="25" r="3.25" fill="#E8F1FF"/>
+  <circle cx="75" cy="29" r="9.86" fill="url(#glow)" opacity="0.55"/>
+  <circle cx="75" cy="29" r="3.625" fill="#E8F1FF"/>
+  <circle cx="50" cy="53" r="14.96" fill="url(#glow)" opacity="0.95"/>
+  <circle cx="50" cy="53" r="5.5" fill="#8BBEFF"/>
+  <circle cx="48" cy="81" r="10.54" fill="url(#glow)" opacity="0.55"/>
+  <circle cx="48" cy="81" r="3.875" fill="#E8F1FF"/>
+  <path fill="#E8F1FF" d="M84 61Q84 66 89 66Q84 66 84 71Q84 66 79 66Q84 66 84 61Z"/>
   </g>
 </svg>

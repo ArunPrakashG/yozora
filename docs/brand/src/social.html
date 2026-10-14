@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>social</title>
+<body style="width:1280px;height:640px"><div id="s" class="stage" style="width:1280px;height:640px"></div>
+<script src="brand.js"></script><script>
+page(() => {
+  s.innerHTML = `<canvas data-sky='{"seed":23,"density":1.1,"glows":[{"x":0.5,"y":0.35,"r":0.5,"color":"rgba(139,190,255,0.09)"},{"x":0.9,"y":0.9,"r":0.35,"color":"rgba(143,227,207,0.05)"}],"clear":[[330,300,620,190]]}'></canvas>
+  <div class="horizon" style="left:-560px;top:500px;width:2400px;height:2400px"></div>
+  ${bar()}
+  <div style="position:absolute;left:0;right:0;top:132px;display:flex;flex-direction:column;align-items:center;text-align:center">
+    ${mark({ size: 132, tile: true, id: 'b' })}
+    <div style="display:flex;align-items:baseline;gap:18px;margin-top:30px"><span class="wordmark" style="font-size:88px;line-height:1">Yozora</span><span class="jp" style="font-size:30px;color:${T.ink3};font-weight:300">夜空</span></div>
+    <div style="font-size:24px;color:${T.ink2};margin-top:18px;letter-spacing:-.01em">Your desktop. A universe of its own.</div>
+    <div class="mono" style="font-size:14px;color:${T.ink3};margin-top:22px;letter-spacing:.08em">HYPRLAND · RUST · GPUI · 120 HZ · NEAR-ZERO IDLE</div>
+  </div>`;
+});
+</script>

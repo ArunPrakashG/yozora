@@ -275,7 +275,7 @@ impl Icon {
         let s: &'static str = match self {
             Icon::Logo => {
                 return Cow::Borrowed(
-                    r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="#000" d="M6.43 2.6A6 6 0 1 0 13.4 9.57A5 5 0 0 1 6.43 2.6Z"/><path fill="#000" d="M13.2 0.9l.55 1.55 1.55.55-1.55.55-.55 1.55-.55-1.55-1.55-.55 1.55-.55z"/></svg>"##,
+                    r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g fill="none" stroke="#000" stroke-width=".9" stroke-linecap="round" opacity=".55"><path d="M3.63 2.88L8.0 8.2"/><path d="M12.75 3.64L8.0 8.2"/><path d="M8.0 8.2L7.62 13.52"/></g><g fill="#000"><circle cx="3.63" cy="2.88" r="0.95"/><circle cx="12.75" cy="3.64" r="1.05"/><circle cx="8.0" cy="8.2" r="1.6"/><circle cx="7.62" cy="13.52" r="1.1"/><path d="M13.7 9.5Q13.7 10.9 15.1 10.9Q13.7 10.9 13.7 12.3Q13.7 10.9 12.3 10.9Q13.7 10.9 13.7 9.5Z"/></g></svg>"##,
                 );
             }
             Icon::Wifi => return format!("{ARC3}{ARC2}{ARC1}").into(),

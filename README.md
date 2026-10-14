@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/brand/banner.png" alt="Yozora: a desktop for Hyprland, written in Rust with GPUI"></p>
+
 # Yozora
 
 Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in Rust with
