@@ -26,7 +26,7 @@ use zbus::{
 
 use crate::{
     jev,
-    store::{Added, Notification, Store, Urgency, strip_markup},
+    store::{Added, Answer, Notification, Store, Urgency, now, strip_markup},
 };
 
 pub const NAME: &str = "org.freedesktop.Notifications";
@@ -52,6 +52,10 @@ pub enum UiEvent {
     ExpireAll,
     /// It can wait: the toast leaves soon.
     Shorten(u32),
+    /// New details for an open toast, from Jev. Opens nothing.
+    Refresh(Box<Notification>),
+    /// The screen is being shared, or stopped being.
+    Sharing(bool),
     Quit,
 }
 
@@ -62,13 +66,29 @@ pub enum Cmd {
     Action(u32, String),
     Reply(u32, String),
     Ipc(Incoming),
-    /// Jev's odds for a notification, and the fingerprint of the content they're for.
-    Verdict(u32, u64, f64),
+    /// Jev's answers for a notification, and the fingerprint of the content they're for.
+    Verdict(u32, u64, Option<Answer>),
+    /// Hyprland says the screen is being shared, or not.
+    Sharing(bool),
+    /// Time to show snoozed and urgent unread notifications again.
+    Tick,
 }
 
 pub struct Inner {
     pub store: Store,
     pub config: NotifyConfig,
+    pub sharing: bool,
+}
+
+impl Inner {
+    /// The odds a notification needs for the bell's dot, when Jev is on.
+    fn dot_at(&self) -> Option<f64> {
+        self.config.jev.active().then_some(self.config.jev.breakthrough)
+    }
+
+    fn unread(&self) -> bool {
+        self.store.unread(self.dot_at())
+    }
 }
 
 #[derive(Clone)]
@@ -89,16 +109,17 @@ impl Shared {
 
     /// Asks Jev about notification `id` if it's on and the notification may be sent.
     fn ask_jev(&self, id: u32) {
-        let (n, cfg) = {
+        let (n, cfg, habit) = {
             let inner = self.lock();
             let Some(n) = inner.store.get(id).filter(|n| jev::eligible(n, &inner.config.jev)).cloned() else {
                 return;
             };
-            (n, inner.config.jev.clone())
+            let habit = inner.store.habit(&n);
+            (n, inner.config.jev.clone(), habit)
         };
         let cmds = self.cmds.clone();
-        jev::ask(&n, &cfg, move |print, odds| {
-            let _ = cmds.try_send(Cmd::Verdict(id, print, odds));
+        jev::ask(&n, &cfg, habit, move |print, answer| {
+            let _ = cmds.try_send(Cmd::Verdict(id, print, answer));
         });
     }
 }
@@ -159,7 +180,12 @@ impl Fdo {
         let (added, show) = {
             let mut inner = self.shared.lock();
             let show = should_toast(&n, inner.store.dnd, &inner.config);
+            // Jev won't be asked, so nothing will say it's private: it isn't hidden while sharing.
+            let asked = jev::eligible(&n, &inner.config.jev);
             let added = inner.store.add(n, replaces_id);
+            if !asked {
+                inner.store.not_private(added.id());
+            }
             let stored = inner.store.get(added.id()).cloned();
             (added, show.then_some(stored).flatten())
         };
@@ -205,16 +231,35 @@ struct Center {
 
 #[interface(name = "dev.yozora.Notify1")]
 impl Center {
-    /// Everything in the center, newest first, with the same keys as mako's `ListHistory` plus
-    /// `time`, `icon` and `image`.
+    /// Everything in the center but snoozed notifications, newest first, with the same keys as
+    /// mako's `ListHistory` plus `time`, `icon`, `image` and Jev's answers.
     fn list(&self) -> Vec<HashMap<String, OwnedValue>> {
-        self.shared.lock().store.list().map(to_dict).collect()
+        let inner = self.shared.lock();
+        let urgent = inner.config.jev.breakthrough;
+        inner.store.list().filter(|n| n.snoozed_until == 0).map(|n| to_dict(n, urgent)).collect()
     }
 
-    /// Do Not Disturb, and whether anything arrived since the center was last opened.
+    /// Do Not Disturb, and whether anything arrived since the center was last opened that's
+    /// worth the bell's dot. With Jev on, that's what it rates urgent, or hasn't rated yet.
     fn get_state(&self) -> (bool, bool) {
         let inner = self.shared.lock();
-        (inner.store.dnd, inner.store.unread())
+        (inner.store.dnd, inner.unread())
+    }
+
+    /// Keeps a notification at the top of the center and through "Clear all", or stops.
+    async fn pin(&self, id: u32, on: bool, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
+        if self.shared.lock().store.pin(id, on) {
+            let _ = Self::changed(&emitter).await;
+        }
+    }
+
+    /// Hides a notification for `minutes`, then shows it again.
+    async fn snooze(&self, id: u32, minutes: u32, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
+        let until = now() + u64::from(minutes.clamp(1, 7 * 24 * 60)) * 60;
+        if self.shared.lock().store.snooze(id, until) {
+            self.shared.ui(UiEvent::Close(id));
+            let _ = Self::changed(&emitter).await;
+        }
     }
 
     async fn set_do_not_disturb(&self, on: bool, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
@@ -265,7 +310,8 @@ async fn changed(conn: &Connection) {
     }
 }
 
-fn to_dict(n: &Notification) -> HashMap<String, OwnedValue> {
+/// `n` for the bar. `urgent` is the odds at which Jev's answer makes it urgent.
+fn to_dict(n: &Notification, urgent: f64) -> HashMap<String, OwnedValue> {
     let mut d = HashMap::new();
     let mut put = |k: &str, v: Value<'_>| {
         if let Ok(v) = v.try_to_owned() {
@@ -284,6 +330,11 @@ fn to_dict(n: &Notification) -> HashMap<String, OwnedValue> {
     put("time", n.time.into());
     put("attention", n.attention.unwrap_or(-1.0).into());
     put("quiet", n.quiet.into());
+    put("urgent", n.attention.is_some_and(|a| a >= urgent).into());
+    put("private", (n.private == Some(true)).into());
+    put("kind", n.kind.as_str().into());
+    put("needs-action", n.needs_action.into());
+    put("pinned", n.pinned.into());
     put("icon", path(&n.icon).into());
     put("image", path(&n.image).into());
     put("default-action", n.has_action("default").into());
@@ -367,8 +418,7 @@ pub fn build(
         tag,
         expire_ms,
         time: 0,
-        attention: None,
-        quiet: false,
+        ..Default::default()
     }
 }
 
@@ -509,13 +559,22 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
                 let _ = Fdo::notification_closed(&fdo, id, Reason::Expired as u32).await;
             }
             Cmd::Dismissed(id) => {
-                if shared.lock().store.remove(id).is_some() {
+                let removed = {
+                    let mut inner = shared.lock();
+                    inner.store.note(id, false);
+                    inner.store.remove(id).is_some()
+                };
+                if removed {
                     shared.ui(UiEvent::Close(id));
                     let _ = Fdo::notification_closed(&fdo, id, Reason::Dismissed as u32).await;
                 }
             }
             Cmd::Action(id, key) => {
-                let resident = shared.lock().store.get(id).map(|n| n.resident);
+                let resident = {
+                    let mut inner = shared.lock();
+                    inner.store.note(id, true);
+                    inner.store.get(id).map(|n| n.resident)
+                };
                 let Some(resident) = resident else { continue };
                 let _ = Fdo::action_invoked(&fdo, id, &key).await;
                 if !resident {
@@ -525,7 +584,12 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
                 }
             }
             Cmd::Reply(id, text) => {
-                if shared.lock().store.remove(id).is_some() {
+                let removed = {
+                    let mut inner = shared.lock();
+                    inner.store.note(id, true);
+                    inner.store.remove(id).is_some()
+                };
+                if removed {
                     let _ = Fdo::notification_replied(&fdo, id, &text).await;
                     shared.ui(UiEvent::Close(id));
                     let _ = Fdo::notification_closed(&fdo, id, Reason::Dismissed as u32).await;
@@ -535,20 +599,47 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
                 let response = ipc(&incoming.request, &shared);
                 incoming.reply(response);
             }
-            Cmd::Verdict(id, print, odds) => {
+            Cmd::Verdict(id, print, answer) => {
+                // Without an answer, whether it's private stays unknown: hidden while sharing.
+                let Some(answer) = answer else { continue };
                 let (n, effect) = {
                     let mut inner = shared.lock();
                     let send_body = inner.config.jev.send_body;
-                    let (quiet, effect) = verdict(odds, inner.store.dnd, &inner.config.jev);
-                    let n = inner.store.set_attention(id, odds, quiet, |n| jev::fingerprint(n, send_body) == print);
+                    let (quiet, effect) = verdict(answer.attention, inner.store.dnd, &inner.config.jev);
+                    let n = inner.store.set_answer(id, &answer, quiet, |n| jev::fingerprint(n, send_body) == print);
                     (n, effect)
                 };
                 let Some(n) = n else { continue };
-                tracing::debug!("jev: notification {id} needs attention at odds {odds:.2}: {effect:?}");
+                tracing::debug!("jev: notification {id}: {answer:?}: {effect:?}");
                 match effect {
                     Effect::Show if n.urgency != Urgency::Critical => shared.ui(UiEvent::Show(Box::new(n))),
-                    Effect::Shorten => shared.ui(UiEvent::Shorten(id)),
-                    _ => {}
+                    Effect::Shorten => {
+                        shared.ui(UiEvent::Refresh(Box::new(n)));
+                        shared.ui(UiEvent::Shorten(id));
+                    }
+                    _ => shared.ui(UiEvent::Refresh(Box::new(n))),
+                }
+            }
+            Cmd::Sharing(on) => {
+                shared.lock().sharing = on;
+                shared.ui(UiEvent::Sharing(on));
+                continue;
+            }
+            Cmd::Tick => {
+                let due = {
+                    let mut inner = shared.lock();
+                    let jev = &inner.config.jev;
+                    let remind =
+                        (jev.active() && jev.remind_after_min > 0).then(|| u64::from(jev.remind_after_min) * 60);
+                    let urgent = jev.breakthrough;
+                    inner.store.due(now(), remind, urgent)
+                };
+                if due.is_empty() {
+                    continue;
+                }
+                for n in due {
+                    tracing::debug!("showing notification {} again", n.id);
+                    shared.ui(UiEvent::Show(Box::new(n)));
                 }
             }
         }
@@ -576,7 +667,8 @@ fn ipc(request: &yozora_ipc::Request, shared: &Shared) -> Response {
             let inner = shared.lock();
             Response::data(json!({
                 "dnd": inner.store.dnd,
-                "unread": inner.store.unread(),
+                "unread": inner.unread(),
+                "sharing": inner.sharing,
                 "count": inner.store.list().count(),
             }))
         }
@@ -595,6 +687,12 @@ fn ipc(request: &yozora_ipc::Request, shared: &Shared) -> Response {
                         "time": n.time,
                         "attention": n.attention,
                         "quiet": n.quiet,
+                        "private": n.private,
+                        "kind": n.kind,
+                        "needs_action": n.needs_action,
+                        "pinned": n.pinned,
+                        "snoozed_until": n.snoozed_until,
+                        "reminded": n.reminded,
                     })
                 })
                 .collect();

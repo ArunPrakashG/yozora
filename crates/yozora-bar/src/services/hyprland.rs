@@ -27,6 +27,8 @@ pub struct State {
     pub window: Option<Window>,
     /// The main keyboard's layout, for the on-screen display.
     pub keyboard: Option<Keyboard>,
+    /// The screen is being shared, so private notifications hide what they say.
+    pub sharing: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -151,7 +153,7 @@ pub fn snapshot() -> anyhow::Result<State> {
         class: active["class"].as_str().unwrap_or_default().to_string(),
         workspace: int(&active["workspace"], "id"),
     });
-    Ok(State { monitors, workspaces, window, keyboard: None })
+    Ok(State { monitors, workspaces, window, keyboard: None, sharing: false })
 }
 
 /// The main keyboard's active layout.
@@ -169,6 +171,11 @@ pub fn keyboard() -> anyhow::Result<Option<Keyboard>> {
             count: codes.len().max(1),
         }
     }))
+}
+
+/// `screencast>>1,0` → started sharing.
+fn screencast(line: &str) -> Option<bool> {
+    Some(line.strip_prefix("screencast>>")?.split(',').next()? == "1")
 }
 
 fn is_layout_event(line: &str) -> bool {
@@ -216,7 +223,8 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
         tracing::debug!("keyboard layout: {e:#}");
         None
     });
-    publish(link, &mut last, &kbd)?;
+    let mut sharing = false;
+    publish(link, &mut last, &kbd, sharing)?;
 
     loop {
         let wake = async { Wake::Line(lines.next().await) }.or(async { Wake::Cmd(link.cmds.recv().await.ok()) }).await;
@@ -224,7 +232,9 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
             Wake::Line(None) => anyhow::bail!("Hyprland closed the event socket"),
             Wake::Line(Some(line)) => {
                 let line = line?;
-                if !relevant(&line) {
+                let shared = screencast(&line);
+                sharing = shared.unwrap_or(sharing);
+                if !relevant(&line) && shared.is_none() {
                     continue;
                 }
                 let mut layout_changed = is_layout_event(&line);
@@ -233,6 +243,7 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
                 let burst = async {
                     while let Some(Ok(l)) = lines.next().await {
                         layout_changed |= is_layout_event(&l);
+                        sharing = screencast(&l).unwrap_or(sharing);
                     }
                 };
                 burst
@@ -243,7 +254,7 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
                 if layout_changed {
                     kbd = keyboard().unwrap_or(kbd);
                 }
-                publish(link, &mut last, &kbd)?;
+                publish(link, &mut last, &kbd, sharing)?;
             }
             Wake::Cmd(None) => return Ok(()),
             Wake::Cmd(Some(Cmd::Workspace(id))) => dispatch_workspace(id, &mut lua),
@@ -251,12 +262,18 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
     }
 }
 
-type Key = (Vec<Monitor>, Vec<Workspace>, Option<Window>, Option<Keyboard>);
+type Key = (Vec<Monitor>, Vec<Workspace>, Option<Window>, Option<Keyboard>, bool);
 
-fn publish(link: &Link<State, Cmd>, last: &mut Option<Key>, kbd: &Option<Keyboard>) -> anyhow::Result<()> {
+fn publish(
+    link: &Link<State, Cmd>,
+    last: &mut Option<Key>,
+    kbd: &Option<Keyboard>,
+    sharing: bool,
+) -> anyhow::Result<()> {
     let mut state = snapshot()?;
     state.keyboard = kbd.clone();
-    let key = (state.monitors.clone(), state.workspaces.clone(), state.window.clone(), state.keyboard.clone());
+    state.sharing = sharing;
+    let key = (state.monitors.clone(), state.workspaces.clone(), state.window.clone(), state.keyboard.clone(), sharing);
     if last.as_ref() != Some(&key) {
         *last = Some(key);
         link.publish(state);
@@ -300,6 +317,9 @@ mod tests {
         assert!(super::relevant("activewindow>>kitty,~"));
         assert!(super::relevant("activelayout>>kbd,English"));
         assert!(super::is_layout_event("activelayout>>kbd,English"));
+        assert_eq!(super::screencast("screencast>>1,0"), Some(true));
+        assert_eq!(super::screencast("screencast>>0,0"), Some(false));
+        assert_eq!(super::screencast("activewindow>>kitty,~"), None);
         assert!(!super::relevant("urgent>>5a3f"));
     }
 }

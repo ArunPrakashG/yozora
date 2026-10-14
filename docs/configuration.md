@@ -195,7 +195,9 @@ url          = "https://api.typesafe.ai/v1/systemone"
 send_body    = true      # false sends only the app and title
 skip_apps    = []        # app names or desktop entries never sent
 quiet_below  = 0.25      # odds of needing attention below this: a quiet notification
-breakthrough = 0.85      # odds at or above this show the toast during Do Not Disturb
+breakthrough = 0.85      # odds at or above this: urgent, shown during Do Not Disturb
+remind_after_min = 10    # show an urgent one you haven't seen again after this long, once; 0 never
+learn        = true      # also send how often you opened or dismissed this app's notifications
 ```
 
 Critical notifications stay until you dismiss them, and still show during Do Not Disturb.
@@ -206,9 +208,23 @@ History is kept in `$XDG_STATE_HOME/yozora/notify.json`, and images apps send in
 `~/.cache/yozora/notify/`.
 
 With `[jev]` on, each notification's app, title, urgency, category and (with `send_body`) the
-first 1000 characters of its text go to TypeSafe AI's Jev, through `curl`, which asks how likely
-it is you want to see it now. The toast doesn't wait for the answer. A quiet one leaves after
-1.5 seconds and isn't counted as unread; during Do Not Disturb one past `breakthrough` is shown.
+first 1000 characters of its text go to TypeSafe AI's Jev, through `curl`. One request asks four
+things: how likely it is you want to see it now, whether it's private, what kind it is (message,
+alert, reminder, update or promotion) and whether it asks you to do something. With `learn`, it
+also carries how many of that app's notifications you opened and dismissed, once there are three;
+never what they said. The toast doesn't wait for the answers.
+
+- **Quiet** (below `quiet_below`): the toast leaves after 1.5 seconds, it isn't counted as unread,
+  and the bar folds it into *Can wait*.
+- **Urgent** (at or above `breakthrough`): shown during Do Not Disturb, listed first under *Needs
+  you*, and shown once more after `remind_after_min` if you haven't opened the center. With Jev
+  on, only urgent notifications, and ones not answered yet, put the dot on the bell.
+- **Private**: while the screen is shared (Hyprland's `screencast` event), its toast and its card in
+  the bar show only the app. A toast Jev hasn't answered about yet is hidden the same way.
+- **Kind**: the bar groups by it instead of by app.
+- **Asks for something**: its card in the bar can be pinned (kept on top and through *Clear all*)
+  or snoozed for an hour, after which it shows again.
+
 Critical, transient, progress and volume-style notifications are never sent, and answers are
 remembered by content, so a repeat isn't asked about twice.
 

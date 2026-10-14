@@ -1,4 +1,7 @@
-//! The notification center, grouped by app, and Do Not Disturb.
+//! The notification center and Do Not Disturb.
+//!
+//! With Jev on in Yozora Notify, pinned notifications come first, then the urgent ones, then
+//! the rest by kind, and what can wait is folded at the bottom. Otherwise they're grouped by app.
 
 use gpui::{
     AnyElement, App, Context, Div, FontWeight, InteractiveElement, IntoElement, ParentElement,
@@ -90,15 +93,16 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
                 .into_any_element(),
         );
     }
+    let sharing = Services::get(cx).hyprland.as_ref().is_some_and(|h| h.read(cx).state.sharing);
+    let yozora = state.daemon == Daemon::Yozora;
     let mut shown = 0;
     for (g, group) in groups(&state.items).into_iter().enumerate() {
         if shown >= 30 {
             break;
         }
-        let app = group[0].app.clone();
-        let expanded = group.len() == 1 || p.ui.expanded.contains(&app);
-        let glyph = yozora_ui::icons::guess_app_icon(&app, &group[0].desktop_entry);
-        let toggle_app = app.clone();
+        let Group { key, title, glyph, items: group, always_open, folded } = group;
+        let expanded = always_open || (group.len() == 1 && !folded) || p.ui.expanded.contains(&key);
+        let toggle_key = key.clone();
         let mut el = div().flex().flex_col().pt(px(if g == 0 { 0. } else { 8. })).child(
             div()
                 .id(("group", g))
@@ -111,35 +115,35 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
                 .text_size(px(11.))
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_color(theme.ink_3)
-                .child(div().flex().items_center().gap(px(8.)).child(icon_sized(glyph, 13.)).child(if app.is_empty() {
-                    "NOTIFICATIONS".to_string()
-                } else {
-                    app.to_uppercase()
-                }))
-                .child(div().font_weight(FontWeight::NORMAL).child(if group.len() > 1 && expanded {
+                .child(div().flex().items_center().gap(px(8.)).child(icon_sized(glyph, 13.)).child(title))
+                .child(div().font_weight(FontWeight::NORMAL).child(if expanded && !always_open && group.len() > 1 {
                     "Show less".to_string()
                 } else {
                     group.len().to_string()
                 }))
-                .when(group.len() > 1, |el| {
+                .when(!always_open && (group.len() > 1 || folded), |el| {
                     el.cursor_pointer().hover(|s| s.text_color(theme.ink_2)).on_click(cx.listener(
                         move |p, _, _, cx| {
-                            if !p.ui.expanded.remove(&toggle_app) {
-                                p.ui.expanded.insert(toggle_app.clone());
+                            if !p.ui.expanded.remove(&toggle_key) {
+                                p.ui.expanded.insert(toggle_key.clone());
                             }
                             cx.notify();
                         },
                     ))
                 }),
         );
-        let take = if expanded { group.len() } else { 1 };
+        let take = match (expanded, folded) {
+            (true, _) => group.len(),
+            (false, true) => 0,
+            (false, false) => 1,
+        };
         for n in group.iter().take(take) {
-            el = el.child(card(n, shown, theme, cx));
+            el = el.child(card(n, shown, sharing, yozora, theme, cx));
             shown += 1;
         }
-        if !expanded {
+        if !expanded && !folded {
             // The rest peek out from under the newest, like a stack of cards.
-            let peek_app = app.clone();
+            let peek_key = key.clone();
             el = el.child(
                 div()
                     .id(("peek", g))
@@ -150,7 +154,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
                     .child(div().h(px(7.)).w_full().px(px(10.)).child(peek(theme, 1.)))
                     .when(group.len() > 2, |el| el.child(div().h(px(6.)).w_full().px(px(20.)).child(peek(theme, 0.7))))
                     .on_click(cx.listener(move |p, _, _, cx| {
-                        p.ui.expanded.insert(peek_app.clone());
+                        p.ui.expanded.insert(peek_key.clone());
                         cx.notify();
                     })),
             );
@@ -185,19 +189,100 @@ fn peek(theme: &Theme, opacity: f32) -> impl IntoElement {
         .opacity(opacity)
 }
 
-/// Notifications grouped by app, groups ordered by their newest notification.
-fn groups(items: &[Notification]) -> Vec<Vec<&Notification>> {
-    let mut groups: Vec<Vec<&Notification>> = Vec::new();
-    for n in items {
-        match groups.iter_mut().find(|g| g[0].app == n.app) {
-            Some(g) => g.push(n),
-            None => groups.push(vec![n]),
-        }
-    }
-    groups
+struct Group<'a> {
+    /// What remembers whether it's expanded.
+    key: String,
+    title: String,
+    glyph: Icon,
+    items: Vec<&'a Notification>,
+    /// Pinned and urgent notifications are always all shown.
+    always_open: bool,
+    /// "Can wait" shows only its header until opened.
+    folded: bool,
 }
 
-fn card(n: &Notification, i: usize, theme: &Theme, cx: &mut Context<Popover>) -> AnyElement {
+fn kind_group(kind: &str) -> Option<(&'static str, Icon)> {
+    Some(match kind {
+        "message" => ("MESSAGES", Icon::Smile),
+        "alert" => ("ALERTS", Icon::Warning),
+        "reminder" => ("REMINDERS", Icon::Calendar),
+        "update" => ("UPDATES", Icon::Sync),
+        "promotion" => ("PROMOTIONS", Icon::Star),
+        _ => return None,
+    })
+}
+
+/// Pinned, then urgent, then the rest by kind or app in order of their newest, then what can
+/// wait. Items come newest first and stay that way within a group.
+fn groups(items: &[Notification]) -> Vec<Group<'_>> {
+    let fixed = |key: &str, title: &str, glyph, always_open, folded| Group {
+        key: key.into(),
+        title: title.into(),
+        glyph,
+        items: Vec::new(),
+        always_open,
+        folded,
+    };
+    let mut pinned = fixed("pinned", "PINNED", Icon::Star, true, false);
+    let mut urgent = fixed("urgent", "NEEDS YOU", Icon::Alert, true, false);
+    let mut quiet = fixed("quiet", "CAN WAIT", Icon::Clock, false, true);
+    let mut rest: Vec<Group> = Vec::new();
+    for n in items {
+        if n.pinned {
+            pinned.items.push(n);
+        } else if n.quiet {
+            quiet.items.push(n);
+        } else if n.urgent {
+            urgent.items.push(n);
+        } else {
+            let (key, title, glyph) = match kind_group(&n.kind) {
+                Some((title, glyph)) => (format!("kind:{}", n.kind), title.to_string(), glyph),
+                None => (
+                    format!("app:{}", n.app),
+                    if n.app.is_empty() { "NOTIFICATIONS".into() } else { n.app.to_uppercase() },
+                    yozora_ui::icons::guess_app_icon(&n.app, &n.desktop_entry),
+                ),
+            };
+            match rest.iter_mut().find(|g| g.key == key) {
+                Some(g) => g.items.push(n),
+                None => rest.push(Group { key, title, glyph, items: vec![n], always_open: false, folded: false }),
+            }
+        }
+    }
+    [pinned, urgent].into_iter().chain(rest).chain([quiet]).filter(|g| !g.items.is_empty()).collect()
+}
+
+/// A small round button on a card's edge, shown while the card is hovered.
+fn corner(id: (&'static str, usize), glyph: Icon, on: bool, theme: &Theme) -> gpui::Stateful<Div> {
+    div()
+        .id(id)
+        .absolute()
+        .top(px(-6.))
+        .size(px(20.))
+        .rounded_full()
+        .bg(theme.glass_pop)
+        .border_1()
+        .border_color(theme.hair_2)
+        .flex()
+        .items_center()
+        .justify_center()
+        .cursor_pointer()
+        .text_color(if on { theme.accent } else { theme.ink })
+        .opacity(if on { 1. } else { 0. })
+        .group_hover("nt", |s| s.opacity(1.))
+        .child(icon_sized(glyph, 11.))
+}
+
+fn card(
+    n: &Notification,
+    i: usize,
+    sharing: bool,
+    yozora: bool,
+    theme: &Theme,
+    cx: &mut Context<Popover>,
+) -> AnyElement {
+    let hidden = sharing && n.private;
+    let (pinned, can_hold) = (n.pinned, yozora && (n.needs_action || n.pinned));
     let id = n.id;
     let glyph = n.icon_path.clone();
     let fallback = yozora_ui::icons::guess_app_icon(&n.app, &n.desktop_entry);
@@ -258,8 +343,19 @@ fn card(n: &Notification, i: usize, theme: &Theme, cx: &mut Context<Popover>) ->
                         .child(n.app.clone())
                         .children(when),
                 )
-                .child(div().font_weight(FontWeight::SEMIBOLD).mt(px(1.)).child(n.summary.clone()))
-                .when(!n.body.is_empty(), |el| {
+                .when(hidden, |el| {
+                    el.child(
+                        div()
+                            .mt(px(1.))
+                            .text_size(px(12.5))
+                            .text_color(theme.ink_2)
+                            .child("Hidden while you share your screen"),
+                    )
+                })
+                .when(!hidden, |el| {
+                    el.child(div().font_weight(FontWeight::SEMIBOLD).mt(px(1.)).child(n.summary.clone()))
+                })
+                .when(!hidden && !n.body.is_empty(), |el| {
                     el.child(
                         div()
                             .mt(px(1.))
@@ -293,5 +389,17 @@ fn card(n: &Notification, i: usize, theme: &Theme, cx: &mut Context<Popover>) ->
                     send(Cmd::Dismiss(id), cx);
                 }),
         )
+        .when(can_hold, |el| {
+            el.child(corner(("pin", i), Icon::Star, pinned, theme).right(px(20.)).on_click(move |_, _, cx| {
+                cx.stop_propagation();
+                send(Cmd::Pin(id, !pinned), cx);
+            }))
+            .child(corner(("snooze", i), Icon::Clock, false, theme).right(px(-6.)).on_click(
+                move |_, _, cx| {
+                    cx.stop_propagation();
+                    send(Cmd::Snooze(id, 60), cx);
+                },
+            ))
+        })
         .into_any_element()
 }

@@ -59,6 +59,11 @@ pub struct JevSection {
     pub quiet_below: f64,
     /// At or above these odds a notification is shown during Do Not Disturb.
     pub breakthrough: f64,
+    /// Send how often each app's notifications were opened or dismissed, so Jev learns what
+    /// matters to you. Only counts, never content.
+    pub learn: bool,
+    /// Minutes before an unread notification past `breakthrough` is shown again, once. 0 never.
+    pub remind_after_min: u32,
 }
 
 impl Default for JevSection {
@@ -71,6 +76,8 @@ impl Default for JevSection {
             skip_apps: Vec::new(),
             quiet_below: 0.25,
             breakthrough: 0.85,
+            learn: true,
+            remind_after_min: 10,
         }
     }
 }
@@ -93,6 +100,8 @@ impl std::fmt::Debug for JevSection {
             .field("skip_apps", &self.skip_apps)
             .field("quiet_below", &self.quiet_below)
             .field("breakthrough", &self.breakthrough)
+            .field("learn", &self.learn)
+            .field("remind_after_min", &self.remind_after_min)
             .finish()
     }
 }
@@ -163,6 +172,10 @@ fn validate(c: &mut NotifyConfig, warnings: &mut Vec<Warning>) {
             warn(format!("{name} {v} is outside 0–1; using {default}"));
             *v = default;
         }
+    }
+    if c.jev.remind_after_min > 24 * 60 {
+        warn("jev.remind_after_min is above 1440; using 1440".into());
+        c.jev.remind_after_min = 24 * 60;
     }
     if c.jev.enabled && c.jev.api_key.trim().is_empty() {
         warn("jev.enabled is on but jev.api_key is empty; Jev stays off".into());
