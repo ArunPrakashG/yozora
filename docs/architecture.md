@@ -27,7 +27,8 @@ of truth.
 | `yozora-bar` | GPUI app, one layer-shell window per monitor, popovers as `xdg_popup` | Session-long, autostarted |
 | `yozora-settings` | GPUI app, one normal window | Only while open |
 | `yozora-notify` | GPUI app and D-Bus server (`org.freedesktop.Notifications`); one layer-shell window for the toasts, only while there are any | Session-long, autostarted |
-| Future: Launch, Lock, Studio, … | One binary each | Their own |
+| `yozora-lock` | GPUI app, one `ext-session-lock-v1` surface per monitor | While locked; started by hypridle |
+| Future: Launch, Studio, … | One binary each | Their own |
 
 `yozora-bar` is a single process for all monitors. Services (Hyprland, PulseAudio, D-Bus) are
 shared by every bar window, so a second monitor costs one more window, not more connections.
@@ -97,16 +98,25 @@ crates/
     src/store.rs         notifications, history on disk, Do Not Disturb
     src/toasts.rs        the toast window: stack, springs, timers, inline reply
     src/hypr.rs          which monitor toasts open on; the blur rule
+  yozora-lock/         bin
+    src/main.rs          run, single instance, the abort-on-panic hook, a lock surface per monitor
+    src/view.rs          the lock screen: clock, password field, media, power; unlocking
+    src/auth.rs          the password buffer, tries and waits, the hint under the field
+    src/pam.rs           a small libpam binding: authenticate, then refresh credentials
+    src/system.rs        the user, battery, network, keyboard layout, each monitor's wallpaper
+    src/background.rs    the blurred wallpaper, made once and cached
+    src/services.rs      MPRIS, the notification count, logind power and LockedHint
   yozora-settings/     bin
     src/app.rs           window, file and manifest watching, status polling, portal theme
     src/apps.rs          discovered apps and whether they're running
     src/doc.rs           one config file being edited
     src/view.rs          sidebar, header, page, TOML preview, footer
     src/pages/           appearance, motion, bar, modules, monitors, about, and generic
-  yozora-config/       bar.toml, notify.toml and theme.toml types, loading with warnings, editing, watching,
+  yozora-config/       bar.toml, notify.toml, lock.toml and theme.toml types, loading with warnings, editing, watching,
                        manifests and settings schemas
   yozora-ipc/          the one-line JSON control socket
-  yozora-ui/           theme tokens, icons, icon theme lookup, springs, frame timing, controls, text input
+  yozora-ui/           theme tokens, icons, icon theme lookup, springs, frame timing, controls, text input,
+                       Hyprland's socket and monitors
   yz-pointer/          virtual-pointer clicks and drags for scripted UI tests
 packaging/             manifests, PKGBUILD, systemd unit, Hyprland snippets, desktop files
 scripts/               click.sh, drag.sh, bench.sh
@@ -350,11 +360,40 @@ sent upstream, before considering another renderer.
   the size of each big block freed, so render buffers end up kept in the heap. Fixing it saves
   about 4 MB of anonymous memory, with no change in frame timing.
 
+## The lock screen
+
+`yozora-lock` holds the session through `ext-session-lock-v1`. The compositor shows only lock
+surfaces until the locker says to unlock, and if the locker dies without saying so the session
+stays locked. On Hyprland that means a red screen until another locker takes over, which
+`misc:allow_session_lock_restore` permits.
+
+Upstream GPUI has layer-shell windows but no session lock, so Yozora builds against a fork:
+[ArunPrakashG/zed, branch `yozora`](https://github.com/ArunPrakashG/zed/tree/yozora). It is Zed
+`main` plus [zed#65055](https://github.com/zed-industries/zed/pull/65055) (lock surfaces, no
+commit before the first buffer, closing the windows on `finished`) and one commit exporting the
+namespace. A layer-shell window opened with `gpui::layer_shell::SESSION_LOCK_NAMESPACE` becomes a
+lock surface on the window's display. The first one locks the session and closing the last one
+unlocks it. When the PR lands upstream, the workspace goes back to Zed `main`.
+
+That API has sharp edges, and the lock is written around them:
+
+- **Dropping windows unlocks.** A panic that unwound would close the windows, so the lock
+  installs a hook that aborts instead. Only an accepted password closes them.
+- **The compositor can end the lock** (`finished`, for example when another locker already
+  holds it). GPUI closes the windows then; the lock sees none left and exits with an error.
+- **A new monitor needs its own surface.** The lock watches GPUI's displays and opens one on
+  each new display.
+
+PAM runs on a background thread. The password is kept in a `Zeroizing` buffer, copied once
+into PAM's reply, and that copy is wiped before it's freed. Tests use `pam_start_confdir` with
+`pam_permit` and `pam_deny` services in a temporary directory, never the real stack, because
+`pam_faillock` would lock the account after three wrong tries.
+
 ## Decisions
 
 | Date | Decision |
 |---|---|
-| 2026-10-12 | GPUI from Zed `main` at a pinned git revision; bumped deliberately |
+| 2026-10-12 | GPUI from Zed `main` at a pinned git revision; bumped deliberately (since 2026-10-13, the fork's) |
 | 2026-10-12 | Audio through the PulseAudio protocol (pipewire-pulse), not native PipeWire |
 | 2026-10-12 | Battery, Bluetooth, network and audio behind generic backend traits |
 | 2026-10-12 | Default bar is minimal; modules are added through a generic registry |
@@ -369,3 +408,5 @@ sent upstream, before considering another renderer.
 | 2026-10-13 | Audio through `pactl subscribe` instead of a client library |
 | 2026-10-13 | Popovers grab only when opened by a click |
 | 2026-10-13 | Custom modules speak plain text or JSON lines with `text` |
+| 2026-10-13 | Our own lock screen on a GPUI fork with `ext-session-lock-v1`, until upstream has it |
+| 2026-10-13 | The lock checks passwords through PAM's `yozora-lock` service, falling back to `login` |

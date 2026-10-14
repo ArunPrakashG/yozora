@@ -77,6 +77,11 @@ pub enum Icon {
     Reset,
     External,
     Code,
+    ArrowRight,
+    CapsLock,
+    Spinner,
+    Clock,
+    Alert,
     Window,
 }
 
@@ -145,6 +150,11 @@ const ALL: &[Icon] = &[
     Icon::Reset,
     Icon::External,
     Icon::Code,
+    Icon::ArrowRight,
+    Icon::CapsLock,
+    Icon::Spinner,
+    Icon::Clock,
+    Icon::Alert,
     Icon::Window,
 ];
 
@@ -220,6 +230,11 @@ impl Icon {
             Icon::Reset => "reset",
             Icon::External => "external",
             Icon::Code => "code",
+            Icon::ArrowRight => "arrow-right",
+            Icon::CapsLock => "caps-lock",
+            Icon::Spinner => "spinner",
+            Icon::Clock => "clock",
+            Icon::Alert => "alert",
             Icon::Window => "window",
         }
     }
@@ -370,6 +385,14 @@ impl Icon {
                 r#"<path d="M13.5 4.5H19.5V10.5M19.5 4.5L11 13M17 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 4 18.5v-10A1.5 1.5 0 0 1 5.5 7H10"/>"#
             }
             Icon::Code => r#"<path d="M8.5 7.5L4 12l4.5 4.5M15.5 7.5L20 12l-4.5 4.5"/>"#,
+            Icon::ArrowRight => r#"<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>"#,
+            Icon::CapsLock => r#"<path d="M12 4.5l7 7.5h-3.8v5H8.8v-5H5z"/><path d="M8.8 20h6.4"/>"#,
+            // Three quarters of a circle; turned by the caller.
+            Icon::Spinner => r#"<path d="M12 3.5a8.5 8.5 0 1 1-8.5 8.5"/>"#,
+            Icon::Clock => r#"<path d="M12 7.5V12l3 2"/><circle cx="12" cy="12" r="8.5"/>"#,
+            Icon::Alert => {
+                r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5"/><circle class="f" cx="12" cy="16.2" r="1.1"/>"#
+            }
             Icon::Window => {
                 r#"<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 8.5h17M6.5 6.5h.01M9 6.5h.01"/>"#
             }
@@ -426,6 +449,13 @@ impl IconElement {
     /// Any SVG asset path, like a battery level icon.
     pub fn from_path(path: impl Into<SharedString>, size: f32) -> Self {
         IconElement(svg().path(path).size(px(size)).flex_none())
+    }
+
+    /// Turned clockwise by `turns` (1.0 is a full turn), for spinners.
+    pub fn rotate(self, turns: f32) -> Self {
+        IconElement(
+            self.0.with_transformation(gpui::Transformation::rotate(gpui::radians(turns * std::f32::consts::TAU))),
+        )
     }
 
     fn inherit_color(&mut self, window: &Window) {

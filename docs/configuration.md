@@ -206,6 +206,45 @@ For example, to toggle Do Not Disturb from a key:
 hl.bind("SUPER + D", hl.dsp.exec_cmd("yozora-notify dnd"))
 ```
 
+## lock.toml
+
+```toml
+version = 1
+
+[background]
+image = ""          # empty: the wallpaper from swaybg, hyprpaper or swww; "{output}" becomes e.g. DP-1
+blur  = true        # off shows the image as it is, under the same dark veil
+
+[clock]
+format = "%H:%M"        # strftime
+date   = "%A, %-d %B"
+
+[show]
+media         = true    # what's playing, with previous, play or pause, and next
+notifications = true    # how many arrived while locked, never what they say
+power         = true    # suspend, restart and shut down
+
+[auth]
+tries  = 5          # 1–20 wrong passwords in a row before a wait
+wait_s = 30         # the first wait, up to 600 s; it doubles each time
+```
+
+Changes apply the next time the screen locks. Like `bar.toml`, `lock.toml` can have a `[theme]`
+table. The blurred background is cached in `~/.cache/yozora/lock/`.
+
+Passwords are checked by PAM. Yozora Lock uses the `yozora-lock` service when
+`/etc/pam.d/yozora-lock` exists (the PKGBUILD installs one that includes `login`), and `login`
+otherwise. A wait from `tries` is on top of whatever PAM does: on Arch, `pam_faillock` locks the
+account for 10 minutes after 3 failures within 15 minutes.
+
+`yozora-lock` has these commands:
+
+| Command | Does |
+|---|---|
+| `yozora-lock [--config DIR]` | Locks the session; does nothing if it's already locked |
+| `yozora-lock --preview` | Shows the lock screen without locking; Escape closes it |
+| `status` | `{"locked": true}` or `false` |
+
 ## The control socket
 
 Each running app listens on `$XDG_RUNTIME_DIR/yozora/<id>.sock`. The bar's commands, also

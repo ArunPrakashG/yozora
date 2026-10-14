@@ -6,6 +6,7 @@ members = [
     "crates/yozora-ipc",
     "crates/yozora-bar",
     "crates/yozora-settings",
+    "crates/yozora-lock",
     "crates/yozora-notify",
     "crates/yz-pointer",
 ]
@@ -16,10 +17,11 @@ license = "MIT"
 repository = "https://github.com/ArunPrakashG/yozora"
 
 [workspace.dependencies]
-# GPUI from Zed main at a pinned revision. crates.io gpui predates layer-shell and popups.
+# GPUI from Zed main at a pinned revision, on our fork: Zed 26363aa plus ext-session-lock-v1
+# (zed-industries/zed#65055) for the lock screen. crates.io gpui predates layer-shell and popups.
 # Bump on purpose: the Wayland platform code changes often.
-gpui = { git = "https://github.com/zed-industries/zed", rev = "26363aabdb31a0c016728634202e1ad5067033aa" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "26363aabdb31a0c016728634202e1ad5067033aa", features = ["wayland"] }
+gpui = { git = "https://github.com/ArunPrakashG/zed", rev = "b1ae934ca242b3dedc1a534fe64833fc26e3792b" }
+gpui_platform = { git = "https://github.com/ArunPrakashG/zed", rev = "b1ae934ca242b3dedc1a534fe64833fc26e3792b", features = ["wayland"] }
 anyhow = "1"
 async-channel = "2"
 async-io = "2"

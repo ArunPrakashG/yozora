@@ -7,6 +7,9 @@ Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in 
   popovers and near-zero cost when idle.
 - **Yozora Notify** is the notification server. Toasts match the bar's popovers, and the bar's
   notification center shows the history, grouped by app. It replaces mako or dunst.
+- **Yozora Lock** is the lock screen: the blurred wallpaper, a clock, the password field, what's
+  playing and the power buttons. It locks through `ext-session-lock-v1`, so if it crashes the
+  session stays locked. It replaces hyprlock or swaylock.
 - **Yozora Settings** edits every Yozora app's configuration. It finds installed apps on its
   own, so a new tool shows up without Settings being rebuilt.
 
@@ -57,17 +60,24 @@ You need Rust (the toolchain is pinned in `rust-toolchain.toml`), clang, cmake a
 xkbcommon, fontconfig and Vulkan development files.
 
 ```bash
-cargo build --release -p yozora-bar -p yozora-notify -p yozora-settings
+cargo build --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-settings
 ```
 
 Then install the binaries and the app manifests, so Settings can find the apps:
 
 ```bash
-install -Dm755 target/release/yozora-bar target/release/yozora-notify target/release/yozora-settings -t ~/.local/bin
+install -Dm755 target/release/yozora-bar target/release/yozora-notify target/release/yozora-lock target/release/yozora-settings -t ~/.local/bin
 ```
 
 ```bash
 install -Dm644 packaging/apps/*.toml -t ~/.local/share/yozora/apps
+```
+
+The lock screen checks passwords through its own PAM service, which needs root to install. Without
+it, the lock uses the `login` service, which works on most systems.
+
+```bash
+sudo install -Dm644 packaging/pam/yozora-lock -t /etc/pam.d
 ```
 
 ## Start the bar with Hyprland
@@ -92,6 +102,25 @@ To bind a key to a popover:
 hl.bind("SUPER + A", hl.dsp.exec_cmd("yozora-bar msg toggle control-center"))
 ```
 
+## Lock the screen
+
+hypridle starts the lock. In `~/.config/hypr/hypridle.conf`:
+
+```ini
+general {
+    lock_cmd = yozora-lock
+    before_sleep_cmd = loginctl lock-session
+    inhibit_sleep = 3  # suspend only once the screen is locked
+}
+```
+
+Then `loginctl lock-session`, the bar's Lock item and idle timeouts all show it. To try the
+screen without locking anything, run `yozora-lock --preview`; Escape closes it.
+
+While locked, wrong passwords in a row (5 by default) make the field wait 30 s, then twice as
+long each time. Media controls and the power buttons work without the password; the
+notification pill only counts what arrived, never what it says.
+
 ### Keeping mako
 
 The bar also works with mako instead of yozora-notify, showing mako's history. For Do Not
@@ -114,6 +143,8 @@ by hand. Comments and formatting survive edits from Settings.
 - `theme.toml`: theme, accent, glass, font and motion, shared by every Yozora app.
 - `bar.toml`: everything about the bar.
 - `notify.toml`: how long toasts stay, how many show at once, where, and how much history.
+- `lock.toml`: the lock screen's background, clock format, what it shows, and how long wrong
+  passwords make it wait.
 
 The full reference is [docs/configuration.md](docs/configuration.md).
 
@@ -148,6 +179,12 @@ each system service the enabled modules need.
 - **Yozora apps skip OpenGL when a Vulkan driver is installed**, which saves about 40 MB. If
   Vulkan doesn't work, an app restarts itself with GL allowed. Set `YOZORA_GL=1` to always
   allow GL.
+- **The lock screen takes about 2.4 s to appear** (release build, 2,752 installed font faces):
+  1.6 s of that is GPUI reading every system font. Set hypridle's `inhibit_sleep = 3` so suspend
+  waits until the screen is locked.
+- **The lock screen needs a GPUI fork.** Upstream GPUI has no `ext-session-lock-v1` yet; Yozora
+  pins a fork with [zed#65055](https://github.com/zed-industries/zed/pull/65055) applied. See
+  [docs/architecture.md](docs/architecture.md#the-gpui-fork).
 - **The log shows `ERROR gpui::window: window not found` each time a popover closes.** It's
   harmless: Wayland sends one last event for a window GPUI has already dropped.
 - **Tested on one machine:** Hyprland 0.56.2, a GTX 1650 Super, a 144 Hz and a 75 Hz rotated

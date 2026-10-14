@@ -2,11 +2,11 @@
 pkgname=yozora-git
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="Yozora: a top bar, notifications and settings for Hyprland, built with GPUI"
+pkgdesc="Yozora: a top bar, notifications, a lock screen and settings for Hyprland, built with GPUI"
 arch=('x86_64' 'aarch64')
 url="https://github.com/ArunPrakashG/yozora"
 license=('MIT')
-depends=('hyprland' 'wayland' 'libxkbcommon' 'fontconfig' 'freetype2' 'vulkan-icd-loader' 'dbus')
+depends=('hyprland' 'wayland' 'libxkbcommon' 'fontconfig' 'freetype2' 'vulkan-icd-loader' 'dbus' 'pam')
 makedepends=('cargo' 'git' 'clang' 'cmake')
 optdepends=(
   'pipewire-pulse: sound module (or pulseaudio)'
@@ -17,6 +17,7 @@ optdepends=(
 )
 provides=('yozora' 'notification-daemon')
 conflicts=('yozora')
+backup=('etc/pam.d/yozora-lock')
 options=('!lto')
 source=("yozora::git+${url}.git")
 sha256sums=('SKIP')
@@ -34,28 +35,33 @@ prepare() {
 build() {
   cd yozora
   export CARGO_TARGET_DIR=target
-  cargo build --frozen --release -p yozora-bar -p yozora-notify -p yozora-settings
+  cargo build --frozen --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-settings
 }
 
 check() {
   cd yozora
-  cargo test --frozen -p yozora-config -p yozora-ipc -p yozora-notify
+  cargo test --frozen -p yozora-config -p yozora-ipc -p yozora-notify -p yozora-lock
 }
 
 package() {
   cd yozora
   install -Dm755 target/release/yozora-bar -t "$pkgdir/usr/bin"
   install -Dm755 target/release/yozora-notify -t "$pkgdir/usr/bin"
+  install -Dm755 target/release/yozora-lock -t "$pkgdir/usr/bin"
   install -Dm755 target/release/yozora-settings -t "$pkgdir/usr/bin"
 
   install -Dm644 packaging/apps/bar.toml -t "$pkgdir/usr/share/yozora/apps"
   install -Dm644 packaging/apps/bar.settings.toml -t "$pkgdir/usr/share/yozora/apps"
   install -Dm644 packaging/apps/notify.toml -t "$pkgdir/usr/share/yozora/apps"
   install -Dm644 packaging/apps/notify.settings.toml -t "$pkgdir/usr/share/yozora/apps"
+  install -Dm644 packaging/apps/lock.toml -t "$pkgdir/usr/share/yozora/apps"
+  install -Dm644 packaging/apps/lock.settings.toml -t "$pkgdir/usr/share/yozora/apps"
+  install -Dm644 packaging/pam/yozora-lock -t "$pkgdir/etc/pam.d"
 
   install -Dm644 packaging/desktop/yozora-settings.desktop -t "$pkgdir/usr/share/applications"
   install -Dm644 packaging/desktop/yozora-bar.desktop -t "$pkgdir/usr/share/applications"
   install -Dm644 packaging/icons/yozora-bar.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
+  install -Dm644 packaging/icons/yozora-lock.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
   install -Dm644 packaging/icons/yozora-notify.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
   install -Dm644 packaging/icons/yozora-settings.svg -t "$pkgdir/usr/share/icons/hicolor/scalable/apps"
 

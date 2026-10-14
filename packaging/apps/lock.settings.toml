@@ -1,0 +1,82 @@
+# Settings schema for Yozora Lock, rendered as its page in Yozora Settings. Changes apply the next
+# time the screen locks.
+
+[[section]]
+title = "Background"
+
+[[section.field]]
+key     = "background.image"
+kind    = "string"
+label   = "Image"
+help    = "Empty uses the wallpaper from swaybg, hyprpaper or swww. `{output}` is replaced by the monitor's name, such as DP-1."
+default = ""
+
+[[section.field]]
+key     = "background.blur"
+kind    = "bool"
+label   = "Blur"
+help    = "Off shows the image as it is, under the same dark veil."
+default = true
+
+[[section]]
+title = "Clock"
+
+[[section.field]]
+key     = "clock.format"
+kind    = "string"
+label   = "Time"
+help    = "strftime format, such as %H:%M or %-I:%M."
+default = "%H:%M"
+
+[[section.field]]
+key     = "clock.date"
+kind    = "string"
+label   = "Date"
+help    = "strftime format for the line under the time."
+default = "%A, %-d %B"
+
+[[section]]
+title = "Show"
+
+[[section.field]]
+key     = "show.media"
+kind    = "bool"
+label   = "What's playing"
+help    = "With previous, play or pause, and next."
+default = true
+
+[[section.field]]
+key     = "show.notifications"
+kind    = "bool"
+label   = "Notification count"
+help    = "How many arrived while locked. Their contents are never shown."
+default = true
+
+[[section.field]]
+key     = "show.power"
+kind    = "bool"
+label   = "Power buttons"
+help    = "Suspend, restart and shut down."
+default = true
+
+[[section]]
+title = "Password"
+
+[[section.field]]
+key     = "auth.tries"
+kind    = "int"
+label   = "Tries before a wait"
+help    = "Wrong passwords in a row before the field waits."
+default = 5
+min     = 1
+max     = 20
+
+[[section.field]]
+key     = "auth.wait_s"
+kind    = "int"
+label   = "First wait"
+help    = "Seconds. It doubles each time."
+default = 30
+min     = 0
+max     = 600
+step    = 5
