@@ -39,6 +39,11 @@ Expect rough edges; see [Known limitations](#known-limitations).
 | `control-center` | Quick settings | Wi-Fi, Bluetooth, DND, dark mode, volume, power | — |
 | `custom/<name>` | Your command's output | — (runs `on_click` when clicked) | — |
 
+The bar also has an **on-screen display**: a capsule at the bottom of the focused monitor that
+shows volume, mute, the microphone, the output device, brightness and the keyboard layout as
+they change, whatever changed them, and leaves 1.4 s later. It replaces wob or swayosd; see
+[Volume and brightness keys](#volume-and-brightness-keys).
+
 A missing service never crashes the bar. Its module shows that it's unavailable and reconnects
 when the service comes back.
 
@@ -104,6 +109,28 @@ To bind a key to a popover:
 ```lua
 hl.bind("SUPER + A", hl.dsp.exec_cmd("yozora-bar msg toggle control-center"))
 ```
+
+## Volume and brightness keys
+
+The bar notices volume, mute, output and keyboard layout changes by itself, so keys only need
+to make the change:
+
+```lua
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_SINK@ +5%"), { repeating = true, locked = true })
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("pactl set-sink-mute @DEFAULT_SINK@ toggle"), { locked = true })
+```
+
+The kernel doesn't announce brightness changes, so brightness keys go through the bar, which
+changes it through logind (no udev rule or `video` group needed) and shows the result:
+
+```lua
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("yozora-bar osd brightness +5%"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("yozora-bar osd brightness -5%"), { repeating = true, locked = true })
+```
+
+The full set is in [`packaging/hyprland/yozora.lua`](packaging/hyprland/yozora.lua). Stop wob or
+swayosd if you ran one. Turn the OSD off, move it under the bar or change how long it stays in
+`[osd]` in `bar.toml`.
 
 ## Lock the screen
 

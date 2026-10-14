@@ -85,6 +85,13 @@ logout   = "uwsm stop || loginctl terminate-session \"$XDG_SESSION_ID\""
 reboot   = "systemctl reboot"
 poweroff = "systemctl poweroff"
 settings = "yozora-settings"
+
+# The on-screen display for volume, brightness and keyboard layout changes.
+[osd]
+enabled         = true
+position        = "bottom" # or "top", under the bar
+timeout_ms      = 1400     # how long it stays after the last change; 500 to 10000
+keyboard_layout = true     # show keyboard layout switches
 ```
 
 ### Modules
@@ -296,6 +303,8 @@ available as `yozora-bar msg …`:
 | `reload` | Re-reads the configuration now |
 | `stats` | Frame timing and memory |
 | `bench [workspaces\|popover] [N] [MONITOR]` | Animates N times and reports frame timing |
+| `osd brightness [+N%\|-N%\|N%]` | Changes the brightness through logind and shows it. Also `yozora-bar osd …` |
+| `osd volume\|mic\|layout` | Shows the current value |
 | `ping` | Version and configuration warnings (what Settings uses) |
 | `quit` | Exits |
 

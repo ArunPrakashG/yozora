@@ -214,6 +214,16 @@ Ways to add a module:
   monitor that was clicked. The compositor grab gives click-outside-to-close. The surface has a
   fixed size with transparent margins for the shadow, and the input region excludes the margins.
   Content is built on open and kept for about 10 s after close so reopening is instant.
+- **OSD.** A `WindowKind::LayerShell` surface on the overlay layer, anchored to the bottom (or
+  top) of the focused monitor, with an empty input region so it never takes a click. It lives
+  in the bar process: the bar already runs the audio and Hyprland services, so the OSD observes
+  their snapshots and shows what changed, from any source, with no process or pipe of its own.
+  The window opens on the first change (about 20 ms in a release build, since GPUI's GPU context
+  is already up) and closes after its leave animation, so an idle OSD has no surface. Brightness
+  has no kernel change events, so `yozora-bar osd brightness` changes it through logind's
+  `SetBrightness` and shows it in one step. The pactl snapshot behind every audio change runs
+  its three queries in parallel, which brings a key press to the capsule's first frame to about
+  45 ms.
 - **Springs.** A small `Spring { x, v, target, k, c }` advanced by real frame time. While unsettled
   it requests the next frame; once position and velocity are within epsilon it stops, so a static
   bar renders nothing. Retargeting keeps velocity, which is what makes motion interruptible.

@@ -4,6 +4,7 @@ mod app;
 mod bar;
 mod cli;
 mod modules;
+mod osd;
 mod popover;
 mod services;
 mod tooltip;
