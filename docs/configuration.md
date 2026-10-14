@@ -85,6 +85,13 @@ logout   = "uwsm stop || loginctl terminate-session \"$XDG_SESSION_ID\""
 reboot   = "systemctl reboot"
 poweroff = "systemctl poweroff"
 settings = "yozora-settings"
+
+# The on-screen display for volume, brightness and keyboard layout changes.
+[osd]
+enabled         = true
+position        = "bottom" # or "top", under the bar
+timeout_ms      = 1400     # how long it stays after the last change; 500 to 10000
+keyboard_layout = true     # show keyboard layout switches
 ```
 
 ### Modules
@@ -271,6 +278,11 @@ web_search      = "https://duckduckgo.com/?q={}"  # {} is where the query goes
 max_results     = 6                               # 1–20 rows in each section
 suggestions     = true                            # apps you usually open at this hour, when nothing is typed
 files_in_search = true                            # mix files into results from the third letter
+editor          = ""                              # for projects; empty: the first of zed, code, … installed, then $VISUAL or $EDITOR
+project_roots   = ["~"]                           # folders searched for git repositories, four levels deep
+script_dirs     = ["~/.config/yozora/scripts", "~/.local/share/vicinae/scripts"]
+browser         = true                            # bookmarks and history from Chromium-based browsers and Firefox
+currency        = true                            # fetch the ECB's daily rates for `100 usd to inr`
 
 [commands]                                        # each runs through `sh -c`
 lock     = "loginctl lock-session"
@@ -285,6 +297,13 @@ Changes apply the next time the launcher opens. Like `bar.toml`, `launch.toml` c
 `$XDG_DATA_DIRS`, re-read when one changes; `NoDisplay`, `Hidden`, `OnlyShowIn` and `NotShowIn`
 are honoured. What you open, and pins and hidden apps, are kept in
 `~/.local/state/yozora/launch.json`; deleting it starts over.
+
+Projects, browser pages and currency rates are read in the background when the launcher starts
+and again at most every ten minutes when it opens. Browser databases are read without taking
+their locks and nothing from them leaves the machine. With `currency` on, the rates are fetched
+with `curl` from the European Central Bank at most twice a day and cached in
+`~/.cache/yozora/launch/ecb-rates.xml`; conversion never waits on the network. Scripts and SSH
+hosts are re-read every time the launcher opens.
 
 Apps start in their own systemd scope (`app-yozora-<id>-<random>.scope` in `app.slice`), so
 they keep running if the launcher restarts and show up per app in `systemd-cgtop`.
@@ -312,6 +331,8 @@ available as `yozora-bar msg …`:
 | `reload` | Re-reads the configuration now |
 | `stats` | Frame timing and memory |
 | `bench [workspaces\|popover] [N] [MONITOR]` | Animates N times and reports frame timing |
+| `osd brightness [+N%\|-N%\|N%]` | Changes the brightness through logind and shows it. Also `yozora-bar osd …` |
+| `osd volume\|mic\|layout` | Shows the current value |
 | `ping` | Version and configuration warnings (what Settings uses) |
 | `quit` | Exits |
 

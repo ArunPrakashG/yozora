@@ -127,7 +127,11 @@ fn ensure_services(cx: &mut App) {
     }
     // Monitors and workspaces decide which bars exist, so Hyprland always runs.
     kinds.insert(Kind::Hyprland);
+    if settings.bar.osd.enabled {
+        kinds.insert(Kind::Audio);
+    }
     Services::ensure(kinds, &settings.bar.custom, cx);
+    crate::osd::observe(cx);
     // Bars may need to observe services that just started.
     for bar in Shell::bars(cx) {
         let _ = bar.update(cx, |bar, _, cx| bar.observe_services(cx));
@@ -192,6 +196,16 @@ fn monitor_name(display: &dyn gpui::PlatformDisplay, hypr: Option<&hyprland::Sta
     hypr.and_then(|h| h.monitors.iter().find(|m| m.x == x && m.y == y))
         .map(|m| m.name.clone())
         .unwrap_or_else(|| format!("display-{index}"))
+}
+
+/// The focused monitor's name and display, for surfaces that follow focus like the OSD.
+pub fn focused_display(cx: &App) -> Option<(String, DisplayId)> {
+    let hypr = Services::get(cx).hyprland.as_ref().filter(|h| h.read(cx).ready).map(|h| h.read(cx).state.clone());
+    let focused = hypr.as_ref().and_then(|h| h.monitors.iter().find(|m| m.focused)).map(|m| m.name.clone());
+    let displays = cx.displays();
+    let named: Vec<_> =
+        displays.iter().enumerate().map(|(i, d)| (monitor_name(d.as_ref(), hypr.as_ref(), i), d.id())).collect();
+    named.iter().find(|(n, _)| Some(n) == focused.as_ref()).or(named.first()).cloned()
 }
 
 /// Opens and closes bar windows to match the connected monitors and the configuration.
@@ -461,6 +475,10 @@ pub fn handle_ipc(incoming: Incoming, cx: &mut App) {
                 None => Response::error("no bar is open"),
             }
         }
+        "osd" => {
+            osd_command(args, incoming, cx);
+            return;
+        }
         "quit" => {
             incoming.reply(Response::ok());
             cx.quit();
@@ -469,6 +487,40 @@ pub fn handle_ipc(incoming: Incoming, cx: &mut App) {
         other => Response::error(format!("unknown command {other:?}")),
     };
     incoming.reply(response);
+}
+
+/// `osd brightness [+N%|-N%|N%]` changes the brightness and shows it; `osd volume`, `mic` and
+/// `layout` show the current value.
+fn osd_command(args: Vec<String>, incoming: Incoming, cx: &mut App) {
+    use crate::{osd, services::brightness};
+    match args.first().map(String::as_str) {
+        Some("brightness") => {
+            let change = match brightness::parse(args.get(1).map(String::as_str)) {
+                Ok(c) => c,
+                Err(e) => return incoming.reply(Response::error(e)),
+            };
+            cx.spawn(async move |cx| {
+                // D-Bus and sysfs: off the main thread.
+                let result = cx.background_executor().spawn(async move { brightness::apply(change) }).await;
+                cx.update(|cx| match result {
+                    Ok(level) => {
+                        osd::show(osd::Shown::Brightness(level), cx);
+                        incoming.reply(Response::data(json!({ "brightness": (level * 100.).round() })));
+                    }
+                    Err(e) => incoming.reply(Response::error(format!("{e:#}"))),
+                });
+            })
+            .detach();
+        }
+        Some(what) => match osd::current(what, cx) {
+            Ok(shown) => {
+                osd::show(shown, cx);
+                incoming.reply(Response::ok());
+            }
+            Err(e) => incoming.reply(Response::error(e)),
+        },
+        None => incoming.reply(Response::error("osd needs brightness, volume, mic or layout")),
+    }
 }
 
 /// `tray:N` or `tray:NAME`: the menu of the Nth tray item, or the first whose title contains NAME.

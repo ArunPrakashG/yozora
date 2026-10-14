@@ -6,7 +6,7 @@ pkgdesc="Yozora: a top bar, notifications, a lock screen, a launcher and setting
 arch=('x86_64' 'aarch64')
 url="https://github.com/ArunPrakashG/yozora"
 license=('MIT')
-depends=('hyprland' 'wayland' 'libxkbcommon' 'fontconfig' 'freetype2' 'vulkan-icd-loader' 'dbus' 'pam')
+depends=('hyprland' 'wayland' 'libxkbcommon' 'fontconfig' 'freetype2' 'vulkan-icd-loader' 'dbus' 'pam' 'sqlite')
 makedepends=('cargo' 'git' 'clang' 'cmake')
 optdepends=(
   'pipewire-pulse: sound module (or pulseaudio)'
@@ -18,7 +18,9 @@ optdepends=(
   'cliphist: clipboard history in the launcher'
   'plocate: file search in the launcher'
   'xdg-utils: opening files and web searches from the launcher'
-  'curl: Jev sorting in notifications'
+  'curl: currency rates in the launcher, Jev sorting in notifications'
+  'libnotify: output of silent script commands in the launcher'
+  'openssh: SSH hosts in the launcher'
 )
 provides=('yozora' 'notification-daemon')
 conflicts=('yozora')

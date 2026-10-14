@@ -152,6 +152,34 @@ impl Default for SessionConfig {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OsdPosition {
+    /// Above the bottom edge of the screen.
+    #[default]
+    Bottom,
+    /// Under the bar.
+    Top,
+}
+
+/// The on-screen display: a capsule that shows volume, brightness and keyboard layout changes.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(default)]
+pub struct OsdConfig {
+    pub enabled: bool,
+    pub position: OsdPosition,
+    /// How long it stays after the last change, in milliseconds.
+    pub timeout_ms: u32,
+    /// Show keyboard layout switches.
+    pub keyboard_layout: bool,
+}
+
+impl Default for OsdConfig {
+    fn default() -> Self {
+        Self { enabled: true, position: OsdPosition::Bottom, timeout_ms: 1400, keyboard_layout: true }
+    }
+}
+
 /// A `custom/<name>` module: a long-running command that prints one JSON object per line.
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 #[serde(default)]
@@ -174,6 +202,7 @@ pub struct BarConfig {
     pub window: WindowConfig,
     pub media: MediaConfig,
     pub session: SessionConfig,
+    pub osd: OsdConfig,
     pub custom: BTreeMap<String, CustomConfig>,
 }
 
@@ -256,6 +285,10 @@ fn validate(bar: &mut BarConfig, warnings: &mut Vec<Warning>) {
         warn("workspaces.count is above 20; using 20".into());
         bar.workspaces.count = 20;
     }
+    if !(500..=10_000).contains(&bar.osd.timeout_ms) {
+        warn(format!("osd.timeout_ms {} is outside 500–10000; using 1400", bar.osd.timeout_ms));
+        bar.osd.timeout_ms = 1400;
+    }
     if bar.version > 1 {
         warn(format!("version {} is newer than this bar understands", bar.version));
     }
@@ -316,5 +349,16 @@ mod tests {
         let loaded = load(&dir).unwrap();
         assert_eq!(loaded.value.bar.bar.height, 34);
         assert_eq!(loaded.warnings.len(), 1);
+    }
+
+    #[test]
+    fn osd_section() {
+        let text = "[osd]\nposition = \"top\"\ntimeout_ms = 2000\n";
+        let bar: BarConfig = load::deserialize(text.parse().unwrap(), text, FILE).unwrap().value;
+        assert_eq!(bar.osd.position, OsdPosition::Top);
+        assert_eq!(bar.osd.timeout_ms, 2000);
+        assert!(bar.osd.enabled && bar.osd.keyboard_layout);
+        let dir = dir_with(&[("bar.toml", "[osd]\ntimeout_ms = 20\n")]);
+        assert_eq!(load(&dir).unwrap().value.bar.osd.timeout_ms, 1400);
     }
 }

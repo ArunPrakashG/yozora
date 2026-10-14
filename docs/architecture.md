@@ -117,6 +117,12 @@ crates/
     src/desktop.rs       .desktop parsing and the Exec field codes
     src/sources.rs       windows, commands, cliphist, emoji, recent files and plocate
     src/calc.rs          the calculator and unit conversion
+    src/money.rs         currency conversion with the ECB's cached daily rates
+    src/clock.rs         times in other zones, through chrono-tz
+    src/scripts.rs       Raycast and Vicinae script commands: headers, arguments, running
+    src/projects.rs      git repositories and the folders Zed and VS Code opened recently
+    src/ssh.rs           hosts from ~/.ssh/config, following Include
+    src/browser.rs       bookmarks and history from Chromium-based browsers and Firefox
     src/usage.rs         frecency, the hour-of-day boost, pins
     src/spawn.rs         launching into a systemd scope, terminals
   yozora-settings/     bin
@@ -215,6 +221,16 @@ Ways to add a module:
   monitor that was clicked. The compositor grab gives click-outside-to-close. The surface has a
   fixed size with transparent margins for the shadow, and the input region excludes the margins.
   Content is built on open and kept for about 10 s after close so reopening is instant.
+- **OSD.** A `WindowKind::LayerShell` surface on the overlay layer, anchored to the bottom (or
+  top) of the focused monitor, with an empty input region so it never takes a click. It lives
+  in the bar process: the bar already runs the audio and Hyprland services, so the OSD observes
+  their snapshots and shows what changed, from any source, with no process or pipe of its own.
+  The window opens on the first change (about 20 ms in a release build, since GPUI's GPU context
+  is already up) and closes after its leave animation, so an idle OSD has no surface. Brightness
+  has no kernel change events, so `yozora-bar osd brightness` changes it through logind's
+  `SetBrightness` and shows it in one step. The pactl snapshot behind every audio change runs
+  its three queries in parallel, which brings a key press to the capsule's first frame to about
+  45 ms.
 - **Springs.** A small `Spring { x, v, target, k, c }` advanced by real frame time. While unsettled
   it requests the next frame; once position and velocity are within epsilon it stops, so a static
   bar renders nothing. Retargeting keeps velocity, which is what makes motion interruptible.
@@ -422,6 +438,14 @@ recent files. Opening refreshes windows and recent files in the background. A se
 of it takes about 0.1 ms, so every keystroke searches again from scratch. Only `plocate` runs
 outside the process, 90 ms after typing stops, and its results join when they arrive.
 
+Scripts and SSH hosts are re-read on every open; they're a few small files. Projects (a walk of
+`project_roots`, four levels deep and capped at 40,000 folders, about 5 ms on the dev machine),
+browser pages (about 40 ms for 2,000 pages) and currency rates load in the background at start
+and again at most every ten minutes. Other apps' SQLite databases are opened read-only with
+`immutable=1`, so the launcher never waits on a browser's or an editor's lock. A currency or time
+answer never waits on the network: the ECB rates are fetched by `curl` into a cache and used
+from there.
+
 Ranking is nucleo's fuzzy score plus bonuses: the name starting with the query, the query
 spelling the initials (`vsc`), a later word starting with it. Generic names, keywords and
 descriptions only match when every typed word starts one of their words, so letters scattered
@@ -457,3 +481,5 @@ checks that Hyprland reports it as active, and only then closes.
 | 2026-10-13 | The lock checks passwords through PAM's `yozora-lock` service, falling back to `login` |
 | 2026-10-14 | The launcher keeps a window mapped per monitor and switches its layer, rather than opening one each time |
 | 2026-10-14 | Launched apps run in their own systemd scope, not as the launcher's children |
+| 2026-10-14 | Script commands use the Raycast/Vicinae header format, so existing scripts work unchanged |
+| 2026-10-14 | Browser history and editor recents are read in place with SQLite `immutable=1`, not copied |

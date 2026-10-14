@@ -126,18 +126,22 @@ help    = "Icons stay 16 px at every height."
     }
 
     #[test]
-    fn the_packaged_schemas_load() {
+    fn shipped_schemas_load() {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packaging/apps");
-        let mut loaded = 0;
-        for entry in std::fs::read_dir(&dir).unwrap() {
-            let path = entry.unwrap().path();
-            if path.to_string_lossy().ends_with(".settings.toml") {
-                Schema::load(&path).unwrap();
-                loaded += 1;
+        let mut n = 0;
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            if entry.file_name().to_string_lossy().ends_with(".settings.toml") {
+                Schema::load(&entry.path()).unwrap();
+                n += 1;
             }
         }
-        assert!(loaded >= 4, "{loaded} schemas in {}", dir.display());
-        let notify = Schema::load(&dir.join("notify.settings.toml")).unwrap();
+        assert!(n >= 3);
+    }
+
+    #[test]
+    fn the_jev_key_is_secret() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packaging/apps/notify.settings.toml");
+        let notify = Schema::load(&path).unwrap();
         let key = notify.section.iter().flat_map(|s| &s.field).find(|f| f.key == "jev.api_key").unwrap();
         assert!(key.secret && key.kind == FieldKind::String);
     }

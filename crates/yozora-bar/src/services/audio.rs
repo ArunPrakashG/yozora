@@ -143,9 +143,17 @@ fn device(v: &Value, input: bool) -> Device {
 }
 
 pub fn snapshot() -> anyhow::Result<State> {
-    let info = json(&["info"])?;
-    let sinks = json(&["list", "sinks"])?;
-    let sources = json(&["list", "sources"])?;
+    // Each pactl run takes about 7 ms; run the three at once so the OSD follows a key quickly.
+    let (info, sinks, sources) = std::thread::scope(|s| {
+        let sinks = s.spawn(|| json(&["list", "sinks"]));
+        let sources = s.spawn(|| json(&["list", "sources"]));
+        let info = json(&["info"]);
+        let join = |h: std::thread::ScopedJoinHandle<'_, anyhow::Result<Value>>| {
+            h.join().unwrap_or_else(|_| Err(anyhow::anyhow!("pactl thread panicked")))
+        };
+        (info, join(sinks), join(sources))
+    });
+    let (info, sinks, sources) = (info?, sinks?, sources?);
     let server = info["server_name"].as_str().unwrap_or_default();
     Ok(State {
         sinks: sinks.as_array().into_iter().flatten().map(|v| device(v, false)).collect(),
