@@ -226,4 +226,32 @@ mod tests {
         assert!(c.contains(r#"data-binary = "{\"t\":\"say \\\"hi\\\"\\\\n\"}""#), "{c}");
         assert!(c.contains(r#"write-out = "\n%{http_code}""#));
     }
+
+    /// Asks the real Jev about a few notifications: `JEV_API_KEY=… cargo test -p yozora-notify
+    /// live -- --ignored --nocapture`.
+    #[test]
+    #[ignore = "needs JEV_API_KEY and the network"]
+    fn live() {
+        let key = std::env::var("JEV_API_KEY").expect("JEV_API_KEY");
+        let url = JevSection::default().url;
+        let samples = [
+            ("Signal", "Sam", "Are you still coming at 5? I'm outside"),
+            ("Slack", "Deploy failed", "prod-api: rollout stuck, 3/8 pods crashlooping"),
+            ("Calendar", "Standup in 1 minute", "Zoom link inside"),
+            ("Gmail", "Weekly newsletter", "Ten deals you don't want to miss"),
+            ("Steam", "Summer Sale", "Up to 90% off"),
+            ("Discover", "Updates installed", "4 packages were updated"),
+        ];
+        for (app, title, text) in samples {
+            let n = Notification { app: app.into(), summary: title.into(), body: text.into(), ..Default::default() };
+            let started = std::time::Instant::now();
+            let p = post(&url, &key, &body(&n, true)).and_then(|a| odds(&a));
+            println!(
+                "{:>5} ms  {:>6}  {app}: {title}",
+                started.elapsed().as_millis(),
+                p.map_or("-".into(), |p| format!("{p:.2}"))
+            );
+            assert!(p.is_some(), "no answer for {title}");
+        }
+    }
 }
