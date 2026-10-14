@@ -27,7 +27,8 @@ of truth.
 | `yozora-bar` | GPUI app, one layer-shell window per monitor, popovers as `xdg_popup` | Session-long, autostarted |
 | `yozora-settings` | GPUI app, one normal window | Only while open |
 | `yozora-notify` | GPUI app and D-Bus server (`org.freedesktop.Notifications`); one layer-shell window for the toasts, only while there are any | Session-long, autostarted |
-| `yozora-lock` | GPUI app, one `ext-session-lock-v1` surface per monitor | While locked; started by hypridle |
+| `yozora-lock` | GPUI app, one `ext-session-lock-v1` surface per monitor | While locked; started by `yozora-idle` (or hypridle) |
+| `yozora-idle` | No UI. Idle timers from `ext-idle-notify-v1`, logind (lock requests, sleep), `org.freedesktop.ScreenSaver` inhibitors | Session-long, autostarted |
 | `yozora-launch` | GPUI app, one layer-shell window per monitor, kept mapped and empty while closed | Session-long, autostarted |
 | Future: Studio, … | One binary each | Their own |
 

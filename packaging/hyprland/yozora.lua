@@ -32,9 +32,8 @@ hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("pactl set-source-mute @DEFAULT_SOUR
 hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("yozora-bar osd brightness +5%"), { repeating = true, locked = true })
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("yozora-bar osd brightness -5%"), { repeating = true, locked = true })
 
--- The lock screen runs from hypridle: in ~/.config/hypr/hypridle.conf, set
--- `lock_cmd = yozora-lock`, `before_sleep_cmd = loginctl lock-session` and `inhibit_sleep = 3`.
--- Then this key locks too:
+-- Yozora Idle locks when you're away, on `loginctl lock-session` and before sleep:
+-- `systemctl --user enable --now yozora-idle.service`, with hypridle stopped. Then this key locks too:
 -- hl.bind("SUPER + L", hl.dsp.exec_cmd("loginctl lock-session"))
 
 -- The launcher. It starts on login and stays ready, so it opens on the next frame. With the systemd unit, enable

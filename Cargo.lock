@@ -6365,6 +6365,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "yozora-idle"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-channel",
+ "async-io",
+ "futures-lite",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "wayland-client",
+ "wayland-protocols",
+ "yozora-config",
+ "yozora-ipc",
+ "zbus",
+]
+
+[[package]]
 name = "yozora-ipc"
 version = "0.1.0"
 dependencies = [

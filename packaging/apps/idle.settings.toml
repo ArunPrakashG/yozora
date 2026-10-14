@@ -1,0 +1,59 @@
+# Settings schema for Yozora Idle, rendered as its page in Yozora Settings. Yozora Idle restarts
+# itself when idle.toml changes. A time of 0 means never.
+
+[[section]]
+title = "Lock"
+
+[[section.field]]
+key     = "lock.after_min"
+kind    = "int"
+label   = "Lock after"
+help    = "Minutes without input before the screen locks. 0 never locks on its own. `loginctl lock-session` and locking before sleep work either way."
+default = 10
+min     = 0
+max     = 1440
+
+[[section.field]]
+key     = "lock.command"
+kind    = "string"
+label   = "Lock with"
+help    = "The command that locks the screen. A second lock while already locked does nothing."
+default = "yozora-lock"
+
+[[section]]
+title = "Screens and sleep"
+
+[[section.field]]
+key     = "screen.off_after_min"
+kind    = "int"
+label   = "Turn screens off after"
+help    = "Minutes without input before the monitors turn off. Any input turns them back on. 0 leaves them on."
+default = 0
+min     = 0
+max     = 1440
+
+[[section.field]]
+key     = "suspend.after_min"
+kind    = "int"
+label   = "Suspend after"
+help    = "Minutes without input before the computer suspends. 0 never suspends."
+default = 0
+min     = 0
+max     = 1440
+
+[[section.field]]
+key     = "suspend.lock_first"
+kind    = "bool"
+label   = "Lock before sleep"
+help    = "Lock the screen before any suspend, including one you start yourself, and hold the suspend until it is locked."
+default = true
+
+[[section]]
+title = "Staying awake"
+
+[[section.field]]
+key     = "inhibit.respect"
+kind    = "bool"
+label   = "Respect apps that keep the screen on"
+help    = "A video player or call asking for the screen to stay awake stops all of the above. Turning this off ignores them."
+default = true

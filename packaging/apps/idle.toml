@@ -1,0 +1,10 @@
+# Installed to /usr/share/yozora/apps/idle.toml. Yozora Settings finds Yozora Idle through this
+# file.
+id          = "idle"
+name        = "Yozora Idle"
+binary      = "yozora-idle"
+icon        = "yozora"
+description = "Locks, turns the screens off and suspends when you're away."
+config      = "idle.toml"
+settings    = "idle.settings.toml"
+socket      = "idle.sock"

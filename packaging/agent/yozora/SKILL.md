@@ -100,12 +100,14 @@ yozora --json bar close                  # close any open popover
 yozora --json launcher open "firefox"    # open the launcher with a query; launcher close
 yozora --json settings notify            # open Yozora Settings on a page
 yozora --json lock                       # lock the screen
+yozora --json idle                       # what Yozora Idle counts down to, and what holds the screen on
+yozora --json keep-awake on              # no locking, screen-off or suspend, for a long task; off to end it
 yozora --json apps                       # installed parts and their config files
 ```
 
 ## Settings
 
-Each part has a TOML file in `~/.config/yozora/`, such as `bar.toml`, `notify.toml`, `launch.toml` and `lock.toml`. The shared look is in `theme.toml`.
+Each part has a TOML file in `~/.config/yozora/`, such as `bar.toml`, `notify.toml`, `launch.toml`, `lock.toml` and `idle.toml`. The shared look is in `theme.toml`.
 
 - Every running part watches its file, so changes apply within a second.
 - `config set` checks values against the same schema Yozora Settings uses, and keeps the file's comments.

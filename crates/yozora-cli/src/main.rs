@@ -50,6 +50,8 @@ Desktop
   launcher [open [QUERY]|close|toggle]
   settings [PAGE]                 Open Yozora Settings, on PAGE (appearance, motion, bar, notify, ...)
   lock                            Lock the screen now
+  idle                            What Yozora Idle is counting down to, and what holds the screen on
+  keep-awake [on|off|toggle]      Stop locking, screen-off and suspend while on
 
 Notifications (Yozora Notify)
   notifications [list] [--unread] [--urgent] [--app NAME] [--limit N] [--show-private]
@@ -119,6 +121,8 @@ fn run(cmd: &str, args: Vec<String>, out: &out::Out) -> anyhow::Result<()> {
         "launcher" | "launch" => apps::launcher(args, out),
         "settings" => apps::settings(args, out),
         "lock" => apps::lock(out),
+        "idle" => apps::idle(out),
+        "keep-awake" | "awake" => apps::keep_awake(args, out),
         "notifications" | "notification" | "notify" | "n" => notify::run(args, out),
         "dnd" => notify::dnd(args, out),
         "config" => config::run(args, out),

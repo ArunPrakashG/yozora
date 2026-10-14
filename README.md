@@ -15,6 +15,8 @@ Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in 
 - **Yozora Lock** is the lock screen: the blurred wallpaper, a clock, the password field, what's
   playing and the power buttons. It locks through `ext-session-lock-v1`, so if it crashes the
   session stays locked. It replaces hyprlock or swaylock.
+- **Yozora Idle** locks, turns the screens off and suspends when you're away, and locks before
+  sleep. It replaces hypridle.
 - **Yozora Launch** is the launcher: apps, open windows, files, clipboard history, emoji, math
   and unit conversion, shell commands and web search, from one field. It stays running with a
   window ready on each monitor, so it shows on the next frame. It replaces rofi, wofi or fuzzel.
@@ -139,18 +141,43 @@ swayosd if you ran one. Turn the OSD off, move it under the bar or change how lo
 
 ## Lock the screen
 
-hypridle starts the lock. In `~/.config/hypr/hypridle.conf`:
+**Yozora Idle** decides when to lock, and **Yozora Lock** draws the screen. Idle replaces
+hypridle. It locks after you've been away, on `loginctl lock-session` (your keybind, the bar's
+Lock item), and before the computer sleeps. It holds a sleep until the screen is actually
+locked, so waking never shows an unlocked desktop.
 
-```ini
-general {
-    lock_cmd = yozora-lock
-    before_sleep_cmd = loginctl lock-session
-    inhibit_sleep = 3  # suspend only once the screen is locked
-}
+Turn it on with the systemd unit, and stop hypridle first, because two of them would both lock:
+
+```bash
+systemctl --user disable --now hypridle.service
 ```
 
-Then `loginctl lock-session`, the bar's Lock item and idle timeouts all show it. To try the
-screen without locking anything, run `yozora-lock --preview`; Escape closes it.
+```bash
+systemctl --user enable --now yozora-idle.service
+```
+
+Unless you set it otherwise, it locks after 10 minutes. The times are in Yozora Settings, or
+`~/.config/yozora/idle.toml`:
+
+```toml
+[lock]
+after_min = 10          # 0 never locks on its own
+[screen]
+off_after_min = 0       # turn the monitors off; any input turns them back on
+[suspend]
+after_min = 0
+lock_first = true       # lock before any suspend, and hold it until the screen is locked
+[inhibit]
+respect = true          # a video or a call asking for the screen to stay on stops all of it
+```
+
+Apps ask for the screen to stay on through Wayland and through `org.freedesktop.ScreenSaver`;
+Yozora Idle honors both. `yozora keep-awake on` does the same by hand, for example during a long
+agent run, and `yozora idle` shows what it's counting down to and what is holding the screen on.
+
+To try the lock screen without locking anything, run `yozora-lock --preview`; Escape closes it.
+Without Yozora Idle, hypridle works as before: set `lock_cmd = yozora-lock`,
+`before_sleep_cmd = loginctl lock-session` and `inhibit_sleep = 3`.
 
 While locked, wrong passwords in a row (5 by default) make the field wait 30 s, then twice as
 long each time. Media controls and the power buttons work without the password; the
@@ -294,8 +321,8 @@ redacted unless you ask for them; to change things only when asked; and to pass 
   Vulkan doesn't work, an app restarts itself with GL allowed. Set `YOZORA_GL=1` to always
   allow GL.
 - **The lock screen takes about 2.4 s to appear** (release build, 2,752 installed font faces):
-  1.6 s of that is GPUI reading every system font. Set hypridle's `inhibit_sleep = 3` so suspend
-  waits until the screen is locked.
+  1.6 s of that is GPUI reading every system font. Yozora Idle holds a suspend until the screen is
+  locked (hypridle needs `inhibit_sleep = 3` for that).
 - **The lock screen needs a GPUI fork.** Upstream GPUI has no `ext-session-lock-v1` yet; Yozora
   pins a fork with [zed#65055](https://github.com/zed-industries/zed/pull/65055) applied. See
   [docs/architecture.md](docs/architecture.md#the-gpui-fork).
