@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>poster</title>
+<body style="width:1200px;height:1600px"><div id="s" class="stage" style="width:1200px;height:1600px"></div>
+<script src="brand.js"></script><script>
+page(() => {
+  s.innerHTML = `<canvas data-sky='{"seed":5,"density":1.25,"glows":[{"x":0.5,"y":0.3,"r":0.45,"color":"rgba(139,190,255,0.11)"},{"x":0.1,"y":0.55,"r":0.35,"color":"rgba(187,168,255,0.07)"},{"x":0.95,"y":0.65,"r":0.3,"color":"rgba(143,227,207,0.05)"}],"clear":[[300,580,600,300]]}'></canvas>
+  <div class="horizon" style="left:-900px;top:1180px;width:3000px;height:3000px"></div>
+  ${bar()}
+  <div style="position:absolute;left:0;right:0;top:170px;display:flex;justify-content:center">${mark({ size: 380, id: 'c' })}</div>
+  <div style="position:absolute;left:0;right:0;top:590px;text-align:center">
+    <div class="jp" style="font-size:30px;color:${T.ink3};font-weight:300;letter-spacing:.5em;margin-left:.5em">夜空</div>
+    <div class="wordmark" style="font-size:150px;line-height:1;margin-top:18px">Yozora</div>
+    <div style="font-size:34px;color:${T.ink2};margin-top:30px;letter-spacing:-.01em">Your desktop. A universe of its own.</div>
+  </div>`;
+  const add = (html, css) => { const d = document.createElement('div'); d.innerHTML = html; const e = d.firstElementChild; Object.assign(e.style, css); s.appendChild(e); };
+  add(popover(), { left: '150px', top: '930px', transform: 'scale(1.05)', transformOrigin: 'top left' });
+  add(toast(), { left: '580px', top: '930px', width: '470px', transform: 'scale(1.05)', transformOrigin: 'top left' });
+  add(toast({ app: 'Yozora Notify', summary: '3 can wait', body: 'Jev folded them away until you are free', ic: 'bell', progress: 0.4 }), { left: '580px', top: '1048px', width: '470px', transform: 'scale(1.05)', transformOrigin: 'top left' });
+  add(`<div class="mono" style="position:absolute;left:0;right:0;bottom:150px;text-align:center;font-size:18px;color:${T.ink2};letter-spacing:.14em">BAR · NOTIFY · LOCK · LAUNCH · SETTINGS</div>`, {});
+  add(`<div style="position:absolute;left:0;right:0;bottom:112px;text-align:center;font-size:16px;color:${T.ink3}">An open-source desktop for Hyprland, written in Rust</div>`, {});
+});
+</script>

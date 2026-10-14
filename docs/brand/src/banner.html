@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>banner</title>
+<body style="width:1280px;height:400px"><div id="s" class="stage" style="width:1280px;height:400px"></div>
+<script src="brand.js"></script><script>
+page(() => {
+  s.innerHTML = `<canvas data-sky='{"seed":11,"density":1.1,"glows":[{"x":0.8,"y":0.15,"r":0.45,"color":"rgba(139,190,255,0.10)"},{"x":0.15,"y":0.9,"r":0.4,"color":"rgba(187,168,255,0.07)"}],"clear":[[100,140,800,180]]}'></canvas>
+  <div class="horizon" style="left:-260px;top:300px;width:1800px;height:1800px"></div>
+  ${bar()}
+  <div style="position:absolute;left:84px;top:118px;display:flex;align-items:center;gap:26px">
+    ${mark({ size: 112, tile: true, id: 'a' })}
+    <div>
+      <div style="display:flex;align-items:baseline;gap:16px"><span class="wordmark" style="font-size:72px;line-height:1">Yozora</span><span class="jp" style="font-size:26px;color:${T.ink3};font-weight:300">夜空</span></div>
+      <div style="font-size:19px;color:${T.ink2};margin-top:12px;letter-spacing:-.005em">A desktop for Hyprland, written in Rust with GPUI.</div>
+      <div class="mono" style="font-size:12.5px;color:${T.ink3};margin-top:16px;letter-spacing:.06em">BAR · NOTIFY · LOCK · LAUNCH · SETTINGS</div>
+    </div>
+  </div>
+  <div style="position:absolute;right:56px;top:52px">${''}</div>`;
+  const p = document.createElement('div'); p.innerHTML = popover(); const pop = p.firstElementChild;
+  pop.style.right = '52px'; pop.style.top = '48px'; s.appendChild(pop);
+  const t = document.createElement('div'); t.innerHTML = toast(); const ts = t.firstElementChild;
+  ts.style.right = '436px'; ts.style.top = '262px'; ts.style.width = '300px'; s.appendChild(ts);
+});
+</script>
