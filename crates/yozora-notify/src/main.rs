@@ -175,7 +175,7 @@ fn run(replace: bool, dir: PathBuf) -> ExitCode {
     let (ui_tx, ui_rx) = async_channel::unbounded::<UiEvent>();
     let (cmd_tx, cmd_rx) = async_channel::unbounded::<Cmd>();
     let shared = Shared {
-        inner: Arc::new(Mutex::new(Inner { store, config: settings.notify.clone() })),
+        inner: Arc::new(Mutex::new(Inner { store, config: settings.notify.clone(), sharing: false })),
         ui: ui_tx,
         cmds: cmd_tx.clone(),
     };
@@ -219,6 +219,22 @@ fn run(replace: bool, dir: PathBuf) -> ExitCode {
         })
         .expect("spawning the control socket thread");
 
+    let tick_cmds = cmd_tx.clone();
+    std::thread::Builder::new()
+        .name("yz-tick".into())
+        .spawn(move || {
+            while tick_cmds.send_blocking(Cmd::Tick).is_ok() {
+                std::thread::sleep(std::time::Duration::from_secs(30));
+            }
+        })
+        .expect("spawning the reminder timer");
+
+    let share_cmds = cmd_tx.clone();
+    std::thread::Builder::new()
+        .name("yz-screencast".into())
+        .spawn(move || hypr::watch_screencast(|on| share_cmds.send_blocking(Cmd::Sharing(on)).is_ok()))
+        .expect("spawning the screen sharing watcher");
+
     let (cfg_tx, cfg_rx) = async_channel::unbounded::<()>();
     let watch_dir = dir.clone();
     std::thread::Builder::new()
@@ -256,6 +272,8 @@ fn run(replace: bool, dir: PathBuf) -> ExitCode {
                     UiEvent::CloseAll => Stack::close_all(cx),
                     UiEvent::ExpireAll => Stack::expire_all(cx),
                     UiEvent::Shorten(id) => Stack::shorten(id, cx),
+                    UiEvent::Refresh(n) => Stack::refresh(*n, cx),
+                    UiEvent::Sharing(on) => Stack::set_sharing(on, cx),
                     UiEvent::Quit => cx.quit(),
                 });
             }

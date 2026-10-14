@@ -7,8 +7,9 @@ Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in 
   popovers and near-zero cost when idle.
 - **Yozora Notify** is the notification server. Toasts match the bar's popovers, and the bar's
   notification center shows the history, grouped by app. It replaces mako or dunst. Optionally,
-  with your own TypeSafe AI key, Jev sorts out the notifications that can wait; this sends their
-  app, title and text to TypeSafe AI, so it's off by default.
+  with your own TypeSafe AI key, Jev sorts them: what can wait folds away, urgent ones get through
+  Do Not Disturb and come back if missed, and private ones hide while you share your screen. This
+  sends their app, title and text to TypeSafe AI, so it's off by default.
 - **Yozora Lock** is the lock screen: the blurred wallpaper, a clock, the password field, what's
   playing and the power buttons. It locks through `ext-session-lock-v1`, so if it crashes the
   session stays locked. It replaces hyprlock or swaylock.

@@ -54,13 +54,15 @@ pub struct Stack {
     window: Option<WindowHandle<Toasts>>,
     config: NotifyConfig,
     cmds: Sender<Cmd>,
+    /// The screen is being shared: private toasts hide what they say.
+    sharing: bool,
 }
 
 impl Global for Stack {}
 
 impl Stack {
     pub fn new(config: NotifyConfig, cmds: Sender<Cmd>) -> Self {
-        Self { window: None, config, cmds }
+        Self { window: None, config, cmds, sharing: false }
     }
 
     fn view(cx: &App) -> Option<(WindowHandle<Toasts>, Entity<Toasts>)> {
@@ -122,6 +124,28 @@ impl Stack {
                     t.left = t.left.map(|left| left.min(QUIET_LEFT));
                     cx.notify();
                 }
+            });
+        }
+    }
+
+    /// New details for an open toast, such as Jev's answers. Opens nothing.
+    pub fn refresh(n: Notification, cx: &mut App) {
+        if let Some((_, view)) = Self::view(cx) {
+            view.update(cx, |t, cx| {
+                if let Some(t) = t.items.iter_mut().find(|t| t.n.id == n.id && t.active()) {
+                    t.n = n;
+                    cx.notify();
+                }
+            });
+        }
+    }
+
+    pub fn set_sharing(on: bool, cx: &mut App) {
+        cx.global_mut::<Stack>().sharing = on;
+        if let Some((_, view)) = Self::view(cx) {
+            view.update(cx, |t, cx| {
+                t.sharing = on;
+                cx.notify();
             });
         }
     }
@@ -247,11 +271,13 @@ pub struct Toasts {
     last: Instant,
     input_region: Vec<Bounds<Pixels>>,
     tick: Option<Task<()>>,
+    sharing: bool,
 }
 
 impl Toasts {
     fn open(n: Notification, cx: &mut App) -> anyhow::Result<WindowHandle<Toasts>> {
         let config = cx.global::<Stack>().config.clone();
+        let sharing = cx.global::<Stack>().sharing;
         let (display, monitor) = crate::hypr::display_for(&config.toasts.monitor, cx);
         let screen_height =
             display.and_then(|id| cx.find_display(id)).map(|d| f32::from(d.bounds().size.height)).unwrap_or(1080.);
@@ -289,6 +315,7 @@ impl Toasts {
                         last: Instant::now(),
                         input_region: Vec::new(),
                         tick: None,
+                        sharing,
                     };
                     toasts.add(n, window, cx);
                     toasts
@@ -573,6 +600,9 @@ impl Toasts {
         }
         let bounds = t.bounds.clone();
         let has_default = n.has_action("default");
+        // While the screen is shared, a private toast shows only its app. So does one Jev hasn't
+        // answered about yet.
+        let hidden = self.sharing && n.private != Some(false);
 
         let mut body = div().flex_1().min_w_0().flex().flex_col().child(
             div()
@@ -589,7 +619,11 @@ impl Toasts {
                 }))
                 .child(div().flex_none().child(ago(t.arrived))),
         );
-        if !n.summary.is_empty() {
+        if hidden {
+            body = body.child(
+                div().mt(px(2.)).text_size(px(13.)).text_color(theme.ink_2).child("Hidden while you share your screen"),
+            );
+        } else if !n.summary.is_empty() {
             body = body.child(
                 div()
                     .mt(px(2.))
@@ -599,7 +633,7 @@ impl Toasts {
                     .child(n.summary.clone()),
             );
         }
-        if !n.body.is_empty() {
+        if !hidden && !n.body.is_empty() {
             body = body.child(
                 div()
                     .mt(px(2.))
@@ -611,6 +645,7 @@ impl Toasts {
             );
         }
         if n.preview
+            && !hidden
             && let Some(path) = &n.image
         {
             body = body
@@ -632,7 +667,9 @@ impl Toasts {
                         .child(div().text_size(px(11.5)).text_color(theme.ink_3).child(format!("{p}%"))),
                 );
         }
-        if let Some(reply) = &t.reply {
+        if hidden {
+            // Action labels can say as much as the body.
+        } else if let Some(reply) = &t.reply {
             let input = reply.input.clone();
             body = body.child(
                 div()
@@ -734,7 +771,12 @@ impl Toasts {
             .overflow_hidden()
             .cursor_pointer()
             .child(canvas(move |b, _, _| bounds.set(b), |_, _, _, _| {}).absolute().top_0().left_0().size_full())
-            .child(self.icon(n, theme))
+            .child(if hidden {
+                // An attached image is often a photo of whoever wrote.
+                self.icon(&Notification { image: None, ..n.clone() }, theme).into_any_element()
+            } else {
+                self.icon(n, theme).into_any_element()
+            })
             .child(body)
             .child(
                 div()

@@ -51,7 +51,7 @@ step    = 50
 
 [[section]]
 title       = "Smart sorting (Jev)"
-description = "Asks Jev, TypeSafe AI's classifier, how urgent each notification is. Toasts that can wait leave early and aren't counted as unread, and during Do Not Disturb the urgent ones still show. Each notification's app, title and (if allowed) text are sent to TypeSafe AI. Critical, progress and transient notifications are never sent."
+description = "Asks Jev, TypeSafe AI's classifier, how urgent each notification is, whether it's private, what kind it is and whether it asks for something. Toasts that can wait leave early and fold into Can wait, urgent ones still show during Do Not Disturb and come back if missed, and private ones hide while you share your screen. Each notification's app, title and (if allowed) text are sent to TypeSafe AI. Critical, progress and transient notifications are never sent."
 
 [[section.field]]
 key     = "jev.enabled"
@@ -100,3 +100,20 @@ default = 0.85
 min     = 0
 max     = 1
 step    = 0.05
+
+[[section.field]]
+key     = "jev.remind_after_min"
+kind    = "int"
+label   = "Remind about urgent ones after"
+help    = "Minutes before an urgent notification you haven't seen is shown again, once. 0 never."
+default = 10
+min     = 0
+max     = 1440
+step    = 5
+
+[[section.field]]
+key     = "jev.learn"
+kind    = "bool"
+label   = "Learn from what you open"
+help    = "Sends how often you opened or dismissed each app's notifications, so Jev learns what matters to you. Only counts, never content."
+default = true
