@@ -1,9 +1,12 @@
 name: CI
 
+# Off for now: runs only when started by hand (Actions → CI → Run workflow). To turn it back on,
+# restore these triggers:
+#   push:
+#     branches: [main, "feat/**"]
+#   pull_request:
 on:
-  push:
-    branches: [main, "feat/**"]
-  pull_request:
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
