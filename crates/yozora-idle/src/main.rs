@@ -318,7 +318,8 @@ impl Idle {
             .arg(&self.cfg.lock.command)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            // The lock screen's log, such as why a password was refused, goes to the journal.
+            .stderr(Stdio::inherit())
             .process_group(0)
             .spawn()
         {

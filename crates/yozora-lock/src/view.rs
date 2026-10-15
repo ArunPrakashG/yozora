@@ -144,7 +144,7 @@ impl Lock {
                         lock.unlock(cx);
                     }
                     Err(failure) => {
-                        tracing::info!("password rejected: {}", failure.error);
+                        tracing::warn!("password rejected: {} {:?}", failure.error, failure.messages);
                         lock.auth.failed(failure, Instant::now());
                     }
                 }
