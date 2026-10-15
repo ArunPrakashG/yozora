@@ -8,8 +8,8 @@ title = "Clock"
 key     = "clock.format"
 kind    = "string"
 label   = "Format"
-help    = "strftime format. Two spaces split date and time into separate parts."
-default = "%a %-d %b  %H:%M"
+help    = "strftime format, such as %H:%M for 24 hours. Two spaces split date and time into separate parts."
+default = "%a %-d %b  %-I:%M %p"
 
 [[section.field]]
 key     = "clock.week_numbers"

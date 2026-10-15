@@ -174,7 +174,7 @@ fn time(s: &str) -> Option<NaiveTime> {
 }
 
 fn hhmm(t: DateTime<FixedOffset>) -> String {
-    t.format("%H:%M").to_string()
+    t.format("%-I:%M %p").to_string()
 }
 
 /// "5 h 30 min ahead" of local time.
@@ -233,7 +233,7 @@ pub fn answer(q: &str, now: DateTime<Utc>) -> Option<Answer> {
     };
     Some(Answer {
         value: hhmm(there),
-        detail: format!("{} {from_label} → {to_label}{day} · {}", t.format("%H:%M"), there.format("%a %-d %b")),
+        detail: format!("{} {from_label} → {to_label}{day} · {}", t.format("%-I:%M %p"), there.format("%a %-d %b")),
     })
 }
 
@@ -248,11 +248,11 @@ mod tests {
     #[test]
     fn now_somewhere() {
         let now = at("2026-01-15T12:00:00Z");
-        assert_eq!(answer("time in tokyo", now).unwrap().value, "21:00");
-        assert_eq!(answer("london time", now).unwrap().value, "12:00");
-        assert_eq!(answer("time in ist", now).unwrap().value, "17:30");
-        assert_eq!(answer("time in utc+5:30", now).unwrap().value, "17:30");
-        assert_eq!(answer("Time in New York?", now).unwrap().value, "07:00");
+        assert_eq!(answer("time in tokyo", now).unwrap().value, "9:00 PM");
+        assert_eq!(answer("london time", now).unwrap().value, "12:00 PM");
+        assert_eq!(answer("time in ist", now).unwrap().value, "5:30 PM");
+        assert_eq!(answer("time in utc+5:30", now).unwrap().value, "5:30 PM");
+        assert_eq!(answer("Time in New York?", now).unwrap().value, "7:00 AM");
         assert!(answer("time in narnia", now).is_none());
         assert!(answer("bedtime", now).is_none());
     }
@@ -261,13 +261,13 @@ mod tests {
     fn converts_times() {
         let now = at("2026-01-15T12:00:00Z");
         let a = answer("3pm ist to pst", now).unwrap();
-        assert_eq!(a.value, "01:30");
+        assert_eq!(a.value, "1:30 AM");
         assert!(a.detail.contains("IST → PST"), "{}", a.detail);
-        assert_eq!(answer("15:30 utc in tokyo", now).unwrap().value, "00:30");
+        assert_eq!(answer("15:30 utc in tokyo", now).unwrap().value, "12:30 AM");
         assert!(answer("15:30 utc in tokyo", now).unwrap().detail.contains("the next day"));
-        assert_eq!(answer("9 am new york to london", now).unwrap().value, "14:00");
+        assert_eq!(answer("9 am new york to london", now).unwrap().value, "2:00 PM");
         // Summer time: New York is UTC-4 in July.
-        assert_eq!(answer("9am est to utc", at("2026-07-15T12:00:00Z")).unwrap().value, "13:00");
+        assert_eq!(answer("9am est to utc", at("2026-07-15T12:00:00Z")).unwrap().value, "1:00 PM");
         // Not times.
         assert!(answer("3 ist to pst", now).is_none());
         assert!(answer("5 km to mi", now).is_none());

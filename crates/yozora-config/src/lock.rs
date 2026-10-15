@@ -38,7 +38,7 @@ pub struct ClockSection {
 
 impl Default for ClockSection {
     fn default() -> Self {
-        Self { format: "%H:%M".into(), date: "%A, %-d %B".into() }
+        Self { format: "%-I:%M".into(), date: "%A, %-d %B".into() }
     }
 }
 

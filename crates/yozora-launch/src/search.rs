@@ -1061,7 +1061,7 @@ mod tests {
         // 1_000_000 s after the epoch is 13:46 UTC.
         let r = run_with("time in utc", &apps, &Usage::default(), &[], &x);
         assert_eq!(r[0].title, "Time");
-        assert_eq!(r[0].rows[0].title, "13:46");
+        assert_eq!(r[0].rows[0].title, "1:46 PM");
     }
 
     fn titles(sections: &[Section]) -> Vec<(&'static str, Vec<String>)> {
