@@ -24,8 +24,8 @@ repository = "https://github.com/ArunPrakashG/yozora"
 # (zed-industries/zed#65055) for the lock screen, and layer and keyboard switching on layer-shell
 # surfaces for the launcher. crates.io gpui predates layer-shell and popups.
 # Bump on purpose: the Wayland platform code changes often.
-gpui = { git = "https://github.com/ArunPrakashG/zed", rev = "7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4" }
-gpui_platform = { git = "https://github.com/ArunPrakashG/zed", rev = "7dd6ed92b3efd8e0e02f968936e6a5227f44dfe4", features = ["wayland"] }
+gpui = { git = "https://github.com/ArunPrakashG/zed", rev = "b367bb651b8415f9d0f4c12b72be2d1c2979741f" }
+gpui_platform = { git = "https://github.com/ArunPrakashG/zed", rev = "b367bb651b8415f9d0f4c12b72be2d1c2979741f", features = ["wayland"] }
 anyhow = "1"
 async-channel = "2"
 async-io = "2"

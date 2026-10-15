@@ -1,6 +1,7 @@
 //! Theme tokens, motion and controls shared by Yozora apps.
 
 pub mod controls;
+pub mod fonts;
 pub mod frame_stats;
 pub mod gpu;
 pub mod hypr;
