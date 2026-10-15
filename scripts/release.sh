@@ -25,7 +25,9 @@ fi
 
 rm -rf dist build-pkg && mkdir -p dist build-pkg
 cp packaging/arch/PKGBUILD packaging/arch/yozora.install build-pkg/
-(cd build-pkg && YOZORA_SOURCE="git+file://$PWD/.." PKGDEST="$PWD/../dist" makepkg -f --noconfirm --nodeps)
+# Generic x86-64 rather than this machine's flags, and built on disk: makepkg's default build
+# directory can be a small tmpfs.
+(cd build-pkg && RUSTFLAGS="" YOZORA_SOURCE="git+file://$PWD/.." PKGDEST="$PWD/../dist" BUILDDIR="$PWD/work" makepkg -f --noconfirm --nodeps)
 rm -rf build-pkg
 
 # The package's files as a tarball, for machines that aren't Arch: extract it at /.
