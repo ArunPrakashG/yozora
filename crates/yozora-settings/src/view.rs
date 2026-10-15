@@ -101,6 +101,10 @@ pub struct SettingsView {
     page_serial: u32,
     docs: HashMap<String, Doc>,
     inputs: HashMap<String, (Entity<TextInput>, InputTarget)>,
+    /// Fields with typing that hasn't been committed. GPUI delivers the blur after the frame in
+    /// which focus already left, so without this that frame would put the saved value back over
+    /// the typing, and the commit would then see no change.
+    dirty: std::collections::HashSet<String>,
     search: Entity<TextInput>,
     query: String,
     pub monitors: Result<Vec<Monitor>, String>,
@@ -142,6 +146,7 @@ impl SettingsView {
             page_serial: 0,
             docs: HashMap::new(),
             inputs: HashMap::new(),
+            dirty: Default::default(),
             search,
             query: String::new(),
             monitors: Err("Loading monitors…".into()),
@@ -330,7 +335,10 @@ impl SettingsView {
         if let Some((input, stored)) = self.inputs.get_mut(id) {
             *stored = target;
             let input = input.clone();
-            if !input.read(cx).is_focused(window) && !matches!(self.inputs[id].1, InputTarget::Append { .. }) {
+            if !input.read(cx).is_focused(window)
+                && !self.dirty.contains(id)
+                && !matches!(self.inputs[id].1, InputTarget::Append { .. })
+            {
                 input.update(cx, |i, cx| i.set_text(current.to_string(), cx));
             }
             return input;
@@ -345,6 +353,7 @@ impl SettingsView {
         let subscription = cx.subscribe_in(&input, window, move |this, input, event, window, cx| match event {
             InputEvent::Submit | InputEvent::Blur => {
                 let text = input.read(cx).text().to_string();
+                this.dirty.remove(&key);
                 this.commit_input(&key, text, cx);
                 if matches!(event, InputEvent::Submit) && !matches!(this.inputs[&key].1, InputTarget::Append { .. }) {
                     window.focus(&this.focus, cx);
@@ -352,13 +361,16 @@ impl SettingsView {
             }
             InputEvent::Cancel => {
                 // Discard the edit; the next render shows the saved value again.
+                this.dirty.remove(&key);
                 window.focus(&this.focus, cx);
                 if matches!(this.inputs[&key].1, InputTarget::Append { .. }) {
                     input.update(cx, |i, cx| i.set_text("", cx));
                 }
                 cx.notify();
             }
-            InputEvent::Changed => {}
+            InputEvent::Changed => {
+                this.dirty.insert(key.clone());
+            }
         });
         self._subscriptions.push(subscription);
         self.inputs.insert(id.to_string(), (input.clone(), target));
