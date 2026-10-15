@@ -183,6 +183,7 @@ fn install_panic_hook() {
 fn run(config: Option<PathBuf>, fakes: services::Fakes) -> ExitCode {
     // Before any thread starts: it changes the environment.
     yozora_ui::gpu::prefer_vulkan();
+    yozora_ui::fonts::cache_parsed();
     yozora_ui::malloc::tune();
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_env("YOZORA_LOG").unwrap_or_else(|_| EnvFilter::new("info")))
