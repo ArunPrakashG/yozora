@@ -316,26 +316,34 @@ fn reply(request: &Request) -> Response {
     }
 }
 
+/// A display with its Hyprland name, whether it has focus, and its real size.
+type Named = (DisplayId, Option<String>, bool, Option<(f32, f32)>);
+
 /// Opens a lock window on every display that doesn't have one. Returns how many there are.
 fn open_windows(lock: &Entity<Lock>, cx: &mut App) -> usize {
     let monitors = yozora_ui::hypr::monitors().unwrap_or_default();
-    let named: Vec<(DisplayId, Option<String>, bool)> = cx
+    let named: Vec<Named> = cx
         .displays()
         .iter()
         .map(|d| {
             let m = monitors.iter().find(|m| yozora_ui::hypr::display_of(m, cx) == Some(d.id()));
-            (d.id(), m.map(|m| m.name.clone()), m.is_some_and(|m| m.focused))
+            (d.id(), m.map(|m| m.name.clone()), m.is_some_and(|m| m.focused), m.map(|m| (m.width, m.height)))
         })
         .collect();
     let preview = lock.read(cx).preview;
-    for (display, output, focused) in named {
+    for (display, output, focused, logical) in named {
         if lock.read(cx).windows.iter().any(|(d, _)| *d == display) {
             continue;
         }
-        let bounds = cx
-            .find_display(display)
-            .map(|d| d.bounds())
-            .unwrap_or(Bounds { origin: point(px(0.), px(0.)), size: size(px(1920.), px(1080.)) });
+        // GPUI's display size ignores a rotated monitor (a vertical one would get a landscape
+        // window), so ask Hyprland for the real one.
+        let bounds = match logical.filter(|(w, h)| *w > 0. && *h > 0.) {
+            Some((w, h)) => Bounds { origin: point(px(0.), px(0.)), size: size(px(w), px(h)) },
+            None => cx
+                .find_display(display)
+                .map(|d| d.bounds())
+                .unwrap_or(Bounds { origin: point(px(0.), px(0.)), size: size(px(1920.), px(1080.)) }),
+        };
         let namespace = if preview { "yozora-lock-preview".to_string() } else { SESSION_LOCK_NAMESPACE.to_string() };
         let view_lock = lock.clone();
         let view_output = output.clone();

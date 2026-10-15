@@ -15,6 +15,9 @@ pub struct Monitor {
     pub x: i32,
     pub y: i32,
     pub focused: bool,
+    /// The size in logical pixels, as the compositor lays it out: rotated and scaled.
+    pub width: f32,
+    pub height: f32,
 }
 
 /// Sends `command` to Hyprland's request socket and returns the reply.
@@ -40,10 +43,20 @@ pub fn monitors() -> anyhow::Result<Vec<Monitor>> {
                     x: m["x"].as_i64().unwrap_or(0) as i32,
                     y: m["y"].as_i64().unwrap_or(0) as i32,
                     focused: m["focused"].as_bool().unwrap_or(false),
+                    width: logical(m, "width", "height"),
+                    height: logical(m, "height", "width"),
                 })
                 .collect()
         })
         .unwrap_or_default())
+}
+
+/// `key` of the monitor in logical pixels: the mode's sides swap on a quarter turn
+/// (transform 1, 3, 5, 7), and the scale divides them.
+fn logical(m: &serde_json::Value, key: &str, other: &str) -> f32 {
+    let quarter = m["transform"].as_i64().unwrap_or(0) % 2 == 1;
+    let side = m[if quarter { other } else { key }].as_f64().unwrap_or(0.) as f32;
+    side / m["scale"].as_f64().filter(|s| *s > 0.).unwrap_or(1.) as f32
 }
 
 /// The GPUI display for a Hyprland monitor. GPUI's display bounds ignore rotation, but their
