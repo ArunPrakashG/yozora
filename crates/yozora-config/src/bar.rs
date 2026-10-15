@@ -85,7 +85,7 @@ pub struct ClockConfig {
 
 impl Default for ClockConfig {
     fn default() -> Self {
-        Self { format: "%a %-d %b  %H:%M".into(), week_numbers: true }
+        Self { format: "%a %-d %b  %-I:%M %p".into(), week_numbers: true }
     }
 }
 

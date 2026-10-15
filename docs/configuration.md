@@ -65,7 +65,7 @@ center = []
 right  = ["clock", "control-center"]
 
 [clock]
-format       = "%a %-d %b  %H:%M"  # strftime; two spaces split date and time into two parts
+format       = "%a %-d %b  %-I:%M %p"  # strftime (%H:%M for 24 hours); two spaces split date and time into two parts
 week_numbers = true                # ISO weeks in the calendar
 
 [workspaces]
@@ -255,7 +255,7 @@ image = ""          # empty: the wallpaper from swaybg, hyprpaper or swww; "{out
 blur  = true        # off shows the image as it is, under the same dark veil
 
 [clock]
-format = "%H:%M"        # strftime
+format = "%-I:%M"       # strftime (%H:%M for 24 hours)
 date   = "%A, %-d %B"
 
 [show]

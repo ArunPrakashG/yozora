@@ -25,8 +25,8 @@ title = "Clock"
 key     = "clock.format"
 kind    = "string"
 label   = "Time"
-help    = "strftime format, such as %H:%M or %-I:%M."
-default = "%H:%M"
+help    = "strftime format, such as %-I:%M %p for AM/PM or %H:%M for 24 hours."
+default = "%-I:%M"
 
 [[section.field]]
 key     = "clock.date"

@@ -25,7 +25,7 @@ pub fn format_time(format: &str) -> String {
     let mut out = String::new();
     if write!(out, "{}", now.format(format)).is_err() {
         out.clear();
-        let _ = write!(out, "{}", now.format("%a %-d %b  %H:%M"));
+        let _ = write!(out, "{}", now.format("%a %-d %b  %-I:%M %p"));
     }
     out
 }
