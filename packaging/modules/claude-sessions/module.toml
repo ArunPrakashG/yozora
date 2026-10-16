@@ -1,0 +1,16 @@
+schema  = 1
+name    = "claude-sessions"
+title   = "Claude sessions"
+version = "0.1.0"
+icon    = "sync"
+refresh = { interval = 30 }
+exec    = "./run.sh"
+
+[[actions]]
+id      = "sync"
+label   = "Sync now"
+command = "./sync.py --apply"
+
+[[actions]]
+id    = "refresh"
+label = "Check again"
