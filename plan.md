@@ -209,17 +209,17 @@ Executed by `/wave-planning:wave-execute`. See that skill for the worktree, disp
 ```yaml status
 base_branch: feat/modules
 integration_branch: wave/integration
-integration_head: 12ced7c8b44410a37f0697b2bda55e3df4faf0f0
+integration_head: 02d791dbbdedc8b64be7e4f9121e0d051fd8d093
 W1: done
 W2: done
 W3: done
-W4: pending
+W4: done
 P1a: done
 P2a: done
 P3a: done
 P5a: done
 P6a: done
 P4a: done
-P7a: pending
-P8a: pending
+P7a: done
+P8a: done
 ```
