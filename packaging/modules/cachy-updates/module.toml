@@ -1,0 +1,17 @@
+schema  = 1
+name    = "cachy-updates"
+title   = "Updates"
+version = "0.1.0"
+icon    = "package"
+refresh = { interval = 300 }
+exec    = "./run.sh"
+
+[[actions]]
+id      = "update"
+label   = "Update…"
+command = "./update.sh"
+
+[[actions]]
+id      = "check"
+label   = "Check now"
+command = "./run.sh --refresh"
