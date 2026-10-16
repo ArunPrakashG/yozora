@@ -18,6 +18,9 @@ const KNOWN: [(&str, &str); 6] = [
     ("settings", "Yozora Settings"),
 ];
 
+/// The apps that run as systemd user services, in the order they're restarted.
+const SERVICES: [&str; 4] = ["bar", "notify", "launch", "idle"];
+
 pub fn name(id: &str) -> String {
     KNOWN.iter().find(|(k, _)| *k == id).map_or_else(|| format!("Yozora {id}"), |(_, n)| n.to_string())
 }
@@ -175,4 +178,85 @@ pub fn keep_awake(args: Vec<String>, out: &Out) -> anyhow::Result<()> {
     let data = ask("idle", "keep-awake", &args)?;
     out.done(format!("keep awake is {}", if data["keep_awake"] == true { "on" } else { "off" }), data);
     Ok(())
+}
+
+/// The service apps to restart: the ones named, or all of them.
+fn restart_targets(args: &[String]) -> anyhow::Result<Vec<&'static str>> {
+    if args.is_empty() || args.iter().any(|a| a == "all") {
+        return Ok(SERVICES.to_vec());
+    }
+    args.iter()
+        .map(|a| {
+            let id = a.strip_prefix("yozora-").unwrap_or(a);
+            SERVICES.iter().copied().find(|s| *s == id).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "{a:?} isn't a service app; use one of {} (lock and settings aren't services)",
+                    SERVICES.join(", ")
+                )
+            })
+        })
+        .collect()
+}
+
+/// Restarts Yozora's systemd user services, all of them or the ones named.
+pub fn restart(args: Vec<String>, out: &Out) -> anyhow::Result<()> {
+    let targets = restart_targets(&args)?;
+    let units: Vec<String> = targets.iter().map(|id| format!("yozora-{id}.service")).collect();
+    let status = std::process::Command::new("systemctl").args(["--user", "restart"]).args(&units).status()?;
+    anyhow::ensure!(status.success(), "systemctl --user restart failed ({status})");
+    // Give the apps a moment to come up, then report what's running.
+    std::thread::sleep(Duration::from_millis(1500));
+    let results: Vec<Value> = targets
+        .iter()
+        .zip(&units)
+        .map(|(id, unit)| {
+            let active = std::process::Command::new("systemctl")
+                .args(["--user", "is-active", "--quiet", unit])
+                .status()
+                .is_ok_and(|s| s.success());
+            json!({ "id": id, "unit": unit, "active": active })
+        })
+        .collect();
+    let lines: Vec<String> = results
+        .iter()
+        .map(|r| {
+            format!(
+                "{:<8} {}",
+                r["id"].as_str().unwrap_or(""),
+                if r["active"] == true { "running" } else { "not running" }
+            )
+        })
+        .collect();
+    out.lines(&lines, json!({ "restarted": results }));
+    anyhow::ensure!(
+        results.iter().all(|r| r["active"] == true),
+        "some services did not come back; see journalctl --user -u yozora-<app>"
+    );
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::restart_targets;
+
+    fn args(a: &[&str]) -> Vec<String> {
+        a.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn restart_defaults_to_every_service() {
+        assert_eq!(restart_targets(&[]).unwrap(), ["bar", "notify", "launch", "idle"]);
+        assert_eq!(restart_targets(&args(&["all"])).unwrap().len(), 4);
+    }
+
+    #[test]
+    fn restart_takes_names_with_or_without_prefix() {
+        assert_eq!(restart_targets(&args(&["bar", "yozora-idle"])).unwrap(), ["bar", "idle"]);
+    }
+
+    #[test]
+    fn restart_rejects_non_services() {
+        assert!(restart_targets(&args(&["lock"])).is_err());
+        assert!(restart_targets(&args(&["nope"])).is_err());
+    }
 }
