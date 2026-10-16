@@ -102,6 +102,7 @@ yozora --json settings notify            # open Yozora Settings on a page
 yozora --json lock                       # lock the screen
 yozora --json idle                       # what Yozora Idle counts down to, and what holds the screen on
 yozora --json keep-awake on              # no locking, screen-off or suspend, for a long task; off to end it
+yozora --json restart [APP...]             # restart the bar, notify, launch, idle services (all if none named)
 yozora --json apps                       # installed parts and their config files
 ```
 
