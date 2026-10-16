@@ -83,11 +83,11 @@ rationale: "Mostly prose plus two small tests"
 id: P4a
 spec: F4
 steps: [F4.1]
-owns: [crates/yozora-bar/src/modules/module.rs, crates/yozora-bar/tests/module_error_state.rs]
+owns: [crates/yozora-bar/src/modules/module.rs, crates/yozora-bar/src/modules/module_view.rs, crates/yozora-bar/src/modules/mod.rs, crates/yozora-bar/src/bar.rs, crates/yozora-bar/src/popover.rs, crates/yozora-bar/src/app.rs, crates/yozora-bar/src/services/mod.rs, crates/yozora-bar/tests/module_error_state.rs]
 depends_on: [P2a, P3a]
 model: sonnet
-score: {scope: 2, ambiguity: 1, risk: 0, reasoning: 1}
-rationale: "Wires kit and runtime into the bar"
+score: {scope: 2, ambiguity: 1, risk: 1, reasoning: 1}
+rationale: "Wires kit and runtime into the bar across several shared files"
 ```
 
 ```yaml phase
@@ -136,7 +136,7 @@ rationale: "Manifest plus a script that parses checkupdates and paru output"
 | P3a | crates/yozora-bar/src/services/modules.rs, crates/yozora-bar/tests/module_runtime.rs, crates/yozora-bar/tests/module_restart.rs, crates/yozora-bar/tests/module_action.rs |
 | P5a | crates/yozora-cli/src/module.rs, crates/yozora-cli/tests/** |
 | P6a | docs/modules.md, crates/yozora-module/tests/guidelines.rs |
-| P4a | crates/yozora-bar/src/modules/module.rs, crates/yozora-bar/tests/module_error_state.rs |
+| P4a | crates/yozora-bar/src/modules/module.rs, crates/yozora-bar/src/modules/module_view.rs, crates/yozora-bar/src/modules/mod.rs, crates/yozora-bar/src/bar.rs, crates/yozora-bar/src/popover.rs, crates/yozora-bar/src/app.rs, crates/yozora-bar/src/services/mod.rs, crates/yozora-bar/tests/module_error_state.rs |
 | P7a | packaging/modules/claude-sessions/** |
 | P8a | packaging/modules/cachy-updates/** |
 
@@ -149,7 +149,7 @@ rationale: "Manifest plus a script that parses checkupdates and paru output"
 | P3a | crates/yozora-bar/src/services/custom.rs |
 | P5a | crates/yozora-module/src/lib.rs |
 | P6a | docs/brand/**, docs/configuration.md |
-| P4a | crates/yozora-bar/src/modules/custom.rs, crates/yozora-bar/src/popover.rs |
+| P4a | crates/yozora-bar/src/modules/custom.rs, crates/yozora-bar/src/services/modules.rs, crates/yozora-ui/src/kit/display.rs, crates/yozora-ui/src/kit/controls.rs |
 | P7a | docs/modules.md, docs/waves/design/snapshot.html#screen-claude-popover |
 | P8a | docs/modules.md, docs/waves/design/snapshot.html#screen-updates-popover |
 
@@ -187,7 +187,7 @@ integration_checks: []
 ```yaml wave
 wave: 3
 phases: [P4a]
-integration_owned: [Cargo.lock, crates/yozora-bar/src/modules/mod.rs, crates/yozora-bar/src/bar.rs]
+integration_owned: [Cargo.lock]
 criteria: [F4.AC1, F4.AC2]
 integration_checks: []
 ```
@@ -209,17 +209,17 @@ Executed by `/wave-planning:wave-execute`. See that skill for the worktree, disp
 ```yaml status
 base_branch: feat/modules
 integration_branch: wave/integration
-integration_head: 8e2c29cc214a204f9de14a8842c312308dd83540
+integration_head: c5c038c924f836c3587b790e010005d8ca63b7ac
 W1: done
-W2: pending
-W3: pending
+W2: done
+W3: running
 W4: pending
 P1a: done
-P2a: pending
-P3a: pending
-P5a: pending
-P6a: pending
-P4a: pending
+P2a: done
+P3a: done
+P5a: done
+P6a: done
+P4a: running
 P7a: pending
 P8a: pending
 ```
