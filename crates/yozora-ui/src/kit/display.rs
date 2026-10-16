@@ -191,14 +191,8 @@ pub fn badge(text: impl Into<SharedString>, tone: Tone, theme: &Theme) -> Div {
 /// A list row. Label shrink and value truncation follow [`ROW_LAYOUT`].
 pub fn row(id: impl Into<ElementId>, props: RowProps, theme: &Theme) -> Stateful<Div> {
     let RowProps { icon: glyph, title, subtitle, value, badge: tag, tone, size, clickable } = props;
-    let tinted = !matches!(tone, Tone::Neutral | Tone::Accent);
-    let (tile_bg, tile_fg) = if tinted {
-        (tone_soft(tone, theme), tone_color(tone, theme))
-    } else if tone == Tone::Accent {
-        (theme.fill_2, theme.accent)
-    } else {
-        (theme.fill_2, theme.ink)
-    };
+    let tile_bg = if tone == Tone::Accent { theme.accent_soft } else { theme.fill_2 };
+    let tile_fg = tone_color(tone, theme);
     let label = div()
         .flex()
         .flex_col()
@@ -215,7 +209,7 @@ pub fn row(id: impl Into<ElementId>, props: RowProps, theme: &Theme) -> Stateful
         .w_full()
         .min_h(row_height(size))
         .px(px(8.))
-        .py(px(4.))
+        .py(px(8.))
         .rounded(RADIUS_ROW)
         .when(clickable, |el| el.cursor_pointer().hover(|s| s.bg(theme.fill_2)))
         .when_some(glyph, |el, g| {
