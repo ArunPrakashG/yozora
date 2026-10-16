@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/yozora-ui",
     "crates/yozora-config",
+    "crates/yozora-module",
     "crates/yozora-ipc",
     "crates/yozora-bar",
     "crates/yozora-settings",

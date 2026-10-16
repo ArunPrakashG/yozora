@@ -1,0 +1,13 @@
+[package]
+name = "yozora-module"
+version = "0.1.0"
+description = "Strict, versioned schema for Yozora bar modules: manifest, bar item, popover view tree and messages"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
