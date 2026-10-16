@@ -10,6 +10,8 @@ pub mod custom;
 pub mod devices;
 pub mod launcher;
 pub mod media;
+pub mod module;
+pub mod module_view;
 pub mod network;
 pub mod notifications;
 pub mod sound;
@@ -38,6 +40,8 @@ pub enum Module {
     Clock,
     ControlCenter,
     Custom(String),
+    /// A `module/<name>` module run by the module runtime.
+    Dynamic(String),
 }
 
 impl Module {
@@ -55,6 +59,7 @@ impl Module {
         "clock",
         "control-center",
         "custom/<name>",
+        "module/<name>",
     ];
 
     pub fn parse(name: &str) -> Option<Self> {
@@ -71,7 +76,11 @@ impl Module {
             "notifications" => Self::Notifications,
             "clock" => Self::Clock,
             "control-center" => Self::ControlCenter,
-            other => Self::Custom(other.strip_prefix("custom/")?.to_string()),
+            other => match other.strip_prefix("module/") {
+                Some(n) if !n.is_empty() => Self::Dynamic(n.to_string()),
+                Some(_) => return None,
+                None => Self::Custom(other.strip_prefix("custom/")?.to_string()),
+            },
         })
     }
 
@@ -90,12 +99,13 @@ impl Module {
             Self::Clock => "clock".into(),
             Self::ControlCenter => "control-center".into(),
             Self::Custom(n) => format!("custom/{n}"),
+            Self::Dynamic(n) => format!("module/{n}"),
         }
     }
 
     pub fn services(&self) -> &'static [Kind] {
         match self {
-            Self::Launcher | Self::Clock => &[],
+            Self::Launcher | Self::Clock | Self::Dynamic(_) => &[],
             Self::Workspaces | Self::Window => &[Kind::Hyprland],
             Self::Media => &[Kind::Media],
             Self::Tray => &[Kind::Tray],
@@ -123,6 +133,7 @@ impl Module {
             Self::Notifications => Pop::Notifications,
             Self::Clock => Pop::Calendar,
             Self::ControlCenter => Pop::ControlCenter,
+            Self::Dynamic(n) => Pop::Module(n.clone()),
             Self::Workspaces | Self::Window | Self::Tray | Self::Custom(_) => return None,
         })
     }
@@ -144,6 +155,16 @@ impl Layout {
 
     pub fn all(&self) -> impl Iterator<Item = &Module> {
         self.left.iter().chain(&self.center).chain(&self.right)
+    }
+
+    /// The names of the `module/<name>` modules placed in any zone.
+    pub fn dynamic_names(&self) -> BTreeSet<String> {
+        self.all()
+            .filter_map(|m| match m {
+                Module::Dynamic(n) => Some(n.clone()),
+                _ => None,
+            })
+            .collect()
     }
 
     pub fn services(&self) -> BTreeSet<Kind> {
@@ -174,6 +195,8 @@ pub enum Pop {
     ControlCenter,
     /// A tray item's menu, by its key.
     Tray(String),
+    /// A `module/<name>` module's popover, by module name.
+    Module(String),
 }
 
 impl Pop {
@@ -187,6 +210,7 @@ impl Pop {
             Pop::Calendar => 308.,
             Pop::ControlCenter => 344.,
             Pop::Tray(_) => 260.,
+            Pop::Module(_) => 320.,
         })
     }
 
@@ -207,6 +231,7 @@ impl Pop {
             Pop::Calendar => Module::Clock,
             Pop::ControlCenter => Module::ControlCenter,
             Pop::Tray(_) => Module::Tray,
+            Pop::Module(n) => Module::Dynamic(n.clone()),
         }
     }
 }
@@ -255,6 +280,8 @@ pub struct PopUi {
     pub submenu: Vec<i32>,
     /// Apps whose notifications are expanded in the center.
     pub expanded: std::collections::BTreeSet<String>,
+    /// A `module/<name>` action waiting for confirmation.
+    pub module_confirm: Option<module::Pending>,
 }
 
 /// "3m", "2h", "4d": how long ago, from Unix seconds.
@@ -287,6 +314,10 @@ mod tests {
     fn parses_names() {
         assert_eq!(Module::parse("custom/updates"), Some(Module::Custom("updates".into())));
         assert_eq!(Module::parse("control-center").and_then(|m| m.popover()), Some(Pop::ControlCenter));
+        assert_eq!(Module::parse("module/claude"), Some(Module::Dynamic("claude".into())));
+        assert_eq!(Module::Dynamic("claude".into()).name(), "module/claude");
+        assert_eq!(Module::parse("module/claude").and_then(|m| m.popover()), Some(Pop::Module("claude".into())));
+        assert_eq!(Module::parse("module/"), None);
         assert_eq!(Module::parse("nope"), None);
         assert_eq!(ellipsize("abcdef", 4), "abc…");
     }
