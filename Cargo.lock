@@ -6447,6 +6447,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "yozora-module"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "toml 0.8.23",
+]
+
+[[package]]
 name = "yozora-notify"
 version = "0.1.0"
 dependencies = [
