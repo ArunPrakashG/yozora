@@ -272,6 +272,8 @@ pub struct Toasts {
     input_region: Vec<Bounds<Pixels>>,
     tick: Option<Task<()>>,
     sharing: bool,
+    /// Whether the surface currently asks for the keyboard (only while a reply is open).
+    keyboard: bool,
 }
 
 impl Toasts {
@@ -298,8 +300,9 @@ impl Toasts {
                     namespace: "yozora-notify".into(),
                     layer: Layer::Overlay,
                     anchor: Anchor::TOP | Anchor::RIGHT,
-                    // Keyboard only after a click, for inline replies.
-                    keyboard_interactivity: KeyboardInteractivity::OnDemand,
+                    // No keyboard until an inline reply starts, so a toast never takes focus
+                    // from the window being typed in.
+                    keyboard_interactivity: KeyboardInteractivity::None,
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -316,6 +319,7 @@ impl Toasts {
                         input_region: Vec::new(),
                         tick: None,
                         sharing,
+                        keyboard: false,
                     };
                     toasts.add(n, window, cx);
                     toasts
@@ -385,6 +389,8 @@ impl Toasts {
             }
             _ => {}
         });
+        window.set_keyboard_interactivity(KeyboardInteractivity::OnDemand);
+        self.keyboard = true;
         window.focus(&input.focus_handle(cx), cx);
         t.reply = Some(Reply { input, _events: events });
         cx.notify();
@@ -393,8 +399,12 @@ impl Toasts {
     /// Advances timers and springs. Returns whether anything is still moving.
     fn advance(&mut self, reduced: bool, window: &mut Window, cx: &mut Context<Self>) -> (bool, bool) {
         let now = Instant::now();
-        let dt = (now - self.last).min(Duration::from_millis(250));
+        let elapsed = now - self.last;
+        // Springs take a clamped step so a stalled frame doesn't jump; timers use the real time
+        // so a throttled window doesn't stretch how long a toast stays.
+        let dt = elapsed.min(Duration::from_millis(250));
         self.last = now;
+        let pointer = window.mouse_position();
         let max = self.config.toasts.max_visible as usize;
         let mut moving = false;
         let mut timing = false;
@@ -411,12 +421,16 @@ impl Toasts {
             } else {
                 moving |= now - t.arrived < REDUCED;
             }
+            // A missed pointer-leave must not freeze the timer: trust the pointer's position.
+            if t.hovered && !t.bounds.get().contains(&pointer) {
+                t.hovered = false;
+            }
             // Waiting toasts beyond the limit, and ones being read, keep their time.
             if shown > max || t.hovered || t.reply.is_some() {
                 continue;
             }
             if let Some(left) = t.left.as_mut() {
-                *left = left.saturating_sub(dt);
+                *left = left.saturating_sub(elapsed);
                 timing = true;
                 if left.is_zero() {
                     expired.push(t.n.id);
@@ -426,6 +440,11 @@ impl Toasts {
         for id in expired {
             self.leave(id, Some(Cmd::Expired(id)), cx);
             moving = true;
+        }
+        let replying = self.items.iter().any(|t| t.reply.is_some());
+        if self.keyboard && !replying {
+            window.set_keyboard_interactivity(KeyboardInteractivity::None);
+            self.keyboard = false;
         }
         let before = self.items.len();
         self.items.retain(|t| t.leaving.is_none_or(|since| now - since < leave_duration(reduced)));

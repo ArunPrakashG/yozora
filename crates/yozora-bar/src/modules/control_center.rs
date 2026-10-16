@@ -22,12 +22,13 @@ fn slider_caption(title: &str, value: String, theme: &Theme) -> impl IntoElement
     div()
         .flex()
         .justify_between()
+        .gap(px(12.))
         .px(px(4.))
         .pb(px(7.))
         .text_size(px(12.))
         .text_color(theme.ink_2)
-        .child(title.to_string())
-        .child(div().text_color(theme.ink).child(value))
+        .child(div().flex_none().child(title.to_string()))
+        .child(div().min_w_0().truncate().text_color(theme.ink).child(value))
 }
 
 fn tiles(theme: &Theme, cx: &App) -> AnyElement {
