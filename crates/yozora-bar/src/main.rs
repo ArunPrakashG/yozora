@@ -88,7 +88,7 @@ fn check(config: Option<PathBuf>) -> ExitCode {
                 println!("  warning: {w}");
             }
             let clock = &loaded.value.bar.clock.format;
-            if !modules::calendar::valid_format(clock) {
+            if !crate::modules::calendar::valid_format(clock) {
                 problems += 1;
                 println!("  warning: clock.format {clock:?} is not a valid strftime format");
             }

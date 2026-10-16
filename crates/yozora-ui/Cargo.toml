@@ -16,3 +16,4 @@ resvg = { version = "0.46", default-features = false }
 tracing.workspace = true
 unicode-segmentation = "1"
 yozora-config.workspace = true
+yozora-module.workspace = true

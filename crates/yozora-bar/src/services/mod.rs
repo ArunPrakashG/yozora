@@ -11,6 +11,7 @@ pub mod custom;
 pub mod dbus;
 pub mod hyprland;
 pub mod media;
+pub mod modules;
 pub mod network;
 pub mod notifications;
 pub mod power;
@@ -171,6 +172,86 @@ impl Fakes {
     }
 }
 
+/// Runs the `module/<name>` modules and keeps what each last reported.
+///
+/// Modules are discovered once when first placed in a zone. A config reload stops the ones that
+/// left every zone and starts the ones that arrived; the rest keep running untouched. Changing a
+/// running module's `module.toml` on disk needs the module taken out of the zones (or a restart).
+pub struct ModuleHost {
+    pub states: std::collections::BTreeMap<String, modules::ModuleState>,
+    handles: std::collections::BTreeMap<String, modules::Handle>,
+    events: Sender<(String, modules::Event)>,
+}
+
+impl ModuleHost {
+    pub fn handle(&self, name: &str) -> Option<&modules::Handle> {
+        self.handles.get(name)
+    }
+
+    /// Stops what is no longer wanted and starts what is new. A name that isn't installed gets
+    /// a "module not found" state and is looked for again on the next reload.
+    pub fn configure(&mut self, wanted: &BTreeSet<String>) {
+        self.handles.retain(|name, h| {
+            let keep = wanted.contains(name);
+            if !keep {
+                h.stop();
+            }
+            keep
+        });
+        self.states.retain(|name, _| wanted.contains(name));
+        let fresh: Vec<&String> = wanted.iter().filter(|n| !self.handles.contains_key(*n)).collect();
+        if fresh.is_empty() {
+            return;
+        }
+        let (mut found, bad) = modules::discover(&modules::default_dirs());
+        for (path, why) in bad {
+            tracing::warn!("module {}: {why}", path.display());
+        }
+        for name in fresh {
+            match found.iter().position(|d| &d.manifest.name == name) {
+                Some(i) => {
+                    let def = found.swap_remove(i);
+                    self.states.insert(name.clone(), modules::ModuleState::default());
+                    self.handles.insert(name.clone(), modules::spawn(def, self.events.clone()));
+                }
+                None => {
+                    tracing::warn!("module/{name}: not installed");
+                    let state = modules::ModuleState { last_good: None, error: Some("module not found".into()) };
+                    self.states.insert(name.clone(), state);
+                }
+            }
+        }
+    }
+}
+
+impl Drop for ModuleHost {
+    fn drop(&mut self) {
+        for h in self.handles.values() {
+            h.stop();
+        }
+    }
+}
+
+fn start_modules(cx: &mut App) -> Entity<ModuleHost> {
+    let (events, rx) = async_channel::unbounded();
+    let entity = cx.new(|_| ModuleHost { states: Default::default(), handles: Default::default(), events });
+    let weak = entity.downgrade();
+    cx.spawn(async move |cx| {
+        while let Ok((name, event)) = rx.recv().await {
+            let Some(entity) = weak.upgrade() else { break };
+            entity.update(cx, |host, cx| {
+                // A stopped module's last events can still arrive; they are stale.
+                if host.handles.contains_key(&name) {
+                    host.states.entry(name).or_default().apply(&event);
+                    cx.notify();
+                }
+            });
+        }
+    })
+    .detach();
+    entity
+}
+
 pub type Audio = Service<audio::State, audio::Cmd>;
 pub type Bluetooth = Service<bluetooth::State, bluetooth::Cmd>;
 pub type Custom = Service<custom::State, custom::Cmd>;
@@ -189,6 +270,7 @@ pub struct Services {
     pub custom: Option<Entity<Custom>>,
     pub hyprland: Option<Entity<Hyprland>>,
     pub media: Option<Entity<Media>>,
+    pub modules: Option<Entity<ModuleHost>>,
     pub network: Option<Entity<Network>>,
     pub notifications: Option<Entity<Notifications>>,
     pub power: Option<Entity<Power>>,
@@ -198,6 +280,23 @@ pub struct Services {
 impl Global for Services {}
 
 impl Services {
+    /// Starts the module host if any `module/<name>` is placed, and tells it which ones.
+    pub fn ensure_modules(wanted: &BTreeSet<String>, cx: &mut App) {
+        let host = match cx.global::<Self>().modules.clone() {
+            Some(h) => h,
+            None if wanted.is_empty() => return,
+            None => {
+                let h = start_modules(cx);
+                cx.global_mut::<Self>().modules = Some(h.clone());
+                h
+            }
+        };
+        host.update(cx, |h, cx| {
+            h.configure(wanted);
+            cx.notify();
+        });
+    }
+
     pub fn get(cx: &App) -> &Self {
         cx.global::<Self>()
     }

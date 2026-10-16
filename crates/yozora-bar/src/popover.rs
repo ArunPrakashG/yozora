@@ -159,7 +159,7 @@ impl Popover {
                 }
             )*};
         }
-        watch!(audio, bluetooth, media, network, notifications, power, tray);
+        watch!(audio, bluetooth, media, modules, network, notifications, power, tray);
         if let Some(hypr) = Services::get(cx).hyprland.clone() {
             // Without a grab nothing tells us about clicks elsewhere. Close when focus moves.
             subs.push(cx.observe(&hypr, |p, hypr, cx| {
@@ -190,6 +190,13 @@ impl Popover {
             Pop::Notifications => {
                 if let Some(n) = &services.notifications {
                     n.read(cx).send(crate::services::notifications::Cmd::MarkRead);
+                }
+            }
+            Pop::Module(name) => {
+                if let Some(h) = &services.modules
+                    && let Some(handle) = h.read(cx).handle(name)
+                {
+                    handle.refresh();
                 }
             }
             Pop::Tray(key) => {
@@ -327,6 +334,7 @@ impl Render for Popover {
             Pop::Calendar => modules::calendar::popover(self, &theme, cx),
             Pop::ControlCenter => modules::control_center::popover(self, &theme, window, cx),
             Pop::Tray(key) => modules::tray::popover(self, &key, &theme, cx),
+            Pop::Module(name) => modules::module::popover(self, &name, &theme, cx),
         };
         let card_bounds = self.card.clone();
         // Keep the media position ticking.

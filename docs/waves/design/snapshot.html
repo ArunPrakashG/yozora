@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yozora modules design snapshot</title>
+<style>
+  :root {
+    --midnight: #0A0E17; --ink: #E8ECF4; --ink-2: #A5AEC0; --ink-3: #6E7890;
+    --accent: #8BBEFF; --accent-soft: rgba(139,190,255,.16);
+    --success: #8FE3CF; --warning: #FFC58B; --danger: #FF8F9C;
+    --glass-pop: rgba(22,28,42,.83); --hair: rgba(255,255,255,.08); --hair-2: rgba(255,255,255,.14);
+    --fill: rgba(255,255,255,.05); --fill-2: rgba(255,255,255,.09); --fill-3: rgba(255,255,255,.14);
+    --switch-off: rgba(255,255,255,.18);
+    --r-item: 8px; --r-row: 10px; --r-tile: 12px; --r-pop: 16px;
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px;
+    --font: Inter, system-ui, sans-serif; --mono: "JetBrains Mono", monospace;
+    --t-title: 14px; --t-body: 13px; --t-caption: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #05070C; color: var(--ink); font: var(--t-body)/1.4 var(--font); }
+  section { padding: var(--s-5); border-bottom: 1px solid var(--hair); }
+  h2 { margin: 0 0 var(--s-4); font-size: 13px; color: var(--ink-3); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+  .stage { display: flex; gap: var(--s-5); flex-wrap: wrap; align-items: flex-start; }
+  .swatch { width: 92px; }
+  .swatch i { display: block; height: 40px; border-radius: var(--r-item); border: 1px solid var(--hair-2); margin-bottom: 4px; }
+  .swatch span { font: 11px var(--mono); color: var(--ink-3); }
+  .pop { width: 340px; background: var(--glass-pop); border: 1px solid var(--hair-2); border-radius: var(--r-pop); padding: var(--s-3); box-shadow: 0 12px 40px rgba(0,0,0,.45); }
+  .title { display: flex; justify-content: space-between; align-items: center; padding: var(--s-1) var(--s-2) var(--s-3); font-size: var(--t-title); font-weight: 600; }
+  .title small { font-weight: 400; font-size: var(--t-caption); color: var(--ink-3); }
+  .sect { margin-top: var(--s-2); }
+  .sect > h3 { margin: 0; padding: var(--s-2) var(--s-2) var(--s-1); font-size: 11px; font-weight: 500; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; }
+  .row { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-2); border-radius: var(--r-row); min-height: 40px; }
+  .row:hover, .row.hover { background: var(--fill-2); }
+  .ico { width: 28px; height: 28px; border-radius: var(--r-item); background: var(--fill-2); display: grid; place-items: center; flex: none; font-size: 13px; color: var(--ink-2); }
+  .ico.accent { background: var(--accent-soft); color: var(--accent); }
+  .ico.success { color: var(--success); } .ico.warning { color: var(--warning); } .ico.danger { color: var(--danger); }
+  .txt { flex: 1; min-width: 0; }
+  .txt b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .txt span { display: block; font-size: var(--t-caption); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .val { font-size: var(--t-caption); color: var(--ink-2); flex: none; max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--fill-3); color: var(--ink-2); flex: none; }
+  .badge.accent { background: var(--accent-soft); color: var(--accent); }
+  .badge.success { background: rgba(143,227,207,.16); color: var(--success); }
+  .badge.warning { background: rgba(255,197,139,.16); color: var(--warning); }
+  .badge.danger { background: rgba(255,143,156,.16); color: var(--danger); }
+  .sw { width: 34px; height: 20px; border-radius: 99px; background: var(--switch-off); position: relative; flex: none; }
+  .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+  .sw.on { background: var(--accent); } .sw.on::after { left: 16px; }
+  .bar { height: 4px; border-radius: 2px; background: var(--fill-2); margin-top: 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .slider { height: 22px; border-radius: 99px; background: var(--fill-2); overflow: hidden; }
+  .slider i { display: block; height: 100%; width: 62%; background: var(--accent); }
+  .btns { display: flex; gap: var(--s-2); padding: var(--s-3) var(--s-2) var(--s-1); }
+  .btn { flex: 1; text-align: center; padding: 8px 12px; border-radius: var(--r-row); background: var(--fill-2); border: 1px solid var(--hair); font-weight: 500; }
+  .btn.primary { background: var(--accent); color: #0A0E17; border-color: transparent; }
+  .btn.danger { color: var(--danger); }
+  .empty { text-align: center; padding: var(--s-5) var(--s-4); color: var(--ink-3); }
+  .empty b { display: block; color: var(--ink-2); font-weight: 500; margin-bottom: 2px; }
+  .barmock { display: inline-flex; gap: var(--s-2); align-items: center; padding: 6px 10px; border-radius: var(--r-item); background: var(--glass-pop); border: 1px solid var(--hair); margin-bottom: var(--s-3); }
+  .barmock .it { display: flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 6px; font-size: 12.5px; }
+  .barmock .it.active { background: var(--fill-3); }
+  .note { max-width: 340px; font-size: var(--t-caption); color: var(--ink-3); margin-top: var(--s-2); }
+  .confirm { text-align: center; padding: var(--s-3); }
+  .confirm p { margin: 0 0 var(--s-3); color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<section id="tokens">
+  <h2>Tokens</h2>
+  <div class="stage">
+    <div class="swatch"><i style="background:var(--midnight)"></i><span>midnight #0A0E17</span></div>
+    <div class="swatch"><i style="background:var(--ink)"></i><span>ink</span></div>
+    <div class="swatch"><i style="background:var(--ink-2)"></i><span>ink-2</span></div>
+    <div class="swatch"><i style="background:var(--ink-3)"></i><span>ink-3</span></div>
+    <div class="swatch"><i style="background:var(--accent)"></i><span>accent / neutral-active</span></div>
+    <div class="swatch"><i style="background:var(--success)"></i><span>tone success</span></div>
+    <div class="swatch"><i style="background:var(--warning)"></i><span>tone warning</span></div>
+    <div class="swatch"><i style="background:var(--danger)"></i><span>tone danger</span></div>
+  </div>
+  <p class="note" style="max-width:640px">Tones available to modules: neutral, accent, success, warning, danger. Sizes: compact, regular. Radii 8 / 10 / 12 / 16 px. Spacing 4 / 8 / 12 / 16 / 24 px. Type: Inter 14 title, 13 body, 12 caption; JetBrains Mono for versions and paths. Modules set none of these directly; they pick a tone or size by name.</p>
+</section>
+
+<section id="screen-component-sheet">
+  <h2>Component sheet</h2>
+  <div class="stage">
+    <div class="pop">
+      <div class="title">Title <small>optional caption</small></div>
+      <div class="sect"><h3>Section heading</h3>
+        <div class="row"><span class="ico accent">●</span><span class="txt"><b>Row</b><span>Subtitle in caption type</span></span><span class="val">Value</span></div>
+        <div class="row hover"><span class="ico">●</span><span class="txt"><b>Row, hovered</b><span>Rows with an action show this state</span></span><span class="badge">Badge</span></div>
+        <div class="row"><span class="ico success">●</span><span class="txt"><b>Success tone</b><span>Icon takes the tone colour</span></span><span class="badge success">ok</span></div>
+        <div class="row"><span class="ico warning">●</span><span class="txt"><b>Warning tone</b><span>Needs attention</span></span><span class="badge warning">2</span></div>
+        <div class="row"><span class="ico danger">●</span><span class="txt"><b>Danger tone</b><span>Failed or destructive</span></span><span class="badge danger">!</span></div>
+      </div>
+      <div class="sect"><h3>Controls</h3>
+        <div class="row"><span class="txt"><b>Toggle</b></span><span class="sw on"></span></div>
+        <div class="row"><span class="txt"><b>Toggle, off</b></span><span class="sw"></span></div>
+        <div class="row" style="display:block"><div class="txt"><b>Slider</b></div><div class="slider" style="margin-top:6px"><i></i></div></div>
+        <div class="row" style="display:block"><div class="txt"><b>Progress</b><span>42% · 3 of 7</span></div><div class="bar"><i style="width:42%"></i></div></div>
+      </div>
+      <div class="btns"><span class="btn">Button</span><span class="btn primary">Primary</span></div>
+    </div>
+    <div class="pop">
+      <div class="title">Empty state</div>
+      <div class="empty"><b>Nothing to show</b>One line saying why, and what to do.</div>
+      <div class="title" style="margin-top:var(--s-3)">Confirm</div>
+      <div class="confirm"><p>Remove 3 packages?<br>This can't be undone.</p><div class="btns" style="padding:0"><span class="btn">Cancel</span><span class="btn danger">Remove</span></div></div>
+      <div class="title" style="margin-top:var(--s-3)">Long values</div>
+      <div class="row"><span class="txt"><b>Label stays whole</b></span><span class="val">A very long value that truncates at the end of the row</span></div>
+    </div>
+  </div>
+  <p class="note" style="max-width:700px">Rules shown: at most one primary button per popover; value text truncates before the label does; a section holds at most 8 rows before it scrolls; tones colour the icon and badge only, never the row background.</p>
+</section>
+
+<section id="screen-claude-popover">
+  <h2>Claude sessions popover</h2>
+  <div class="stage">
+    <div>
+      <div class="barmock"><span class="it">12:30 PM</span><span class="it active">󰀦 &#9888; 2</span><span class="it">&#9679;</span></div>
+      <div class="pop">
+        <div class="title">Claude sessions <small>2 out of sync</small></div>
+        <div class="sect"><h3>Accounts</h3>
+          <div class="row"><span class="ico warning">●</span><span class="txt"><b>03fc17c4</b><span>46 sessions · active 13h ago</span></span><span class="badge warning">2 missing</span></div>
+          <div class="row"><span class="ico success">●</span><span class="txt"><b>96b8b77e</b><span>44 sessions · active 14h ago</span></span><span class="badge success">synced</span></div>
+          <div class="row"><span class="ico success">●</span><span class="txt"><b>arunprakashgo+claude1</b><span>44 sessions · active 1m ago</span></span><span class="badge success">synced</span></div>
+        </div>
+        <div class="btns"><span class="btn primary">Sync now</span></div>
+        <div class="note" style="padding:0 var(--s-2)">Restart the Claude app after syncing to see new sessions.</div>
+      </div>
+    </div>
+    <div>
+      <div class="barmock"><span class="it">12:30 PM</span><span class="it active">󰑓</span><span class="it">&#9679;</span></div>
+      <div class="pop">
+        <div class="title">Claude sessions <small>all synced</small></div>
+        <div class="sect"><h3>Accounts</h3>
+          <div class="row"><span class="ico success">●</span><span class="txt"><b>03fc17c4</b><span>46 sessions · active 13h ago</span></span><span class="badge success">synced</span></div>
+          <div class="row"><span class="ico success">●</span><span class="txt"><b>96b8b77e</b><span>44 sessions · active 14h ago</span></span><span class="badge success">synced</span></div>
+        </div>
+        <div class="btns"><span class="btn">Check again</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screen-updates-popover">
+  <h2>CachyOS updates popover</h2>
+  <div class="stage">
+    <div>
+      <div class="barmock"><span class="it">12:30 PM</span><span class="it active">&#8679; 14 <span class="badge warning">news</span></span><span class="it">&#9679;</span></div>
+      <div class="pop">
+        <div class="title">Updates <small>14 pending</small></div>
+        <div class="sect"><h3>Needs attention</h3>
+          <div class="row"><span class="ico warning">!</span><span class="txt"><b>Manual step before updating</b><span>Arch news: nvidia-utils 580 drops Maxwell support</span></span></div>
+        </div>
+        <div class="sect"><h3>Repositories · 11</h3>
+          <div class="row"><span class="ico accent">&#8679;</span><span class="txt"><b>linux-cachyos</b><span style="font-family:var(--mono)">7.2.8-1 → 7.2.9-2</span></span><span class="badge accent">kernel</span></div>
+          <div class="row"><span class="ico">&#8679;</span><span class="txt"><b>mesa</b><span style="font-family:var(--mono)">26.1.2-1 → 26.1.3-1</span></span></div>
+          <div class="row"><span class="ico">&#8679;</span><span class="txt"><b>firefox</b><span style="font-family:var(--mono)">141.0-1 → 141.0.1-1</span></span></div>
+          <div class="row"><span class="val" style="max-width:none;padding-left:40px">and 8 more</span></div>
+        </div>
+        <div class="sect"><h3>AUR · 3</h3>
+          <div class="row"><span class="ico">&#8679;</span><span class="txt"><b>yozora-git</b><span style="font-family:var(--mono)">r48 → r50</span></span></div>
+        </div>
+        <div class="btns"><span class="btn">Check now</span><span class="btn primary">Update…</span></div>
+        <div class="note" style="padding:0 var(--s-2)">Update opens your terminal and runs the update there.</div>
+      </div>
+    </div>
+    <div>
+      <div class="barmock"><span class="it">12:30 PM</span><span class="it active">&#10003;</span><span class="it">&#9679;</span></div>
+      <div class="pop">
+        <div class="title">Updates <small>checked 2m ago</small></div>
+        <div class="empty"><b>Up to date</b>No repository or AUR updates are pending.</div>
+        <div class="btns"><span class="btn">Check now</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

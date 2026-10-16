@@ -19,4 +19,5 @@ toml.workspace = true
 toml_edit.workspace = true
 yozora-config.workspace = true
 yozora-ipc.workspace = true
+yozora-module.workspace = true
 zbus.workspace = true

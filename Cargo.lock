@@ -6333,6 +6333,7 @@ dependencies = [
  "tracing-subscriber",
  "yozora-config",
  "yozora-ipc",
+ "yozora-module",
  "yozora-ui",
  "zbus",
 ]
@@ -6348,6 +6349,7 @@ dependencies = [
  "toml_edit 0.22.27",
  "yozora-config",
  "yozora-ipc",
+ "yozora-module",
  "zbus",
 ]
 
@@ -6447,6 +6449,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "yozora-module"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "toml 0.8.23",
+]
+
+[[package]]
 name = "yozora-notify"
 version = "0.1.0"
 dependencies = [
@@ -6501,6 +6512,7 @@ dependencies = [
  "tracing",
  "unicode-segmentation",
  "yozora-config",
+ "yozora-module",
 ]
 
 [[package]]

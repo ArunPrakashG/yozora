@@ -55,6 +55,8 @@ pub struct Bar {
     /// Where each item was drawn, to anchor its popover.
     bounds: Rc<RefCell<HashMap<String, Bounds<Pixels>>>>,
     observed: BTreeSet<Kind>,
+    /// Whether this bar already redraws on module host changes.
+    modules_observed: bool,
     subscriptions: Vec<Subscription>,
     first_frame_logged: bool,
     bench: Option<Bench>,
@@ -110,6 +112,7 @@ impl Bar {
                         popover: None,
                         bounds: Rc::default(),
                         observed: BTreeSet::new(),
+                        modules_observed: false,
                         subscriptions: Vec::new(),
                         first_frame_logged: false,
                         bench: None,
@@ -153,6 +156,12 @@ impl Bar {
                 subs.push(sub);
                 self.observed.insert(kind);
             }
+        }
+        if !self.modules_observed
+            && let Some(host) = Services::get(cx).modules.clone()
+        {
+            subs.push(cx.observe(&host, |_, _, cx| cx.notify()));
+            self.modules_observed = true;
         }
         self.subscriptions.extend(subs);
     }
@@ -385,6 +394,7 @@ impl Bar {
             Module::Window => return modules::workspaces::window_title(self, theme, cx),
             Module::Tray => return modules::tray::render(self, theme, cx),
             Module::Custom(name) => return modules::custom::render(name, theme, cx),
+            Module::Dynamic(name) => modules::module::item(name, theme, cx),
             Module::Launcher => modules::launcher::item(theme),
             Module::Clock => modules::calendar::item(theme, cx),
             Module::Media => modules::media::item(theme, cx)?,
