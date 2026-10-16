@@ -21,6 +21,8 @@ optdepends=(
   'curl: currency rates in the launcher, Jev sorting in notifications'
   'libnotify: output of silent script commands in the launcher'
   'openssh: SSH hosts in the launcher'
+  'python: the bundled modules (Claude sessions, CachyOS updates)'
+  'pacman-contrib: the CachyOS updates module (checkupdates)'
 )
 provides=('yozora' 'notification-daemon')
 conflicts=('yozora')
@@ -99,6 +101,18 @@ package() {
   install -Dm644 packaging/agent/yozora/SKILL.md -t "$pkgdir/usr/share/yozora/agent/skills/yozora"
   install -Dm644 packaging/hyprland/yozora.lua -t "$pkgdir/usr/share/yozora/hyprland"
   install -Dm644 packaging/hyprland/yozora.conf -t "$pkgdir/usr/share/yozora/hyprland"
+
+  # Bundled modules: scripts keep their exec bit, tests stay out of the package.
+  for module in packaging/modules/*/; do
+    name=$(basename "$module")
+    for f in "$module"*; do
+      case "$(basename "$f")" in
+        test.sh) continue ;;
+        *.sh|*.py) install -Dm755 "$f" -t "$pkgdir/usr/share/yozora/modules/$name" ;;
+        *) install -Dm644 "$f" -t "$pkgdir/usr/share/yozora/modules/$name" ;;
+      esac
+    done
+  done
 
   install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
   install -Dm644 README.md -t "$pkgdir/usr/share/doc/$pkgname"
