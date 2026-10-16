@@ -125,6 +125,11 @@ fn ensure_services(cx: &mut App) {
     for connector in settings.bar.monitor.keys() {
         kinds.extend(Layout::parse(&settings.bar.zones_for(connector)).services());
     }
+    let mut names = Layout::parse(&settings.bar.modules).dynamic_names();
+    for connector in settings.bar.monitor.keys() {
+        names.extend(Layout::parse(&settings.bar.zones_for(connector)).dynamic_names());
+    }
+    Services::ensure_modules(&names, cx);
     // Monitors and workspaces decide which bars exist, so Hyprland always runs.
     kinds.insert(Kind::Hyprland);
     if settings.bar.osd.enabled {
