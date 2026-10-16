@@ -24,6 +24,7 @@ mod agent;
 mod apps;
 mod config;
 mod desktop;
+mod module;
 mod notify;
 mod out;
 
@@ -70,6 +71,11 @@ Settings files
   config set APP KEY VALUE        VALUE `-` reads it from stdin (use that for keys)
   config reset APP KEY            Back to the default
   config path APP
+
+Modules
+  module check PATH               Validate a module's manifest and sample output
+  module new NAME                 Scaffold a module
+  module list                     Installed modules and their state
 
 Agent skill
   agent install [--all]           Link the Yozora skill into Claude Code (~/.claude/skills) and
@@ -127,6 +133,7 @@ fn run(cmd: &str, args: Vec<String>, out: &out::Out) -> anyhow::Result<()> {
         "dnd" => notify::dnd(args, out),
         "config" => config::run(args, out),
         "agent" => agent::run(args, out),
+        "module" => module::run(args, out),
         other => anyhow::bail!("unknown command {other:?}; see yozora --help"),
     }
 }

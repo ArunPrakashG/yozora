@@ -6333,6 +6333,7 @@ dependencies = [
  "tracing-subscriber",
  "yozora-config",
  "yozora-ipc",
+ "yozora-module",
  "yozora-ui",
  "zbus",
 ]
@@ -6348,6 +6349,7 @@ dependencies = [
  "toml_edit 0.22.27",
  "yozora-config",
  "yozora-ipc",
+ "yozora-module",
  "zbus",
 ]
 
@@ -6510,6 +6512,7 @@ dependencies = [
  "tracing",
  "unicode-segmentation",
  "yozora-config",
+ "yozora-module",
 ]
 
 [[package]]

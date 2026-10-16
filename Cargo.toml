@@ -44,6 +44,7 @@ zbus = { version = "5", default-features = false, features = ["async-io"] }
 
 yozora-config = { path = "crates/yozora-config" }
 yozora-ipc = { path = "crates/yozora-ipc" }
+yozora-module = { path = "crates/yozora-module" }
 yozora-ui = { path = "crates/yozora-ui" }
 
 # Zed's workspace patches these, and GPUI relies on the patched versions.

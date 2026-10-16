@@ -11,6 +11,7 @@ pub mod custom;
 pub mod dbus;
 pub mod hyprland;
 pub mod media;
+pub mod modules;
 pub mod network;
 pub mod notifications;
 pub mod power;
