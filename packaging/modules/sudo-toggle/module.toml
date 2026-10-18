@@ -1,0 +1,18 @@
+schema  = 1
+name    = "sudo-toggle"
+title   = "Sudo"
+version = "0.1.0"
+icon    = "lock"
+refresh = { interval = 10 }
+exec    = "./run.sh"
+
+[[actions]]
+id          = "enable"
+label       = "Enable"
+command     = "./toggle.sh enable"
+destructive = true
+
+[[actions]]
+id      = "disable"
+label   = "Disable"
+command = "./toggle.sh disable"
