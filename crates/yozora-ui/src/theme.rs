@@ -167,6 +167,28 @@ impl Theme {
         ]
     }
 
+    /// A tight drop shadow for cards stacked close together, like toasts. It reaches about 14 px
+    /// to the sides, so a surface that leaves that much room around the card doesn't clip it.
+    pub fn card_shadow(&self) -> Vec<BoxShadow> {
+        let soft = Rgba { a: self.shadow[0].a * 0.5, ..self.shadow[0] };
+        vec![
+            BoxShadow {
+                color: soft.into(),
+                offset: point(px(0.), px(5.)),
+                blur_radius: px(18.),
+                spread_radius: px(-4.),
+                inset: false,
+            },
+            BoxShadow {
+                color: self.shadow[1].into(),
+                offset: point(px(0.), px(1.)),
+                blur_radius: px(3.),
+                spread_radius: px(0.),
+                inset: false,
+            },
+        ]
+    }
+
     /// Glow under the active workspace pill and lit tiles.
     pub fn accent_glow(&self) -> Vec<BoxShadow> {
         let mut glow: Hsla = self.accent.into();

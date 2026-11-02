@@ -33,12 +33,12 @@ use crate::{
 
 const WIDTH: Pixels = px(380.);
 /// Room left of the cards for their shadow.
-const SHADOW: Pixels = px(28.);
-/// From the bar and from the screen's right edge.
-const EDGE: Pixels = px(12.);
+const SHADOW: Pixels = px(20.);
+/// From the bar and from the screen's right edge. The shadow reaches about this far.
+const EDGE: Pixels = px(16.);
 /// What is left of a toast once Jev says it can wait.
 const QUIET_LEFT: Duration = Duration::from_millis(1500);
-const GAP: f32 = 12.;
+const GAP: f32 = 10.;
 /// How far a card slides while it arrives or leaves.
 const SLIDE: f32 = 28.;
 const FADE_IN: f32 = 0.18;
@@ -425,8 +425,11 @@ impl Toasts {
             if t.hovered && !t.bounds.get().contains(&pointer) {
                 t.hovered = false;
             }
-            // Waiting toasts beyond the limit, and ones being read, keep their time.
+            // Waiting toasts beyond the limit, and ones being read, keep their time. A hovered
+            // one keeps the frame clock running so the pointer check above still happens and
+            // the timer picks up the moment the pointer leaves.
             if shown > max || t.hovered || t.reply.is_some() {
+                timing |= t.hovered && t.left.is_some();
                 continue;
             }
             if let Some(left) = t.left.as_mut() {
@@ -607,7 +610,7 @@ impl Toasts {
         let n = &t.n;
         let id = n.id;
         let critical = n.urgency == Urgency::Critical;
-        let mut shadow = theme.popover_shadow();
+        let mut shadow = theme.card_shadow();
         if critical {
             shadow.push(BoxShadow {
                 color: with_alpha(theme.danger, 0.16).into(),
@@ -623,12 +626,35 @@ impl Toasts {
         // answered about yet.
         let hidden = self.sharing && n.private != Some(false);
 
+        let close = div()
+            .id(("close", i))
+            .absolute()
+            .top_0()
+            .right_0()
+            .size(px(18.))
+            .rounded_full()
+            .flex()
+            .items_center()
+            .justify_center()
+            .text_color(theme.ink_2)
+            .bg(theme.fill_2)
+            .opacity(0.)
+            .group_hover("toast", |s| s.opacity(1.))
+            .hover(|s| s.bg(theme.fill_3).text_color(theme.ink))
+            .child(icon_sized(Icon::Close, 10.))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                cx.stop_propagation();
+                this.leave(id, Some(Cmd::Dismissed(id)), cx);
+            }));
+        // The time and the close button share one slot at the right of the header: the button
+        // takes the place of the time while the card is hovered.
         let mut body = div().flex_1().min_w_0().flex().flex_col().child(
             div()
                 .flex()
+                .items_center()
                 .justify_between()
                 .gap(px(8.))
-                .pr(px(18.))
+                .h(px(18.))
                 .text_size(px(11.5))
                 .text_color(theme.ink_2)
                 .child(div().truncate().child(if n.app.is_empty() {
@@ -636,7 +662,18 @@ impl Toasts {
                 } else {
                     n.app.clone()
                 }))
-                .child(div().flex_none().child(ago(t.arrived))),
+                .child(
+                    div()
+                        .relative()
+                        .flex_none()
+                        .h(px(18.))
+                        .min_w(px(18.))
+                        .flex()
+                        .items_center()
+                        .justify_end()
+                        .child(div().group_hover("toast", |s| s.opacity(0.)).child(ago(t.arrived)))
+                        .child(close),
+                ),
         );
         if hidden {
             body = body.child(
@@ -765,9 +802,13 @@ impl Toasts {
 
         let timer = t.left.filter(|_| !t.total.is_zero()).map(|left| {
             let f = left.as_secs_f32() / t.total.as_secs_f32();
-            div().absolute().left(px(14.)).right(px(14.)).bottom(px(5.)).h(px(2.)).rounded(px(1.)).bg(theme.fill).child(
-                div().h_full().w(gpui::relative(f.clamp(0., 1.))).rounded(px(1.)).bg(with_alpha(theme.accent, 0.7)),
-            )
+            div()
+                .absolute()
+                .left_0()
+                .right_0()
+                .bottom_0()
+                .h(px(2.))
+                .child(div().h_full().w(gpui::relative(f.clamp(0., 1.))).bg(with_alpha(theme.accent, 0.6)))
         });
 
         div()
@@ -778,10 +819,7 @@ impl Toasts {
             .w(WIDTH)
             .flex()
             .gap(px(12.))
-            .pl(px(12.))
-            .pr(px(14.))
-            .pt(px(12.))
-            .pb(px(14.))
+            .p(px(14.))
             .rounded(px(16.))
             .bg(theme.glass_pop)
             .border_1()
@@ -797,27 +835,6 @@ impl Toasts {
                 self.icon(n, theme).into_any_element()
             })
             .child(body)
-            .child(
-                div()
-                    .id(("close", i))
-                    .absolute()
-                    .top(px(9.))
-                    .right(px(9.))
-                    .size(px(22.))
-                    .rounded(px(7.))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .text_color(theme.ink_2)
-                    .opacity(0.)
-                    .group_hover("toast", |s| s.opacity(1.))
-                    .hover(|s| s.bg(theme.fill_2).text_color(theme.ink))
-                    .child(icon_sized(Icon::Close, 12.))
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        cx.stop_propagation();
-                        this.leave(id, Some(Cmd::Dismissed(id)), cx);
-                    })),
-            )
             .children(timer)
             .on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
                 if let Some(t) = this.items.iter_mut().find(|t| t.n.id == id) {
