@@ -56,8 +56,8 @@ Desktop
   keep-awake [on|off|toggle]      Stop locking, screen-off and suspend while on
 
 Notifications (Yozora Notify)
-  notifications [list] [--unread] [--urgent] [--app NAME] [--limit N] [--show-private]
-  notifications show ID [--show-private]
+  notifications [list] [--unread] [--urgent] [--app NAME] [--limit N]
+  notifications show ID
   notifications dismiss ID...
   notifications clear             Clears everything but pinned notifications
   notifications pin ID | unpin ID
@@ -84,8 +84,6 @@ Agent skill
   agent uninstall                 Remove the links, and stop installing them at login
   agent status
   agent skill                     Print the skill
-
-Notifications marked private by Jev are redacted unless --show-private is given.
 ";
 
 fn main() -> ExitCode {

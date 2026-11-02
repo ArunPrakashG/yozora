@@ -15,7 +15,7 @@ use anyhow::Context as _;
 use async_channel::{Receiver, Sender};
 use futures_lite::{FutureExt, StreamExt};
 use serde_json::json;
-use yozora_config::notify::{JevSection, NotifyConfig};
+use yozora_config::notify::NotifyConfig;
 use yozora_ipc::{Incoming, Response};
 use yozora_ui::icon_theme as icons;
 use zbus::{
@@ -24,10 +24,7 @@ use zbus::{
     zvariant::{OwnedValue, Value},
 };
 
-use crate::{
-    jev,
-    store::{Added, Answer, Notification, Store, Urgency, now, strip_markup},
-};
+use crate::store::{Added, Notification, Store, Urgency, now, strip_markup};
 
 pub const NAME: &str = "org.freedesktop.Notifications";
 pub const FDO_PATH: &str = "/org/freedesktop/Notifications";
@@ -50,10 +47,6 @@ pub enum UiEvent {
     CloseAll,
     /// The center opened: toasts that can time out go to it now.
     ExpireAll,
-    /// It can wait: the toast leaves soon.
-    Shorten(u32),
-    /// New details for an open toast, from Jev. Opens nothing.
-    Refresh(Box<Notification>),
     /// The screen is being shared, or stopped being.
     Sharing(bool),
     Quit,
@@ -63,17 +56,14 @@ pub enum UiEvent {
 pub enum Cmd {
     Expired(u32),
     Dismissed(u32),
-    /// Closed by a script or an agent: like `Dismissed`, but it says nothing about the app's
-    /// habits.
+    /// Closed by a script or an agent rather than by the person.
     Closed(u32),
     Action(u32, String),
     Reply(u32, String),
     Ipc(Incoming),
-    /// Jev's answers for a notification, and the fingerprint of the content they're for.
-    Verdict(u32, u64, Option<Answer>),
     /// Hyprland says the screen is being shared, or not.
     Sharing(bool),
-    /// Time to show snoozed and urgent unread notifications again.
+    /// Time to show snoozed notifications again.
     Tick,
 }
 
@@ -84,13 +74,8 @@ pub struct Inner {
 }
 
 impl Inner {
-    /// The odds a notification needs for the bell's dot, when Jev is on.
-    fn dot_at(&self) -> Option<f64> {
-        self.config.jev.active().then_some(self.config.jev.breakthrough)
-    }
-
     fn unread(&self) -> bool {
-        self.store.unread(self.dot_at())
+        self.store.unread()
     }
 }
 
@@ -109,43 +94,6 @@ impl Shared {
     fn ui(&self, event: UiEvent) {
         let _ = self.ui.try_send(event);
     }
-
-    /// Asks Jev about notification `id` if it's on and the notification may be sent.
-    fn ask_jev(&self, id: u32) {
-        let (n, cfg, habit) = {
-            let inner = self.lock();
-            let Some(n) = inner.store.get(id).filter(|n| jev::eligible(n, &inner.config.jev)).cloned() else {
-                return;
-            };
-            let habit = inner.store.habit(&n);
-            (n, inner.config.jev.clone(), habit)
-        };
-        let cmds = self.cmds.clone();
-        jev::ask(&n, &cfg, habit, move |print, answer| {
-            let _ = cmds.try_send(Cmd::Verdict(id, print, answer));
-        });
-    }
-}
-
-/// What Jev's answer does to the toasts.
-#[derive(Debug, PartialEq)]
-pub enum Effect {
-    Nothing,
-    /// It can wait: its toast leaves early.
-    Shorten,
-    /// Do Not Disturb hid it, but it can't wait.
-    Show,
-}
-
-/// Whether the notification can wait, and what that does.
-pub fn verdict(odds: f64, dnd: bool, cfg: &JevSection) -> (bool, Effect) {
-    let quiet = odds < cfg.quiet_below;
-    let effect = match (dnd, quiet) {
-        (true, _) if odds >= cfg.breakthrough => Effect::Show,
-        (false, true) => Effect::Shorten,
-        _ => Effect::Nothing,
-    };
-    (quiet, effect)
 }
 
 struct Fdo {
@@ -183,17 +131,11 @@ impl Fdo {
         let (added, show) = {
             let mut inner = self.shared.lock();
             let show = should_toast(&n, inner.store.dnd, &inner.config);
-            // Jev won't be asked, so nothing will say it's private: it isn't hidden while sharing.
-            let asked = jev::eligible(&n, &inner.config.jev);
             let added = inner.store.add(n, replaces_id);
-            if !asked {
-                inner.store.not_private(added.id());
-            }
             let stored = inner.store.get(added.id()).cloned();
             (added, show.then_some(stored).flatten())
         };
         tracing::debug!("notification {:?}{}", added, if show.is_some() { "" } else { " (no toast)" });
-        self.shared.ask_jev(added.id());
         if let Some(n) = show {
             self.shared.ui(UiEvent::Show(Box::new(n)));
         } else if let Added::Replaced(id) = added {
@@ -235,15 +177,14 @@ struct Center {
 #[interface(name = "dev.yozora.Notify1")]
 impl Center {
     /// Everything in the center but snoozed notifications, newest first, with the same keys as
-    /// mako's `ListHistory` plus `time`, `icon`, `image` and Jev's answers.
+    /// mako's `ListHistory` plus `time`, `icon` and `image`.
     fn list(&self) -> Vec<HashMap<String, OwnedValue>> {
         let inner = self.shared.lock();
-        let urgent = inner.config.jev.breakthrough;
-        inner.store.list().filter(|n| n.snoozed_until == 0).map(|n| to_dict(n, urgent)).collect()
+        inner.store.list().filter(|n| n.snoozed_until == 0).map(to_dict).collect()
     }
 
     /// Do Not Disturb, and whether anything arrived since the center was last opened that's
-    /// worth the bell's dot. With Jev on, that's what it rates urgent, or hasn't rated yet.
+    /// worth the bell's dot.
     fn get_state(&self) -> (bool, bool) {
         let inner = self.shared.lock();
         (inner.store.dnd, inner.unread())
@@ -313,8 +254,8 @@ async fn changed(conn: &Connection) {
     }
 }
 
-/// `n` for the bar. `urgent` is the odds at which Jev's answer makes it urgent.
-fn to_dict(n: &Notification, urgent: f64) -> HashMap<String, OwnedValue> {
+/// `n` for the bar.
+fn to_dict(n: &Notification) -> HashMap<String, OwnedValue> {
     let mut d = HashMap::new();
     let mut put = |k: &str, v: Value<'_>| {
         if let Ok(v) = v.try_to_owned() {
@@ -331,12 +272,6 @@ fn to_dict(n: &Notification, urgent: f64) -> HashMap<String, OwnedValue> {
     put("category", n.category.as_str().into());
     put("urgency", n.urgency.byte().into());
     put("time", n.time.into());
-    put("attention", n.attention.unwrap_or(-1.0).into());
-    put("quiet", n.quiet.into());
-    put("urgent", n.attention.is_some_and(|a| a >= urgent).into());
-    put("private", (n.private == Some(true)).into());
-    put("kind", n.kind.as_str().into());
-    put("needs-action", n.needs_action.into());
     put("pinned", n.pinned.into());
     put("icon", path(&n.icon).into());
     put("image", path(&n.image).into());
@@ -564,7 +499,6 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
             Cmd::Dismissed(id) => {
                 let removed = {
                     let mut inner = shared.lock();
-                    inner.store.note(id, false);
                     inner.store.remove(id).is_some()
                 };
                 if removed {
@@ -580,8 +514,7 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
             }
             Cmd::Action(id, key) => {
                 let resident = {
-                    let mut inner = shared.lock();
-                    inner.store.note(id, true);
+                    let inner = shared.lock();
                     inner.store.get(id).map(|n| n.resident)
                 };
                 let Some(resident) = resident else { continue };
@@ -595,7 +528,6 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
             Cmd::Reply(id, text) => {
                 let removed = {
                     let mut inner = shared.lock();
-                    inner.store.note(id, true);
                     inner.store.remove(id).is_some()
                 };
                 if removed {
@@ -608,41 +540,13 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
                 let response = ipc(&incoming.request, &shared);
                 incoming.reply(response);
             }
-            Cmd::Verdict(id, print, answer) => {
-                // Without an answer, whether it's private stays unknown: hidden while sharing.
-                let Some(answer) = answer else { continue };
-                let (n, effect) = {
-                    let mut inner = shared.lock();
-                    let send_body = inner.config.jev.send_body;
-                    let (quiet, effect) = verdict(answer.attention, inner.store.dnd, &inner.config.jev);
-                    let n = inner.store.set_answer(id, &answer, quiet, |n| jev::fingerprint(n, send_body) == print);
-                    (n, effect)
-                };
-                let Some(n) = n else { continue };
-                tracing::debug!("jev: notification {id}: {answer:?}: {effect:?}");
-                match effect {
-                    Effect::Show if n.urgency != Urgency::Critical => shared.ui(UiEvent::Show(Box::new(n))),
-                    Effect::Shorten => {
-                        shared.ui(UiEvent::Refresh(Box::new(n)));
-                        shared.ui(UiEvent::Shorten(id));
-                    }
-                    _ => shared.ui(UiEvent::Refresh(Box::new(n))),
-                }
-            }
             Cmd::Sharing(on) => {
                 shared.lock().sharing = on;
                 shared.ui(UiEvent::Sharing(on));
                 continue;
             }
             Cmd::Tick => {
-                let due = {
-                    let mut inner = shared.lock();
-                    let jev = &inner.config.jev;
-                    let remind =
-                        (jev.active() && jev.remind_after_min > 0).then(|| u64::from(jev.remind_after_min) * 60);
-                    let urgent = jev.breakthrough;
-                    inner.store.due(now(), remind, urgent)
-                };
+                let due = shared.lock().store.due(now());
                 if due.is_empty() {
                     continue;
                 }
@@ -683,13 +587,12 @@ fn ipc(request: &yozora_ipc::Request, shared: &Shared) -> Response {
         }
         "list" => {
             let inner = shared.lock();
-            let urgent = inner.config.jev.breakthrough;
-            Response::data(json!(inner.store.list().map(|n| to_json(n, urgent)).collect::<Vec<_>>()))
+            Response::data(json!(inner.store.list().map(to_json).collect::<Vec<_>>()))
         }
         "get" => {
             let inner = shared.lock();
             match id(arg).map(|id| inner.store.get(id)) {
-                Ok(Some(n)) => Response::data(to_json(n, inner.config.jev.breakthrough)),
+                Ok(Some(n)) => Response::data(to_json(n)),
                 Ok(None) => Response::error(format!("no notification {}", arg.unwrap_or_default())),
                 Err(e) => e,
             }
@@ -780,7 +683,7 @@ fn id(arg: Option<&str>) -> Result<u32, Response> {
 }
 
 /// `n` for the control socket.
-fn to_json(n: &Notification, urgent: f64) -> serde_json::Value {
+fn to_json(n: &Notification) -> serde_json::Value {
     json!({
         "id": n.id,
         "app": n.app,
@@ -790,15 +693,8 @@ fn to_json(n: &Notification, urgent: f64) -> serde_json::Value {
         "time": n.time,
         "actions": n.actions.iter().filter(|(k, _)| k != "inline-reply")
             .map(|(k, l)| json!({ "key": k, "label": l })).collect::<Vec<_>>(),
-        "attention": n.attention,
-        "urgent": n.attention.is_some_and(|a| a >= urgent),
-        "quiet": n.quiet,
-        "private": n.private,
-        "kind": n.kind,
-        "needs_action": n.needs_action,
         "pinned": n.pinned,
         "snoozed_until": n.snoozed_until,
-        "reminded": n.reminded,
     })
 }
 
@@ -819,18 +715,6 @@ mod tests {
         assert_eq!(pixels_to_png(4, 4, 16, true, 8, 4, &data, &dir), None);
         assert_eq!(pixels_to_png(2, 2, 8, true, 8, 3, &data, &dir), None);
         let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn jev_answers_decide() {
-        let cfg = JevSection::default();
-        assert_eq!(verdict(0.1, false, &cfg), (true, Effect::Shorten));
-        assert_eq!(verdict(0.5, false, &cfg), (false, Effect::Nothing));
-        assert_eq!(verdict(0.95, false, &cfg), (false, Effect::Nothing));
-        // Do Not Disturb: only what can't wait shows.
-        assert_eq!(verdict(0.95, true, &cfg), (false, Effect::Show));
-        assert_eq!(verdict(0.5, true, &cfg), (false, Effect::Nothing));
-        assert_eq!(verdict(0.1, true, &cfg), (true, Effect::Nothing));
     }
 
     #[test]

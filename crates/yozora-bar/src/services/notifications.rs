@@ -55,16 +55,6 @@ pub struct Notification {
     pub seen: Option<u64>,
     /// Clicking it opens something in the app.
     pub default_action: bool,
-    /// From Jev, through Yozora Notify: it can't wait.
-    pub urgent: bool,
-    /// From Jev: it can wait.
-    pub quiet: bool,
-    /// From Jev: hidden while the screen is shared.
-    pub private: bool,
-    /// From Jev: message, alert, reminder, update or promotion; empty if unknown.
-    pub kind: String,
-    /// From Jev: it asks for something, so it offers pinning and a reminder.
-    pub needs_action: bool,
     pub pinned: bool,
 }
 
@@ -175,11 +165,6 @@ fn parse(list: Vec<HashMap<String, OwnedValue>>) -> Vec<Notification> {
                 urgency: dbus::get(&n, "urgency").unwrap_or(1),
                 seen: dbus::get::<u64>(&n, "time").filter(|t| *t > 0),
                 default_action: dbus::get(&n, "default-action").unwrap_or(false),
-                urgent: dbus::get(&n, "urgent").unwrap_or(false),
-                quiet: dbus::get(&n, "quiet").unwrap_or(false),
-                private: dbus::get(&n, "private").unwrap_or(false),
-                kind: dbus::string(&n, "kind"),
-                needs_action: dbus::get(&n, "needs-action").unwrap_or(false),
                 pinned: dbus::get(&n, "pinned").unwrap_or(false),
             }
         })
@@ -366,39 +351,13 @@ fn run_fake(link: Link<State, Cmd>) {
         ..Default::default()
     };
     let mut state = State {
-        // As sorted by Jev: the kind, then urgent, private, asks for something, or can wait.
         items: vec![
-            Notification {
-                kind: "message".into(),
-                urgent: true,
-                private: true,
-                needs_action: true,
-                ..n(7, "Signal", "Sam", "Are you still coming at 5? I'm outside", 60)
-            },
-            Notification {
-                kind: "alert".into(),
-                urgent: true,
-                needs_action: true,
-                ..n(6, "Slack", "Deploy failed", "prod-api: rollout stuck, 3/8 pods crashlooping", 300)
-            },
-            Notification {
-                kind: "update".into(),
-                ..n(4, "Terminal", "Build finished", "yozora-bar · 0 warnings", 120)
-            },
-            Notification {
-                kind: "update".into(),
-                ..n(3, "Firefox", "Download complete", "hyprland-0.56.2.tar.gz", 720)
-            },
-            Notification {
-                kind: "promotion".into(),
-                quiet: true,
-                ..n(5, "Steam", "Summer Sale", "Up to 90% off", 1800)
-            },
-            Notification {
-                kind: "update".into(),
-                quiet: true,
-                ..n(2, "Software Update", "Updates available", "14 packages can be upgraded", 3600)
-            },
+            n(7, "Signal", "Sam", "Are you still coming at 5? I'm outside", 60),
+            n(6, "Slack", "Deploy failed", "prod-api: rollout stuck, 3/8 pods crashlooping", 300),
+            n(4, "Terminal", "Build finished", "yozora-bar · 0 warnings", 120),
+            n(3, "Firefox", "Download complete", "hyprland-0.56.2.tar.gz", 720),
+            n(5, "Steam", "Summer Sale", "Up to 90% off", 1800),
+            n(2, "Software Update", "Updates available", "14 packages can be upgraded", 3600),
             n(1, "Syncthing", "Folder up to date", "Projects/yozora", 3 * 3600),
         ],
         dnd: false,

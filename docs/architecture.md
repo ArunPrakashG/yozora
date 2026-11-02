@@ -97,7 +97,6 @@ crates/
                          notifications (mako), custom; each with a fake
   yozora-notify/       bin
     src/server.rs        the freedesktop interface, the bar's dev.yozora.Notify1, commands
-    src/jev.rs           optional answers from Jev over curl, off the main thread: urgency, privacy, kind, action
     src/store.rs         notifications, history on disk, Do Not Disturb
     src/toasts.rs        the toast window: stack, springs, timers, inline reply
     src/hypr.rs          which monitor toasts open on; the blur rule
@@ -259,7 +258,7 @@ Files live in `~/.config/yozora/`:
 |---|---|---|
 | `theme.toml` | shared by every Yozora app | theme, accent, glass, motion |
 | `bar.toml` | `yozora-bar` | bar style, height, reserve space, modules per zone, per-monitor sections; may override `[theme]` keys for the bar only |
-| `notify.toml` | `yozora-notify` | toast timeout, how many at once, monitor, history limit, Jev sorting |
+| `notify.toml` | `yozora-notify` | toast timeout, how many at once, monitor, history limit |
 | `<id>.toml` | each future app | its own settings |
 
 Precedence: built-in defaults, then `theme.toml`, then the app's own file.
@@ -489,6 +488,7 @@ checks that Hyprland reports it as active, and only then closes.
 | 2026-10-13 | Our own notification server, yozora-notify, replaces mako; the bar still works with mako |
 | 2026-10-14 | Jev sorting in yozora-notify is opt-in and never delays a toast: the answer only shortens a toast or lets one through Do Not Disturb. Not used in the launcher, where it would be slower than search and would send every query away |
 | 2026-10-14 | Jev's privacy answer hides toasts only while Hyprland reports screen sharing, and a toast stays hidden until Jev answers; the habits sent to Jev are counts per app, never content. Clipboard history and window titles are never sent |
+| 2026-11-03 | Jev sorting is removed from yozora-notify: it was opt-in, sent notification text to a third party, and in use it only shortened some toasts. While the screen is shared, every toast and every card in the center shows only the app; pinning and snoozing are on every card |
 | 2026-10-13 | Audio through `pactl subscribe` instead of a client library |
 | 2026-10-13 | Popovers grab only when opened by a click |
 | 2026-10-13 | Custom modules speak plain text or JSON lines with `text` |
@@ -498,4 +498,4 @@ checks that Hyprland reports it as active, and only then closes.
 | 2026-10-14 | Launched apps run in their own systemd scope, not as the launcher's children |
 | 2026-10-14 | Script commands use the Raycast/Vicinae header format, so existing scripts work unchanged |
 | 2026-10-14 | Browser history and editor recents are read in place with SQLite `immutable=1`, not copied |
-| 2026-10-14 | One `yozora` command for scripts and AI agents, over the existing control sockets, not a second API. Its skill is linked into each harness's skills folder at login by a user service, only for harnesses that are installed, and dismissals it makes don't count toward Jev's habits |
+| 2026-10-14 | One `yozora` command for scripts and AI agents, over the existing control sockets, not a second API. Its skill is linked into each harness's skills folder at login by a user service, only for harnesses that are installed |

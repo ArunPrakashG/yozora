@@ -2,7 +2,6 @@
 //! bar's notification center reads.
 
 mod hypr;
-mod jev;
 mod server;
 mod store;
 mod toasts;
@@ -272,8 +271,6 @@ fn run(replace: bool, dir: PathBuf) -> ExitCode {
                     UiEvent::Close(id) => Stack::close(id, cx),
                     UiEvent::CloseAll => Stack::close_all(cx),
                     UiEvent::ExpireAll => Stack::expire_all(cx),
-                    UiEvent::Shorten(id) => Stack::shorten(id, cx),
-                    UiEvent::Refresh(n) => Stack::refresh(*n, cx),
                     UiEvent::Sharing(on) => Stack::set_sharing(on, cx),
                     UiEvent::Quit => cx.quit(),
                 });

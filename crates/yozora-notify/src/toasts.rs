@@ -36,8 +36,6 @@ const WIDTH: Pixels = px(380.);
 const SHADOW: Pixels = px(20.);
 /// From the bar and from the screen's right edge. The shadow reaches about this far.
 const EDGE: Pixels = px(16.);
-/// What is left of a toast once Jev says it can wait.
-const QUIET_LEFT: Duration = Duration::from_millis(1500);
 const GAP: f32 = 10.;
 /// How far a card slides while it arrives or leaves.
 const SLIDE: f32 = 28.;
@@ -54,7 +52,7 @@ pub struct Stack {
     window: Option<WindowHandle<Toasts>>,
     config: NotifyConfig,
     cmds: Sender<Cmd>,
-    /// The screen is being shared: private toasts hide what they say.
+    /// The screen is being shared: toasts hide what they say.
     sharing: bool,
 }
 
@@ -111,30 +109,6 @@ impl Stack {
                     t.items.iter().filter(|i| i.n.urgency != Urgency::Critical).map(|i| i.n.id).collect();
                 for id in ids {
                     t.leave(id, Some(Cmd::Expired(id)), cx);
-                }
-            });
-        }
-    }
-
-    /// A toast that can wait leaves in a moment, unless it is being read.
-    pub fn shorten(id: u32, cx: &mut App) {
-        if let Some((_, view)) = Self::view(cx) {
-            view.update(cx, |t, cx| {
-                if let Some(t) = t.items.iter_mut().find(|t| t.n.id == id && t.active()) {
-                    t.left = t.left.map(|left| left.min(QUIET_LEFT));
-                    cx.notify();
-                }
-            });
-        }
-    }
-
-    /// New details for an open toast, such as Jev's answers. Opens nothing.
-    pub fn refresh(n: Notification, cx: &mut App) {
-        if let Some((_, view)) = Self::view(cx) {
-            view.update(cx, |t, cx| {
-                if let Some(t) = t.items.iter_mut().find(|t| t.n.id == n.id && t.active()) {
-                    t.n = n;
-                    cx.notify();
                 }
             });
         }
@@ -622,9 +596,8 @@ impl Toasts {
         }
         let bounds = t.bounds.clone();
         let has_default = n.has_action("default");
-        // While the screen is shared, a private toast shows only its app. So does one Jev hasn't
-        // answered about yet.
-        let hidden = self.sharing && n.private != Some(false);
+        // While the screen is shared, a toast shows only its app.
+        let hidden = self.sharing;
 
         let close = div()
             .id(("close", i))
