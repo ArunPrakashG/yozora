@@ -135,10 +135,10 @@ mod tests {
     fn saves_keep_a_private_file_private() {
         use std::os::unix::fs::PermissionsExt;
         let path = std::env::temp_dir().join(format!("yozora-private-{}.toml", std::process::id()));
-        std::fs::write(&path, "[jev]\n").unwrap();
+        std::fs::write(&path, "[keys]\n").unwrap();
         restrict(&path).unwrap();
         let mut file = ConfigFile::open(&path).unwrap();
-        file.set("jev.api_key", "k");
+        file.set("keys.token", "k");
         file.save().unwrap();
         assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
         std::fs::remove_file(&path).unwrap();

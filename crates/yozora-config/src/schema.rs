@@ -137,12 +137,4 @@ help    = "Icons stay 16 px at every height."
         }
         assert!(n >= 3);
     }
-
-    #[test]
-    fn the_jev_key_is_secret() {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packaging/apps/notify.settings.toml");
-        let notify = Schema::load(&path).unwrap();
-        let key = notify.section.iter().flat_map(|s| &s.field).find(|f| f.key == "jev.api_key").unwrap();
-        assert!(key.secret && key.kind == FieldKind::String);
-    }
 }

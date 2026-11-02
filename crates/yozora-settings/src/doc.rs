@@ -126,7 +126,7 @@ pub fn changed_lines(old: &str, new: &str) -> Vec<usize> {
     (prefix..new.len() - suffix).collect()
 }
 
-/// The preview's lines, with the values of `secrets` (dotted keys, such as `jev.api_key`) hidden.
+/// The preview's lines, with the values of `secrets` (dotted keys, such as `svc.api_key`) hidden.
 pub fn masked_lines(text: &str, secrets: &[String]) -> Vec<String> {
     let mut table = String::new();
     text.lines()
@@ -173,14 +173,14 @@ mod tests {
 
     #[test]
     fn secrets_are_hidden_in_the_preview() {
-        let text = "api_key = \"top\"\n[jev]\napi_key = \"k-123\" # mine\nurl = \"u\"\n[other]\napi_key = \"x\"\n";
-        let lines = masked_lines(text, &["jev.api_key".into()]);
+        let text = "api_key = \"top\"\n[svc]\napi_key = \"k-123\" # mine\nurl = \"u\"\n[other]\napi_key = \"x\"\n";
+        let lines = masked_lines(text, &["svc.api_key".into()]);
         assert_eq!(lines[2], "api_key = \"••••••••\"");
         assert_eq!(lines[0], "api_key = \"top\"");
         assert_eq!(lines[3], "url = \"u\"");
         assert_eq!(lines[5], "api_key = \"x\"");
-        assert_eq!(masked_lines("jev.api_key = \"k\"\n", &["jev.api_key".into()])[0], "jev.api_key = \"••••••••\"");
-        assert_eq!(masked_lines("[jev]\napi_key = \"\"\n", &["jev.api_key".into()])[1], "api_key = \"\"");
+        assert_eq!(masked_lines("svc.api_key = \"k\"\n", &["svc.api_key".into()])[0], "svc.api_key = \"••••••••\"");
+        assert_eq!(masked_lines("[svc]\napi_key = \"\"\n", &["svc.api_key".into()])[1], "api_key = \"\"");
     }
 
     #[test]

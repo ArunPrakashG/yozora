@@ -14,7 +14,7 @@ page(() => {
   const add = (html, css) => { const d = document.createElement('div'); d.innerHTML = html; const e = d.firstElementChild; Object.assign(e.style, css); s.appendChild(e); };
   add(popover(), { left: '150px', top: '930px', transform: 'scale(1.05)', transformOrigin: 'top left' });
   add(toast(), { left: '580px', top: '930px', width: '470px', transform: 'scale(1.05)', transformOrigin: 'top left' });
-  add(toast({ app: 'Yozora Notify', summary: '3 can wait', body: 'Jev folded them away until you are free', ic: 'bell', progress: 0.4 }), { left: '580px', top: '1048px', width: '470px', transform: 'scale(1.05)', transformOrigin: 'top left' });
+  add(toast({ app: 'Yozora Notify', summary: 'Build finished', body: 'yozora passed all 214 tests', ic: 'bell', progress: 0.4 }), { left: '580px', top: '1048px', width: '470px', transform: 'scale(1.05)', transformOrigin: 'top left' });
   add(`<div class="mono" style="position:absolute;left:0;right:0;bottom:150px;text-align:center;font-size:18px;color:${T.ink2};letter-spacing:.14em">BAR · NOTIFY · LOCK · LAUNCH · SETTINGS</div>`, {});
   add(`<div style="position:absolute;left:0;right:0;bottom:112px;text-align:center;font-size:16px;color:${T.ink3}">An open-source desktop for Hyprland, written in Rust</div>`, {});
 });

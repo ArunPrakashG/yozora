@@ -59,20 +59,9 @@ fn one_id(args: &[String]) -> anyhow::Result<String> {
     Ok(args[0].clone())
 }
 
-/// Hides what Jev called private, unless asked.
-fn redact(mut n: Value, show_private: bool) -> Value {
-    if !show_private && n["private"] == true {
-        n["summary"] = json!("(private)");
-        n["body"] = Value::Null;
-        n["redacted"] = json!(true);
-    }
-    n
-}
-
 fn list(mut args: Vec<String>, out: &Out) -> anyhow::Result<()> {
     let unread = take_flag(&mut args, "--unread");
     let urgent = take_flag(&mut args, "--urgent");
-    let show_private = take_flag(&mut args, "--show-private");
     let app = take_value(&mut args, "--app")?.map(|a| a.to_lowercase());
     let limit = take_value(&mut args, "--limit")?.map(|l| l.parse::<usize>()).transpose()?;
     anyhow::ensure!(args.is_empty(), "unexpected {:?}", args[0]);
@@ -82,12 +71,11 @@ fn list(mut args: Vec<String>, out: &Out) -> anyhow::Result<()> {
         .as_array()
         .into_iter()
         .flatten()
-        .filter(|n| !unread || (n["quiet"] != true && n["snoozed_until"].as_u64().unwrap_or(0) == 0))
-        .filter(|n| !urgent || n["urgent"] == true || n["urgency"] == "critical")
+        .filter(|n| !unread || (n["snoozed_until"].as_u64().unwrap_or(0) == 0))
+        .filter(|n| !urgent || n["urgency"] == "critical")
         .filter(|n| app.as_ref().is_none_or(|a| n["app"].as_str().unwrap_or("").to_lowercase().contains(a)))
         .take(limit.unwrap_or(usize::MAX))
         .cloned()
-        .map(|n| redact(n, show_private))
         .collect();
     if out.json {
         out.value(&json!(items));
@@ -105,29 +93,17 @@ fn list(mut args: Vec<String>, out: &Out) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// `#12  Signal: Sam  "Are you still coming?"  3 min ago  [urgent, pinned]`
+/// `#12  Signal: Sam  "Are you still coming?"  3 min ago  [critical, pinned]`
 fn line(n: &Value) -> String {
     let mut tags = Vec::new();
     if n["urgency"] == "critical" {
         tags.push("critical".to_string());
-    }
-    if n["urgent"] == true {
-        tags.push("urgent".into());
-    }
-    if n["quiet"] == true {
-        tags.push("can wait".into());
     }
     if n["pinned"] == true {
         tags.push("pinned".into());
     }
     if n["snoozed_until"].as_u64().unwrap_or(0) > 0 {
         tags.push("snoozed".into());
-    }
-    if n["redacted"] == true {
-        tags.push("private".into());
-    }
-    if let Some(k) = n["kind"].as_str().filter(|k| !k.is_empty()) {
-        tags.push(k.into());
     }
     let body = n["body"].as_str().unwrap_or("").replace('\n', " ");
     let body: String =
@@ -143,10 +119,9 @@ fn line(n: &Value) -> String {
     )
 }
 
-fn show(mut args: Vec<String>, out: &Out) -> anyhow::Result<()> {
-    let show_private = take_flag(&mut args, "--show-private");
+fn show(args: Vec<String>, out: &Out) -> anyhow::Result<()> {
     let id = one_id(&args)?;
-    out.value(&redact(ask("notify", "get", &[id])?, show_private));
+    out.value(&ask("notify", "get", &[id])?);
     Ok(())
 }
 
@@ -192,20 +167,4 @@ fn send(mut args: Vec<String>, out: &Out) -> anyhow::Result<()> {
     .map_err(|e| anyhow::anyhow!("no notification server answered: {e:#}"))?;
     out.done(format!("sent notification {id}"), json!({ "id": id }));
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn private_ones_are_redacted_unless_asked() {
-        let n = json!({ "id": 3, "app": "Messages", "summary": "Code", "body": "482913", "private": true });
-        let r = redact(n.clone(), false);
-        assert_eq!(r["summary"], "(private)");
-        assert_eq!(r["body"], Value::Null);
-        assert_eq!(redact(n.clone(), true), n);
-        let open = json!({ "id": 4, "summary": "Hi", "body": "there", "private": null });
-        assert_eq!(redact(open.clone(), false), open);
-    }
 }

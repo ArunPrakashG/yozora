@@ -1,7 +1,6 @@
 //! The notification center and Do Not Disturb.
 //!
-//! With Jev on in Yozora Notify, pinned notifications come first, then the urgent ones, then
-//! the rest by kind, and what can wait is folded at the bottom. Otherwise they're grouped by app.
+//! Pinned notifications come first, then the rest grouped by app.
 
 use gpui::{
     AnyElement, App, Context, Div, FontWeight, InteractiveElement, IntoElement, ParentElement,
@@ -100,8 +99,8 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
         if shown >= 30 {
             break;
         }
-        let Group { key, title, glyph, items: group, always_open, folded } = group;
-        let expanded = always_open || (group.len() == 1 && !folded) || p.ui.expanded.contains(&key);
+        let Group { key, title, glyph, items: group, always_open } = group;
+        let expanded = always_open || group.len() == 1 || p.ui.expanded.contains(&key);
         let toggle_key = key.clone();
         let mut el = div().flex().flex_col().pt(px(if g == 0 { 0. } else { 8. })).child(
             div()
@@ -121,7 +120,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
                 } else {
                     group.len().to_string()
                 }))
-                .when(!always_open && (group.len() > 1 || folded), |el| {
+                .when(!always_open && group.len() > 1, |el| {
                     el.cursor_pointer().hover(|s| s.text_color(theme.ink_2)).on_click(cx.listener(
                         move |p, _, _, cx| {
                             if !p.ui.expanded.remove(&toggle_key) {
@@ -132,16 +131,12 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
                     ))
                 }),
         );
-        let take = match (expanded, folded) {
-            (true, _) => group.len(),
-            (false, true) => 0,
-            (false, false) => 1,
-        };
+        let take = if expanded { group.len() } else { 1 };
         for n in group.iter().take(take) {
             el = el.child(card(n, shown, sharing, yozora, theme, cx));
             shown += 1;
         }
-        if !expanded && !folded {
+        if !expanded {
             // The rest peek out from under the newest, like a stack of cards.
             let peek_key = key.clone();
             el = el.child(
@@ -195,61 +190,34 @@ struct Group<'a> {
     title: String,
     glyph: Icon,
     items: Vec<&'a Notification>,
-    /// Pinned and urgent notifications are always all shown.
+    /// Pinned notifications are always all shown.
     always_open: bool,
-    /// "Can wait" shows only its header until opened.
-    folded: bool,
 }
 
-fn kind_group(kind: &str) -> Option<(&'static str, Icon)> {
-    Some(match kind {
-        "message" => ("MESSAGES", Icon::Smile),
-        "alert" => ("ALERTS", Icon::Warning),
-        "reminder" => ("REMINDERS", Icon::Calendar),
-        "update" => ("UPDATES", Icon::Sync),
-        "promotion" => ("PROMOTIONS", Icon::Star),
-        _ => return None,
-    })
-}
-
-/// Pinned, then urgent, then the rest by kind or app in order of their newest, then what can
-/// wait. Items come newest first and stay that way within a group.
+/// Pinned, then the rest by app in order of their newest. Items come newest first and stay that
+/// way within a group.
 fn groups(items: &[Notification]) -> Vec<Group<'_>> {
-    let fixed = |key: &str, title: &str, glyph, always_open, folded| Group {
-        key: key.into(),
-        title: title.into(),
-        glyph,
-        items: Vec::new(),
-        always_open,
-        folded,
-    };
-    let mut pinned = fixed("pinned", "PINNED", Icon::Star, true, false);
-    let mut urgent = fixed("urgent", "NEEDS YOU", Icon::Alert, true, false);
-    let mut quiet = fixed("quiet", "CAN WAIT", Icon::Clock, false, true);
+    let mut pinned =
+        Group { key: "pinned".into(), title: "PINNED".into(), glyph: Icon::Star, items: Vec::new(), always_open: true };
     let mut rest: Vec<Group> = Vec::new();
     for n in items {
         if n.pinned {
             pinned.items.push(n);
-        } else if n.quiet {
-            quiet.items.push(n);
-        } else if n.urgent {
-            urgent.items.push(n);
         } else {
-            let (key, title, glyph) = match kind_group(&n.kind) {
-                Some((title, glyph)) => (format!("kind:{}", n.kind), title.to_string(), glyph),
-                None => (
-                    format!("app:{}", n.app),
-                    if n.app.is_empty() { "NOTIFICATIONS".into() } else { n.app.to_uppercase() },
-                    yozora_ui::icons::guess_app_icon(&n.app, &n.desktop_entry),
-                ),
-            };
+            let key = format!("app:{}", n.app);
             match rest.iter_mut().find(|g| g.key == key) {
                 Some(g) => g.items.push(n),
-                None => rest.push(Group { key, title, glyph, items: vec![n], always_open: false, folded: false }),
+                None => rest.push(Group {
+                    key,
+                    title: if n.app.is_empty() { "NOTIFICATIONS".into() } else { n.app.to_uppercase() },
+                    glyph: yozora_ui::icons::guess_app_icon(&n.app, &n.desktop_entry),
+                    items: vec![n],
+                    always_open: false,
+                }),
             }
         }
     }
-    [pinned, urgent].into_iter().chain(rest).chain([quiet]).filter(|g| !g.items.is_empty()).collect()
+    [pinned].into_iter().chain(rest).filter(|g| !g.items.is_empty()).collect()
 }
 
 /// A small round button on a card's edge, shown while the card is hovered.
@@ -281,8 +249,8 @@ fn card(
     theme: &Theme,
     cx: &mut Context<Popover>,
 ) -> AnyElement {
-    let hidden = sharing && n.private;
-    let (pinned, can_hold) = (n.pinned, yozora && (n.needs_action || n.pinned));
+    let hidden = sharing;
+    let (pinned, can_hold) = (n.pinned, yozora);
     let id = n.id;
     let glyph = n.icon_path.clone();
     let fallback = yozora_ui::icons::guess_app_icon(&n.app, &n.desktop_entry);

@@ -5,7 +5,6 @@
 //! survives restarts. Ids keep counting up across restarts, so an id never means two things.
 
 use std::{
-    collections::BTreeMap,
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -73,50 +72,10 @@ pub struct Notification {
     pub expire_ms: i32,
     /// Unix seconds when it arrived.
     pub time: u64,
-    /// Jev's odds that it needs attention now, once it has answered.
-    pub attention: Option<f64>,
-    /// It can wait, by Jev's answer: its toast left early and it isn't counted as unread.
-    pub quiet: bool,
-    /// Whether someone else shouldn't see it, by Jev's answer. Unknown until it answers.
-    pub private: Option<bool>,
-    /// What it is, by Jev's answer: one of [`KINDS`], or empty.
-    pub kind: String,
-    /// It asks them to do something, by Jev's answer.
-    pub needs_action: bool,
     /// Kept at the top of the center, and through "Clear all".
     pub pinned: bool,
     /// Unix seconds when a snoozed notification comes back; 0 if it isn't snoozed.
     pub snoozed_until: u64,
-    /// Already shown again once because it was urgent and unread.
-    pub reminded: bool,
-}
-
-/// What Jev can say a notification is.
-pub const KINDS: [&str; 5] = ["message", "alert", "reminder", "update", "promotion"];
-
-/// Jev's answers about one notification.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct Answer {
-    pub attention: f64,
-    pub private: Option<bool>,
-    pub kind: Option<String>,
-    pub needs_action: Option<bool>,
-}
-
-/// How someone handles an app's notifications, sent to Jev so it learns what matters to them.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Habit {
-    /// Clicked, replied to or acted on.
-    pub opened: u32,
-    /// Closed without opening.
-    pub dismissed: u32,
-}
-
-/// Apps whose habits are remembered; past this, the least used are forgotten.
-const MAX_HABITS: usize = 200;
-
-fn habit_key(n: &Notification) -> String {
-    if n.app.trim().is_empty() { n.desktop_entry.to_lowercase() } else { n.app.trim().to_lowercase() }
 }
 
 impl Notification {
@@ -162,7 +121,6 @@ struct Saved {
     dnd: bool,
     last_read: u32,
     items: Vec<Notification>,
-    habits: BTreeMap<String, Habit>,
 }
 
 pub struct Store {
@@ -173,7 +131,6 @@ pub struct Store {
     last_read: u32,
     limit: usize,
     path: Option<PathBuf>,
-    habits: BTreeMap<String, Habit>,
 }
 
 pub fn state_file() -> PathBuf {
@@ -190,7 +147,7 @@ impl Store {
     /// A store that isn't saved anywhere.
     #[cfg(test)]
     pub fn empty(limit: usize) -> Self {
-        Self { items: Vec::new(), next_id: 1, dnd: false, last_read: 0, limit, path: None, habits: BTreeMap::new() }
+        Self { items: Vec::new(), next_id: 1, dnd: false, last_read: 0, limit, path: None }
     }
 
     /// Loads history from `path`, starting empty if it's missing or unreadable.
@@ -204,7 +161,6 @@ impl Store {
             last_read: saved.last_read,
             limit,
             path: Some(path.to_path_buf()),
-            habits: saved.habits,
         };
         store.items.retain(|n| !n.transient);
         store.trim();
@@ -216,13 +172,7 @@ impl Store {
         if let Some(dir) = path.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
-        let saved = Saved {
-            next_id: self.next_id,
-            dnd: self.dnd,
-            last_read: self.last_read,
-            items: self.kept(),
-            habits: self.habits.clone(),
-        };
+        let saved = Saved { next_id: self.next_id, dnd: self.dnd, last_read: self.last_read, items: self.kept() };
         match serde_json::to_vec(&saved) {
             Ok(bytes) => {
                 if let Err(e) = yozora_config::edit::write_atomic(path, &bytes) {
@@ -258,42 +208,9 @@ impl Store {
     }
 
     /// Whether anything arrived since the center was last opened that's worth a dot on the bell:
-    /// not quiet, not snoozed, and with `at_least`, not answered by Jev below those odds.
-    pub fn unread(&self, at_least: Option<f64>) -> bool {
-        self.list().any(|n| {
-            n.id > self.last_read
-                && !n.quiet
-                && n.snoozed_until == 0
-                && at_least.is_none_or(|t| n.attention.is_none_or(|a| a >= t))
-        })
-    }
-
-    /// Records Jev's answers on `id`, if it still has the content they're for.
-    pub fn set_answer(
-        &mut self,
-        id: u32,
-        answer: &Answer,
-        quiet: bool,
-        is_for: impl Fn(&Notification) -> bool,
-    ) -> Option<Notification> {
-        let n = self.items.iter_mut().find(|n| n.id == id && is_for(n))?;
-        n.attention = Some(answer.attention);
-        n.quiet = quiet;
-        n.private = answer.private.or(n.private);
-        if let Some(kind) = &answer.kind {
-            n.kind = kind.clone();
-        }
-        n.needs_action = answer.needs_action.unwrap_or(n.needs_action);
-        let n = n.clone();
-        self.save();
-        Some(n)
-    }
-
-    /// Notes that nothing will say whether `id` is private, so it's treated as not.
-    pub fn not_private(&mut self, id: u32) {
-        if let Some(n) = self.items.iter_mut().find(|n| n.id == id) {
-            n.private = Some(false);
-        }
+    /// not snoozed.
+    pub fn unread(&self) -> bool {
+        self.list().any(|n| n.id > self.last_read && n.snoozed_until == 0)
     }
 
     pub fn pin(&mut self, id: u32, on: bool) -> bool {
@@ -311,53 +228,17 @@ impl Store {
         true
     }
 
-    /// Notifications to show again at `now`: snoozed ones whose time has come, and, after
-    /// `remind_after` seconds, unread ones Jev gave at least `urgent` odds, once each.
-    pub fn due(&mut self, now: u64, remind_after: Option<u64>, urgent: f64) -> Vec<Notification> {
-        let last_read = self.last_read;
+    /// Snoozed notifications whose time has come at `now`, which are no longer snoozed.
+    pub fn due(&mut self, now: u64) -> Vec<Notification> {
         let mut due = Vec::new();
-        for n in self.items.iter_mut().filter(|n| !n.transient) {
-            if n.snoozed_until != 0 && n.snoozed_until <= now {
-                n.snoozed_until = 0;
-                due.push(n.clone());
-            } else if let Some(after) = remind_after
-                && n.snoozed_until == 0
-                && !n.reminded
-                && n.id > last_read
-                && n.attention.is_some_and(|a| a >= urgent)
-                && n.time + after <= now
-            {
-                n.reminded = true;
-                due.push(n.clone());
-            }
+        for n in self.items.iter_mut().filter(|n| !n.transient && n.snoozed_until != 0 && n.snoozed_until <= now) {
+            n.snoozed_until = 0;
+            due.push(n.clone());
         }
         if !due.is_empty() {
             self.save();
         }
         due
-    }
-
-    /// How `n`'s app has been handled, once there's enough to go on.
-    pub fn habit(&self, n: &Notification) -> Option<Habit> {
-        self.habits.get(&habit_key(n)).copied().filter(|h| h.opened + h.dismissed >= 3)
-    }
-
-    /// Counts `id` as opened, or as dismissed without opening.
-    pub fn note(&mut self, id: u32, opened: bool) {
-        let Some(key) = self.get(id).map(habit_key).filter(|k| !k.is_empty()) else { return };
-        if !self.habits.contains_key(&key) && self.habits.len() >= MAX_HABITS {
-            let least = self.habits.iter().min_by_key(|(_, h)| h.opened + h.dismissed).map(|(k, _)| k.clone());
-            if let Some(least) = least {
-                self.habits.remove(&least);
-            }
-        }
-        let h = self.habits.entry(key).or_default();
-        if opened {
-            h.opened = h.opened.saturating_add(1);
-        } else {
-            h.dismissed = h.dismissed.saturating_add(1);
-        }
-        self.save();
     }
 
     /// Adds `n`, replacing the notification with id `replaces` or with the same tag.
@@ -465,64 +346,22 @@ mod tests {
     }
 
     #[test]
-    fn quiet_ones_are_not_unread() {
+    fn snoozes_and_pins() {
         let mut s = Store::empty(10);
-        s.mark_read();
-        let id = s.add(n("sale"), 0).id();
-        assert!(s.unread(None));
-        // An answer for other content (it was replaced since) changes nothing.
-        let low = Answer { attention: 0.1, ..Default::default() };
-        assert!(s.set_answer(id, &low, true, |n| n.summary == "old").is_none());
-        assert!(s.unread(None));
-        let got = s.set_answer(id, &low, true, |n| n.summary == "sale").unwrap();
-        assert_eq!((got.attention, got.quiet), (Some(0.1), true));
-        assert!(!s.unread(None));
-        let sam = s.add(n("Sam: are you coming?"), 0).id();
-        assert!(s.unread(None));
-        // With a bar for the dot, only what Jev hasn't answered yet or rates high counts.
-        assert!(s.unread(Some(0.85)));
-        s.set_answer(sam, &Answer { attention: 0.5, ..low.clone() }, false, |_| true);
-        assert!(s.unread(None) && !s.unread(Some(0.85)));
-        s.set_answer(sam, &Answer { attention: 0.9, ..low }, false, |_| true);
-        assert!(s.unread(Some(0.85)));
-    }
-
-    #[test]
-    fn reminders_snoozes_and_pins() {
-        let mut s = Store::empty(10);
-        let urgent = s.add(Notification { time: 100, ..n("Deploy failed") }, 0).id();
+        let first = s.add(Notification { time: 100, ..n("Deploy failed") }, 0).id();
         let plain = s.add(Notification { time: 100, ..n("Newsletter") }, 0).id();
-        s.set_answer(urgent, &Answer { attention: 0.9, ..Default::default() }, false, |_| true);
-        s.set_answer(plain, &Answer { attention: 0.4, ..Default::default() }, false, |_| true);
-        assert!(s.due(500, Some(600), 0.85).is_empty(), "not yet");
-        let due: Vec<u32> = s.due(700, Some(600), 0.85).iter().map(|n| n.id).collect();
-        assert_eq!(due, [urgent]);
-        assert!(s.due(9999, Some(600), 0.85).is_empty(), "only once");
+        assert!(s.due(9999).is_empty(), "nothing is snoozed");
 
         assert!(s.snooze(plain, 800));
-        assert!(s.due(799, None, 0.85).is_empty());
-        assert_eq!(s.due(800, None, 0.85).len(), 1);
+        assert!(s.due(799).is_empty());
+        assert_eq!(s.due(800).len(), 1);
         assert_eq!(s.get(plain).unwrap().snoozed_until, 0);
+        assert!(s.get(first).is_some());
 
         s.pin(plain, true);
         s.clear();
         let left: Vec<u32> = s.list().map(|n| n.id).collect();
         assert_eq!(left, [plain], "pinned ones survive Clear all");
-    }
-
-    #[test]
-    fn habits_need_a_few_to_count() {
-        let mut s = Store::empty(10);
-        let note = |s: &mut Store, opened| {
-            let id = s.add(Notification { app: "Shop".into(), ..n("Sale") }, 0).id();
-            s.note(id, opened);
-        };
-        note(&mut s, false);
-        note(&mut s, false);
-        let probe = Notification { app: "shop ".into(), ..n("x") };
-        assert_eq!(s.habit(&probe), None);
-        note(&mut s, true);
-        assert_eq!(s.habit(&probe), Some(Habit { opened: 1, dismissed: 2 }));
     }
 
     #[test]
@@ -542,13 +381,13 @@ mod tests {
         s.add(n("b"), 0);
         s.add(n("c"), 0);
         assert_eq!(s.list().count(), 2);
-        assert!(s.unread(None));
+        assert!(s.unread());
         s.mark_read();
-        assert!(!s.unread(None));
+        assert!(!s.unread());
 
         let id = s.add(Notification { transient: true, ..n("t") }, 0).id();
         // Transient ones are never in the center, so they don't count as unread either.
-        assert!(!s.unread(None));
+        assert!(!s.unread());
         assert!(s.get(id).is_some());
         s.expired(id);
         assert!(s.get(id).is_none());
