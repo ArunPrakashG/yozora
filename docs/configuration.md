@@ -25,25 +25,25 @@ version = 1
 theme   = "midnight"   # midnight | daybreak | auto (follows the desktop's light or dark setting)
 accent  = "starlight"  # starlight | aurora | nebula | dawn
 glass   = "balanced"   # clear | balanced | frosted: how much wallpaper shows through
-font    = "Geist"      # falls back to Inter, then the system UI font
+font    = "Inter"      # falls back to Inter, then the system UI font
 
 [motion]
-reduced = false        # every spring becomes a 120 ms fade; nothing slides
+reduced = false        # every move becomes a 100 ms fade; nothing travels
 
 [motion.popover]       # how popovers open
-stiffness = 380.0
-damping   = 28.0
+stiffness = 520.0
+damping   = 40.0
 
 [motion.indicator]     # workspace indicator, switches and highlights
-stiffness = 520.0
-damping   = 34.0
+stiffness = 700.0
+damping   = 53.0
 ```
 
 `auto` reads `color-scheme` from xdg-desktop-portal and follows it live. To switch at sunset,
 use a tool such as darkman that sets that value.
 
-Settings → Motion offers three popover presets: Crisp (560 / 40), Balanced (380 / 28, the
-default) and Soft (220 / 20). It shows the response curve for any values you set by hand.
+Settings → Motion offers three popover presets: Crisp (700 / 53), Balanced (520 / 40, the
+default) and Soft (380 / 30). It shows the response curve for any values you set by hand.
 
 ## bar.toml
 
@@ -180,8 +180,8 @@ accent = "dawn"
 version = 1
 
 [toasts]
-timeout_ms  = 5000       # how long a toast stays, 1000–120000, unless the app asks for another time
-max_visible = 4          # 1–8; past this, the oldest goes to the center
+timeout_ms  = 6000       # how long a toast stays, 1000–120000, unless the app asks for another time
+max_visible = 3          # 1–8; past this, the rest wait behind an "N more" chip
 monitor     = "focused"  # focused, or a connector name such as "DP-1"
 show_low    = false      # also show low-urgency notifications as toasts
 
@@ -189,7 +189,8 @@ show_low    = false      # also show low-urgency notifications as toasts
 limit = 200              # notifications kept in the center, up to 2000
 ```
 
-Critical notifications stay until you dismiss them, and still show during Do Not Disturb.
+Low-urgency toasts stay two thirds as long. Hovering a toast pauses its timer. Critical
+notifications stay until you dismiss them, and still show during Do Not Disturb.
 Everything else waits in the center while Do Not Disturb is on. Opening the center sends the
 toasts on screen to it. Like `bar.toml`, `notify.toml` can have a `[theme]` table.
 

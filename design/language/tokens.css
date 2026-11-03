@@ -1,0 +1,229 @@
+/* Yozora design tokens. Each maps one to one to a field or const in crates/yozora-ui/src/theme.rs:
+   --yz-ink-2 -> theme.ink_2, --yz-radius-lg -> RADIUS_LG, --yz-dur-exit -> motion::EXIT. */
+
+.yz-midnight, .yz-daybreak {
+  --yz-font: "Inter", "Noto Sans", system-ui, sans-serif;
+  --yz-mono: "Geist Mono", ui-monospace, monospace;
+
+  /* Type: size / line height / weight */
+  --yz-text-clock: 600 64px/64px var(--yz-font);
+  --yz-text-display: 600 24px/30px var(--yz-font);
+  --yz-text-title: 600 15px/20px var(--yz-font);
+  --yz-text-strong: 600 13px/18px var(--yz-font);
+  --yz-text-body: 400 13px/18px var(--yz-font);
+  --yz-text-meta: 500 12px/16px var(--yz-font);
+  --yz-text-micro: 600 11px/14px var(--yz-font);
+  --yz-text-num: 500 12px/16px var(--yz-mono);
+
+  /* Space: a 4 px grid, with 2 and 6 for optical fixes */
+  --yz-space-1: 2px;
+  --yz-space-2: 4px;
+  --yz-space-3: 6px;
+  --yz-space-4: 8px;
+  --yz-space-5: 12px;
+  --yz-space-6: 16px;
+  --yz-space-7: 20px;
+  --yz-space-8: 24px;
+  --yz-space-9: 32px;
+
+  /* Radius: inner = outer - padding */
+  --yz-radius-xs: 4px;
+  --yz-radius-sm: 6px;
+  --yz-radius-md: 8px;
+  --yz-radius-lg: 10px;
+  --yz-radius-xl: 12px;
+  --yz-radius-full: 999px;
+
+  /* Size */
+  --yz-bar-h: 36px;
+  --yz-control-h: 32px;
+  --yz-row-h: 40px;
+  --yz-icon: 16px;
+  --yz-app-icon: 32px;
+  --yz-toast-w: 380px;
+  --yz-popover-w: 380px;
+
+  /* Motion. Springs are what the code runs; the cubic-beziers draw the same curve in CSS. */
+  --yz-dur-press: 80ms;
+  --yz-dur-hover: 120ms;
+  --yz-dur-exit: 140ms;
+  --yz-dur-enter: 220ms;
+  --yz-dur-move: 260ms;
+  --yz-stagger: 18ms;
+  --yz-ease-settle: cubic-bezier(0.16, 1, 0.3, 1);  /* spring settle: k 700, c 53, no overshoot */
+  --yz-ease-pop: cubic-bezier(0.2, 1.1, 0.35, 1);    /* spring pop: k 520, c 40, 0.3% overshoot */
+  --yz-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --yz-ease-hover: cubic-bezier(0.2, 0, 0, 1);
+  --yz-rise: 8px;                                    /* how far a surface travels on its way in */
+
+  font-family: var(--yz-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.yz-midnight {
+  color-scheme: dark;
+  --yz-wall: #05070C;
+  --yz-bg: #0A0E17;
+  --yz-glass-bar: rgba(10, 14, 23, 0.72);
+  --yz-surface: #121826;
+  --yz-surface-2: #1A2234;
+  --yz-fill: rgba(232, 241, 255, 0.05);
+  --yz-fill-hover: rgba(232, 241, 255, 0.08);
+  --yz-fill-press: rgba(232, 241, 255, 0.12);
+  --yz-line: rgba(160, 190, 255, 0.10);
+  --yz-line-strong: rgba(170, 200, 255, 0.17);
+  --yz-hi: rgba(255, 255, 255, 0.06);
+  --yz-ink: #EDF2FC;
+  --yz-ink-2: #A6B1C7;
+  --yz-ink-3: #8794AD;
+  --yz-accent: #8BBEFF;
+  --yz-accent-ink: #0A0E17;
+  --yz-accent-soft: rgba(139, 190, 255, 0.16);
+  --yz-ok: #8FE3CF;
+  --yz-warn: #FFC58B;
+  --yz-danger: #FF8F8F;
+  --yz-danger-soft: rgba(255, 143, 143, 0.14);
+  --yz-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.35);
+  --yz-focus: 0 0 0 2px #0A0E17, 0 0 0 4px #8BBEFF;
+}
+
+.yz-daybreak {
+  color-scheme: light;
+  --yz-wall: #DCE2EC;
+  --yz-bg: #EEF1F6;
+  --yz-glass-bar: rgba(246, 248, 252, 0.78);
+  --yz-surface: #FFFFFF;
+  --yz-surface-2: #F3F5F9;
+  --yz-fill: rgba(15, 22, 38, 0.04);
+  --yz-fill-hover: rgba(15, 22, 38, 0.07);
+  --yz-fill-press: rgba(15, 22, 38, 0.11);
+  --yz-line: rgba(15, 30, 70, 0.10);
+  --yz-line-strong: rgba(15, 30, 70, 0.16);
+  --yz-hi: rgba(255, 255, 255, 0.9);
+  --yz-ink: #0F1626;
+  --yz-ink-2: #465270;
+  --yz-ink-3: #5A6680;
+  --yz-accent: #2A64CC;
+  --yz-accent-ink: #FFFFFF;
+  --yz-accent-soft: rgba(42, 100, 204, 0.12);
+  --yz-ok: #0B7562;
+  --yz-warn: #9A4F0B;
+  --yz-danger: #B83426;
+  --yz-danger-soft: rgba(184, 52, 38, 0.10);
+  --yz-shadow: 0 10px 24px -10px rgba(20, 35, 70, 0.28), 0 1px 2px rgba(20, 35, 70, 0.10);
+  --yz-focus: 0 0 0 2px #FFFFFF, 0 0 0 4px #2A64CC;
+}
+
+/* The one surface recipe. Toasts and popovers are opaque: Hyprland doesn't blur layer popups,
+   and a translucent card over a busy window reads as dirt. */
+.yz-surface {
+  background: var(--yz-surface);
+  border: 1px solid var(--yz-line-strong);
+  box-shadow: inset 0 1px 0 var(--yz-hi), var(--yz-shadow);
+}
+
+/* Controls */
+.yz-btn {
+  height: var(--yz-control-h);
+  padding: 0 var(--yz-space-5);
+  border-radius: var(--yz-radius-sm);
+  border: 0;
+  font: var(--yz-text-strong);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--yz-space-3);
+  cursor: pointer;
+  background: var(--yz-fill);
+  color: var(--yz-ink);
+  transition: background-color var(--yz-dur-hover) var(--yz-ease-hover), transform var(--yz-dur-press) var(--yz-ease-hover);
+}
+.yz-btn:hover { background: var(--yz-fill-hover); }
+.yz-btn:active { background: var(--yz-fill-press); transform: scale(0.97); }
+.yz-btn:focus-visible { outline: none; box-shadow: var(--yz-focus); }
+.yz-btn.primary { background: var(--yz-accent); color: var(--yz-accent-ink); }
+.yz-btn.primary:hover { filter: brightness(1.06); }
+.yz-btn.ghost { background: transparent; color: var(--yz-ink-2); }
+.yz-btn.ghost:hover { background: var(--yz-fill-hover); color: var(--yz-ink); }
+.yz-btn.danger { background: var(--yz-danger-soft); color: var(--yz-danger); }
+.yz-btn.grow { flex: 1 1 0; }
+
+.yz-icon-btn {
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--yz-radius-sm);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  background: transparent; color: var(--yz-ink-3);
+  transition: background-color var(--yz-dur-hover) var(--yz-ease-hover), color var(--yz-dur-hover) var(--yz-ease-hover);
+}
+.yz-icon-btn:hover { background: var(--yz-fill-hover); color: var(--yz-ink); }
+.yz-icon-btn:active { background: var(--yz-fill-press); }
+.yz-icon-btn:focus-visible { outline: none; box-shadow: var(--yz-focus); }
+
+.yz-row {
+  min-height: var(--yz-row-h); padding: 0 var(--yz-space-4); border-radius: var(--yz-radius-sm);
+  display: flex; align-items: center; gap: var(--yz-space-5);
+  transition: background-color var(--yz-dur-hover) var(--yz-ease-hover);
+}
+.yz-row:hover { background: var(--yz-fill-hover); }
+
+.yz-switch {
+  width: 34px; height: 20px; border-radius: var(--yz-radius-full); position: relative; flex: none;
+  background: var(--yz-fill-press); border: 0; padding: 0; cursor: pointer;
+  transition: background-color var(--yz-dur-hover) var(--yz-ease-hover);
+}
+.yz-switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--yz-ink); transition: transform var(--yz-dur-enter) var(--yz-ease-settle);
+}
+.yz-switch.on { background: var(--yz-accent); }
+.yz-switch.on::after { transform: translateX(14px); background: var(--yz-accent-ink); }
+
+.yz-tile {
+  height: 56px; border-radius: var(--yz-radius-md); padding: 0 var(--yz-space-5);
+  display: flex; align-items: center; gap: var(--yz-space-4); border: 0; cursor: pointer; text-align: left;
+  background: var(--yz-fill); color: var(--yz-ink);
+  transition: background-color var(--yz-dur-hover) var(--yz-ease-hover), transform var(--yz-dur-press) var(--yz-ease-hover);
+}
+.yz-tile:hover { background: var(--yz-fill-hover); }
+.yz-tile:active { transform: scale(0.98); }
+.yz-tile.on { background: var(--yz-accent-soft); }
+.yz-tile.on .yz-tile-icon { background: var(--yz-accent); color: var(--yz-accent-ink); }
+.yz-tile-icon {
+  width: 32px; height: 32px; border-radius: var(--yz-radius-full); flex: none;
+  display: flex; align-items: center; justify-content: center; background: var(--yz-fill-press); color: var(--yz-ink);
+}
+
+.yz-slider { height: 28px; border-radius: var(--yz-radius-full); background: var(--yz-fill-press); position: relative; overflow: hidden; }
+.yz-slider > i { position: absolute; inset: 0 auto 0 0; background: var(--yz-ink); border-radius: var(--yz-radius-full); }
+
+.yz-chip {
+  height: 24px; padding: 0 var(--yz-space-4); border-radius: var(--yz-radius-full);
+  display: inline-flex; align-items: center; gap: var(--yz-space-2);
+  font: var(--yz-text-meta); background: var(--yz-fill); color: var(--yz-ink-2);
+}
+.yz-chip.accent { background: var(--yz-accent-soft); color: var(--yz-accent); }
+
+/* Toast */
+.yz-toast {
+  width: var(--yz-toast-w); box-sizing: border-box; border-radius: var(--yz-radius-lg);
+  padding: var(--yz-space-5) var(--yz-space-5) var(--yz-space-5) var(--yz-space-5);
+  display: flex; flex-direction: column; gap: var(--yz-space-5); position: relative; overflow: hidden;
+  color: var(--yz-ink);
+}
+.yz-toast-head { display: flex; align-items: center; gap: var(--yz-space-4); height: 20px; }
+.yz-toast-app { font: var(--yz-text-meta); color: var(--yz-ink-2); flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yz-toast-time { font: var(--yz-text-meta); color: var(--yz-ink-3); }
+.yz-toast-main { display: flex; gap: var(--yz-space-5); align-items: flex-start; }
+.yz-toast-text { display: flex; flex-direction: column; gap: var(--yz-space-1); min-width: 0; flex: 1 1 auto; }
+.yz-toast-summary { font: var(--yz-text-strong); color: var(--yz-ink); }
+.yz-toast-body { font: var(--yz-text-body); color: var(--yz-ink-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.yz-toast-actions { display: flex; gap: var(--yz-space-3); }
+.yz-toast-timer { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--yz-accent); opacity: 0.55; transform-origin: left center; }
+.yz-toast.critical { border-color: var(--yz-danger); }
+.yz-toast.critical .yz-toast-app { color: var(--yz-danger); }
+
+.yz-app-icon {
+  width: var(--yz-app-icon); height: var(--yz-app-icon); border-radius: var(--yz-radius-sm); flex: none;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.yz-app-glyph { width: 16px; height: 16px; border-radius: 3px; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .yz-midnight, .yz-daybreak { --yz-dur-enter: 100ms; --yz-dur-move: 100ms; --yz-rise: 0px; }
+}

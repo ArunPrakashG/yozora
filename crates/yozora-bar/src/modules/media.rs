@@ -3,10 +3,13 @@
 use std::time::Duration;
 
 use gpui::{
-    AnyElement, App, Context, Div, FontWeight, IntoElement, ParentElement, SharedString, StatefulInteractiveElement,
-    Styled, div, img, prelude::*, px, relative,
+    AnyElement, App, Context, Div, FontWeight, IntoElement, ParentElement, Pixels, SharedString,
+    StatefulInteractiveElement, Styled, div, img, prelude::*, px, relative,
 };
-use yozora_ui::{Icon, Theme, controls, icon_sized};
+use yozora_ui::{
+    Icon, Theme, controls, icon_sized,
+    theme::{RADIUS_MD, RADIUS_SM, RADIUS_XS},
+};
 
 use crate::{
     app::Config,
@@ -27,14 +30,14 @@ pub fn playing(cx: &App) -> bool {
 }
 
 /// Album art, or a music glyph on a fill when there is none.
-pub fn cover(player: &Player, size: f32, radius: f32, theme: &Theme) -> AnyElement {
+pub fn cover(player: &Player, size: f32, radius: Pixels, theme: &Theme) -> AnyElement {
     match &player.art {
-        Some(path) => img(path.clone()).size(px(size)).flex_none().rounded(px(radius)).into_any_element(),
+        Some(path) => img(path.clone()).size(px(size)).flex_none().rounded(radius).into_any_element(),
         None => div()
             .size(px(size))
             .flex_none()
-            .rounded(px(radius))
-            .bg(theme.fill_3)
+            .rounded(radius)
+            .bg(theme.fill_press)
             .flex()
             .items_center()
             .justify_center()
@@ -53,7 +56,7 @@ pub fn item(theme: &Theme, cx: &App) -> Option<Div> {
     let max = Config::get(cx).settings.bar.media.max_length;
     let on = player.status == Status::Playing;
     Some(
-        bi().pl(px(4.)).pr(px(10.)).child(cover(player, 18., 5., theme)).child(
+        bi().pl(px(4.)).pr(px(10.)).child(cover(player, 18., RADIUS_XS, theme)).child(
             div()
                 .flex()
                 .gap(px(6.))
@@ -101,7 +104,7 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
         Status::Paused => "Paused",
         Status::Stopped => "Stopped",
     };
-    let head = div().flex().gap(px(14.)).items_center().p(px(4.)).child(cover(&player, 88., 12., theme)).child(
+    let head = div().flex().gap(px(14.)).items_center().p(px(4.)).child(cover(&player, 88., RADIUS_MD, theme)).child(
         div()
             .min_w_0()
             .flex()
@@ -120,28 +123,32 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
     );
 
     let pos = player.position_now();
-    let progress =
-        player.length.filter(|l| !l.is_zero()).map(|length| {
-            let f = (pos.as_secs_f32() / length.as_secs_f32()).clamp(0., 1.);
-            div()
-                .px(px(4.))
-                .child(
-                    div().relative().h(px(4.)).mt(px(16.)).rounded(px(2.)).bg(theme.fill_3).overflow_hidden().child(
-                        div().absolute().top_0().bottom_0().left_0().w(relative(f)).rounded(px(2.)).bg(theme.ink),
-                    ),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .justify_between()
-                        .mt(px(6.))
-                        .text_size(px(11.))
-                        .text_color(theme.ink_2)
-                        .child(time(pos))
-                        .child(format!("-{}", time(length.saturating_sub(pos)))),
-                )
-                .into_any_element()
-        });
+    let progress = player.length.filter(|l| !l.is_zero()).map(|length| {
+        let f = (pos.as_secs_f32() / length.as_secs_f32()).clamp(0., 1.);
+        div()
+            .px(px(4.))
+            .child(
+                div()
+                    .relative()
+                    .h(px(4.))
+                    .mt(px(16.))
+                    .rounded(px(2.))
+                    .bg(theme.fill_press)
+                    .overflow_hidden()
+                    .child(div().absolute().top_0().bottom_0().left_0().w(relative(f)).rounded(px(2.)).bg(theme.ink)),
+            )
+            .child(
+                div()
+                    .flex()
+                    .justify_between()
+                    .mt(px(6.))
+                    .text_size(px(11.))
+                    .text_color(theme.ink_2)
+                    .child(time(pos))
+                    .child(format!("-{}", time(length.saturating_sub(pos)))),
+            )
+            .into_any_element()
+    });
 
     let playing = player.status == Status::Playing;
     let ctl = div()
@@ -179,7 +186,7 @@ pub fn popover(_p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Ve
                 .pt(px(10.))
                 .mt(px(8.))
                 .border_t_1()
-                .border_color(theme.hair)
+                .border_color(theme.line)
                 .child(div().px(px(4.)).text_size(px(11.5)).text_color(theme.ink_3).child("Players"))
                 .children(state.players.iter().enumerate().map(|(i, pl)| {
                     let bus = pl.bus.clone();
@@ -201,38 +208,64 @@ pub fn mini(theme: &Theme, cx: &App) -> Option<AnyElement> {
         div()
             .flex()
             .items_center()
-            .gap(px(11.))
-            .p(px(8.))
-            .rounded(px(12.))
-            .bg(theme.fill)
+            .gap(px(12.))
+            .p(px(10.))
+            .rounded(RADIUS_MD)
+            .bg(theme.surface_2)
             .border_1()
-            .border_color(theme.hair)
-            .child(cover(&player, 40., 8., theme))
+            .border_color(theme.line)
+            .child(cover(&player, 44., RADIUS_SM, theme))
             .child(
                 div()
                     .flex_1()
                     .min_w_0()
                     .flex()
                     .flex_col()
+                    .line_height(px(18.))
                     .child(div().font_weight(FontWeight::SEMIBOLD).truncate().child(if player.title.is_empty() {
                         player.identity.clone()
                     } else {
                         player.title.clone()
                     }))
-                    .child(div().text_size(px(12.)).text_color(theme.ink_2).truncate().child(player.artist.clone())),
+                    .child(
+                        div()
+                            .text_size(px(12.))
+                            .line_height(px(16.))
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(theme.ink_2)
+                            .truncate()
+                            .child(if player.artist.is_empty() {
+                                player.identity.clone()
+                            } else {
+                                format!("{} · {}", player.artist, player.identity)
+                            }),
+                    ),
             )
+            .child(mini_button("mini-prev", Icon::Previous, false, theme).on_click(|_, _, cx| send(Cmd::Previous, cx)))
             .child(
-                controls::media_button("mini-play", if playing { Icon::Pause } else { Icon::Play }, false, theme)
-                    .size(px(32.))
+                mini_button("mini-play", if playing { Icon::Pause } else { Icon::Play }, true, theme)
                     .on_click(|_, _, cx| send(Cmd::PlayPause, cx)),
             )
-            .child(
-                controls::media_button("mini-next", Icon::Next, false, theme)
-                    .size(px(32.))
-                    .on_click(|_, _, cx| send(Cmd::Next, cx)),
-            )
+            .child(mini_button("mini-next", Icon::Next, false, theme).on_click(|_, _, cx| send(Cmd::Next, cx)))
             .into_any_element(),
     )
+}
+
+/// A 28 px icon button in the mini player. The main one is full ink.
+fn mini_button(id: &'static str, glyph: Icon, main: bool, theme: &Theme) -> gpui::Stateful<Div> {
+    div()
+        .id(id)
+        .flex_none()
+        .size(px(28.))
+        .rounded(RADIUS_SM)
+        .flex()
+        .items_center()
+        .justify_center()
+        .cursor_pointer()
+        .text_color(if main { theme.ink } else { theme.ink_3 })
+        .hover(|s| s.bg(theme.fill_hover).text_color(theme.ink))
+        .active(|s| s.bg(theme.fill_press))
+        .child(icon_sized(glyph, 15.))
 }
 
 #[cfg(test)]

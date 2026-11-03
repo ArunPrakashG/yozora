@@ -158,7 +158,7 @@ async fn system_dark() -> bool {
 
 fn apply_theme(settings: &LaunchSettings, dark: bool, cx: &mut App) {
     let mut theme = Theme::new(&settings.theme, dark, false);
-    theme.font = yozora_ui::theme::resolve_font(cx, &settings.theme.font);
+    theme.resolve_fonts(cx, &settings.theme.font);
     if cx.reduce_motion() {
         theme.motion.reduced = true;
     }

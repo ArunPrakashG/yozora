@@ -15,7 +15,7 @@ use yozora_ui::{
     Icon, Theme, icon_sized,
     input::{Backspace, InputEvent, TextInput},
     spring::{Spring, SpringConfig},
-    theme::RADIUS_ITEM,
+    theme::{RADIUS_LG, RADIUS_MD, RADIUS_SM, RADIUS_XL, RADIUS_XS},
 };
 
 use crate::{
@@ -143,7 +143,7 @@ impl LaunchView {
             sel: 0,
             actions: None,
             phase: Phase::Closed,
-            drop: Spring::new(1.0, SpringConfig::POPOVER),
+            drop: Spring::new(1.0, SpringConfig::POP),
             last: Instant::now(),
             scroll: ScrollHandle::new(),
             generation: 0,
@@ -165,7 +165,7 @@ impl LaunchView {
         self.error = None;
         self.requery(cx);
         self.phase = Phase::Open { since: Instant::now() };
-        self.drop = Spring::new(0.0, SpringConfig::POPOVER);
+        self.drop = Spring::new(0.0, SpringConfig::POP);
         self.drop.set_target(1.0);
         self.last = Instant::now();
         window.set_layer(Layer::Overlay);
@@ -775,7 +775,7 @@ fn visual(v: &Visual, size: f32, theme: &Theme) -> AnyElement {
         Visual::Glyph(icon) => div()
             .size(px(size))
             .flex_none()
-            .rounded(px((size * 0.28).round()))
+            .rounded(RADIUS_SM)
             .bg(if theme.dark { rgb(0x2A3245) } else { rgb(0x3B4864) })
             .flex()
             .items_center()
@@ -794,7 +794,7 @@ fn visual(v: &Visual, size: f32, theme: &Theme) -> AnyElement {
         Visual::Letter(c) => div()
             .size(px(size))
             .flex_none()
-            .rounded(px((size * 0.28).round()))
+            .rounded(RADIUS_SM)
             .bg(theme.accent_soft)
             .text_color(theme.accent)
             .text_size(px((size * 0.45).round()))
@@ -811,8 +811,8 @@ fn kbd(text: &'static str, theme: &Theme) -> impl IntoElement {
     div()
         .px(px(5.))
         .py(px(1.))
-        .rounded(px(5.))
-        .bg(theme.fill_2)
+        .rounded(RADIUS_XS)
+        .bg(theme.fill_hover)
         .font_family(theme.mono.clone())
         .text_size(px(11.))
         .text_color(theme.ink_2)
@@ -851,8 +851,8 @@ impl LaunchView {
                     .min_w(px(22.))
                     .h(px(20.))
                     .px(px(6.))
-                    .rounded(px(6.))
-                    .bg(theme.fill_2)
+                    .rounded(RADIUS_XS)
+                    .bg(theme.fill_hover)
                     .flex()
                     .items_center()
                     .justify_center()
@@ -882,7 +882,7 @@ impl LaunchView {
             .gap(px(12.))
             .h(px(if row.top { 62. } else { 50. }))
             .px(px(10.))
-            .rounded(px(12.))
+            .rounded(RADIUS_MD)
             .flex_none()
             .child(visual(&row.visual, size, theme))
             .child(
@@ -925,7 +925,7 @@ impl LaunchView {
                 this.submit(Modifier::None, window, cx);
             }));
         if selected {
-            el = el.bg(theme.fill_3).border_1().border_color(theme.hair_2);
+            el = el.bg(theme.fill_press).border_1().border_color(theme.line_strong);
         }
         el.into_any_element()
     }
@@ -946,7 +946,7 @@ impl LaunchView {
                 .pt(px(12.))
                 .pb(px(10.))
                 .px(px(4.))
-                .rounded(px(14.))
+                .rounded(RADIUS_LG)
                 .text_size(px(12.))
                 .text_color(if selected { theme.ink } else { theme.ink_2 })
                 .child(visual(&row.visual, 48., theme))
@@ -971,7 +971,7 @@ impl LaunchView {
                     this.submit(Modifier::None, window, cx);
                 }));
             if selected {
-                tile = tile.bg(theme.fill_2);
+                tile = tile.bg(theme.fill_hover);
             }
             grid = grid.child(tile);
         }
@@ -1013,7 +1013,7 @@ impl LaunchView {
                     .justify_between()
                     .h(px(42.))
                     .px(px(12.))
-                    .rounded(px(10.))
+                    .rounded(RADIUS_SM)
                     .text_size(px(13.5))
                     .text_color(theme.ink)
                     .child(label.clone())
@@ -1035,7 +1035,7 @@ impl LaunchView {
                         this.submit(Modifier::None, window, cx);
                     }));
                 if selected {
-                    el = el.bg(theme.fill_3).border_1().border_color(theme.hair_2);
+                    el = el.bg(theme.fill_press).border_1().border_color(theme.line_strong);
                 }
                 out.push(el.into_any_element());
             }
@@ -1090,7 +1090,7 @@ impl LaunchView {
                         .id(("chip", k))
                         .h(px(28.))
                         .px(px(10.))
-                        .rounded(px(8.))
+                        .rounded(RADIUS_SM)
                         .flex()
                         .items_center()
                         .gap(px(7.))
@@ -1098,8 +1098,8 @@ impl LaunchView {
                         .text_color(theme.ink_2)
                         .bg(theme.fill)
                         .border_1()
-                        .border_color(theme.hair)
-                        .hover(|s| s.bg(theme.fill_2).text_color(theme.ink))
+                        .border_color(theme.line)
+                        .hover(|s| s.bg(theme.fill_hover).text_color(theme.ink))
                         .child(
                             div()
                                 .font_family(theme.mono.clone())
@@ -1156,7 +1156,7 @@ impl LaunchView {
             .h(px(FOOT_H))
             .px(px(16.))
             .border_t_1()
-            .border_color(theme.hair)
+            .border_color(theme.line)
             .text_size(px(12.))
             .text_color(if self.error.is_some() { theme.danger } else { theme.ink_2 })
             .child(div().flex_1().min_w_0().whitespace_nowrap().overflow_hidden().text_ellipsis().child(left))
@@ -1198,7 +1198,7 @@ impl Render for LaunchView {
             div()
                 .h(px(28.))
                 .px(px(10.))
-                .rounded(RADIUS_ITEM)
+                .rounded(RADIUS_SM)
                 .flex()
                 .flex_none()
                 .items_center()
@@ -1222,11 +1222,11 @@ impl Render for LaunchView {
             .w(px(width))
             .flex()
             .flex_col()
-            .rounded(px(20.))
-            .bg(theme.glass_pop)
+            .rounded(RADIUS_XL)
+            .bg(theme.surface)
             .border_1()
-            .border_color(theme.hair_2)
-            .shadow(theme.popover_shadow())
+            .border_color(theme.line_strong)
+            .shadow(theme.raised_shadow())
             .overflow_hidden()
             .opacity(opacity)
             .occlude()
@@ -1239,7 +1239,7 @@ impl Render for LaunchView {
                     .gap(px(12.))
                     .h(px(SEARCH_H))
                     .px(px(18.))
-                    .when(has_body, |d| d.border_b_1().border_color(theme.hair))
+                    .when(has_body, |d| d.border_b_1().border_color(theme.line))
                     .child(search_icon)
                     .child(div().flex_1().min_w_0().child(self.input.clone()))
                     .child(
@@ -1247,9 +1247,9 @@ impl Render for LaunchView {
                             .flex_none()
                             .px(px(7.))
                             .py(px(3.))
-                            .rounded(px(6.))
+                            .rounded(RADIUS_XS)
                             .border_1()
-                            .border_color(theme.hair_2)
+                            .border_color(theme.line_strong)
                             .font_family(theme.mono.clone())
                             .text_size(px(11.))
                             .text_color(theme.ink_3)

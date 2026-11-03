@@ -210,7 +210,12 @@ impl Store {
     /// Whether anything arrived since the center was last opened that's worth a dot on the bell:
     /// not snoozed.
     pub fn unread(&self) -> bool {
-        self.list().any(|n| n.id > self.last_read && n.snoozed_until == 0)
+        self.list().any(|n| self.is_unread(n))
+    }
+
+    /// Whether `n` arrived since the center was last opened and isn't snoozed.
+    pub fn is_unread(&self, n: &Notification) -> bool {
+        n.id > self.last_read && n.snoozed_until == 0
     }
 
     pub fn pin(&mut self, id: u32, on: bool) -> bool {
@@ -252,6 +257,8 @@ impl Store {
             Some(i) => {
                 let old = self.items.remove(i);
                 n.id = old.id;
+                // An update keeps its pin.
+                n.pinned = old.pinned;
                 Added::Replaced(old.id)
             }
             None => {
@@ -284,10 +291,12 @@ impl Store {
         }
     }
 
-    /// Empties the center, except pinned notifications.
-    pub fn clear(&mut self) {
+    /// Empties the center, except pinned notifications. Returns the ids that went.
+    pub fn clear(&mut self) -> Vec<u32> {
+        let gone = self.items.iter().filter(|n| !n.pinned).map(|n| n.id).collect();
         self.items.retain(|n| n.pinned);
         self.save();
+        gone
     }
 
     pub fn mark_read(&mut self) {

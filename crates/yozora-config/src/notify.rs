@@ -26,7 +26,7 @@ pub struct ToastSection {
 
 impl Default for ToastSection {
     fn default() -> Self {
-        Self { timeout_ms: 5000, max_visible: 4, monitor: "focused".into(), show_low: false }
+        Self { timeout_ms: 6000, max_visible: 3, monitor: "focused".into(), show_low: false }
     }
 }
 
@@ -85,12 +85,12 @@ pub fn load(dir: &Path) -> anyhow::Result<Loaded<NotifySettings>> {
 fn validate(c: &mut NotifyConfig, warnings: &mut Vec<Warning>) {
     let mut warn = |message: String| warnings.push(Warning { file: FILE.into(), line: None, message });
     if !(1000..=120_000).contains(&c.toasts.timeout_ms) {
-        warn(format!("toasts.timeout_ms {} is outside 1000–120000; using 5000", c.toasts.timeout_ms));
-        c.toasts.timeout_ms = 5000;
+        warn(format!("toasts.timeout_ms {} is outside 1000–120000; using 6000", c.toasts.timeout_ms));
+        c.toasts.timeout_ms = 6000;
     }
     if !(1..=8).contains(&c.toasts.max_visible) {
-        warn(format!("toasts.max_visible {} is outside 1–8; using 4", c.toasts.max_visible));
-        c.toasts.max_visible = 4;
+        warn(format!("toasts.max_visible {} is outside 1–8; using 3", c.toasts.max_visible));
+        c.toasts.max_visible = 3;
     }
     if c.history.limit > 2000 {
         warn("history.limit is above 2000; using 2000".into());
@@ -118,7 +118,7 @@ mod tests {
             .unwrap();
         let loaded = load(&dir).unwrap();
         assert_eq!(loaded.value.notify.toasts.timeout_ms, 8000);
-        assert_eq!(loaded.value.notify.toasts.max_visible, 4);
+        assert_eq!(loaded.value.notify.toasts.max_visible, 3);
         assert_eq!(loaded.value.theme.accent, crate::theme::Accent::Dawn);
         assert_eq!(loaded.warnings.len(), 1);
         let _ = std::fs::remove_dir_all(&dir);

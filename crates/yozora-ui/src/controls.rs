@@ -14,7 +14,7 @@ use gpui::{
 
 use crate::{
     icons::{Icon, icon, icon_sized},
-    theme::{RADIUS_ROW, RADIUS_TILE, Theme},
+    theme::{RADIUS_MD, RADIUS_SM, Theme},
 };
 
 /// The spring for small controls: the design's indicator spring, or a snap with reduced motion.
@@ -36,23 +36,16 @@ pub fn switch(id: impl Into<ElementId>, on: bool, theme: &Theme) -> Stateful<Div
         .flex_none()
         .w(px(34.))
         .h(px(20.))
-        .rounded(px(10.))
+        .rounded_full()
         .cursor_pointer()
-        .bg(if on { theme.accent } else { theme.switch_off })
+        .bg(if on { theme.accent } else { theme.fill_press })
         .child(
             div()
                 .absolute()
                 .top(px(2.))
                 .size(px(16.))
                 .rounded_full()
-                .bg(gpui::white())
-                .shadow(vec![gpui::BoxShadow {
-                    color: gpui::hsla(0., 0., 0., 0.35),
-                    offset: gpui::point(px(0.), px(1.)),
-                    blur_radius: px(3.),
-                    spread_radius: px(0.),
-                    inset: false,
-                }])
+                .bg(if on { theme.accent_ink } else { theme.ink })
                 .with_spring((id, "knob"), indicator_spring(theme, if on { px(16.) } else { px(2.) }), |el, x| {
                     el.left(x)
                 }),
@@ -72,15 +65,14 @@ pub fn tile(
         .id(id)
         .flex()
         .items_center()
-        .gap(px(10.))
-        .p(px(10.))
+        .gap(px(12.))
+        .h(px(56.))
+        .px(px(16.))
         .min_w_0()
-        .rounded(RADIUS_TILE)
-        .bg(theme.fill)
-        .border_1()
-        .border_color(theme.hair)
+        .rounded(RADIUS_MD)
+        .bg(if on { theme.accent_soft } else { theme.fill })
         .cursor_pointer()
-        .hover(|s| s.bg(theme.fill_2))
+        .when(!on, |el| el.hover(|s| s.bg(theme.fill_hover)))
         .child(
             div()
                 .size(px(32.))
@@ -89,9 +81,8 @@ pub fn tile(
                 .flex()
                 .items_center()
                 .justify_center()
-                .bg(if on { theme.accent } else { theme.fill_3 })
+                .bg(if on { theme.accent } else { theme.fill_press })
                 .text_color(if on { theme.accent_ink } else { theme.ink })
-                .when(on, |el| el.shadow(theme.accent_glow()))
                 .child(icon(glyph)),
         )
         .child(
@@ -99,8 +90,23 @@ pub fn tile(
                 .flex()
                 .flex_col()
                 .min_w_0()
-                .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(title.into()))
-                .child(div().text_size(px(11.5)).text_color(theme.ink_2).truncate().child(detail.into())),
+                .child(
+                    div()
+                        .text_size(px(13.))
+                        .line_height(px(18.))
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .truncate()
+                        .child(title.into()),
+                )
+                .child(
+                    div()
+                        .text_size(px(12.))
+                        .line_height(px(16.))
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(theme.ink_2)
+                        .truncate()
+                        .child(detail.into()),
+                ),
         )
 }
 
@@ -115,9 +121,9 @@ pub fn row(id: impl Into<ElementId>, theme: &Theme) -> Stateful<Div> {
         .min_h(px(40.))
         .px(px(8.))
         .py(px(6.))
-        .rounded(RADIUS_ROW)
+        .rounded(RADIUS_SM)
         .text_size(px(13.))
-        .hover(|s| s.bg(theme.fill_2))
+        .hover(|s| s.bg(theme.fill_hover))
 }
 
 /// The two-line text block inside a row.
@@ -136,11 +142,11 @@ pub fn row_icon(glyph: Icon, on: bool, theme: &Theme) -> impl IntoElement {
     div()
         .size(px(28.))
         .flex_none()
-        .rounded(px(8.))
+        .rounded(RADIUS_SM)
         .flex()
         .items_center()
         .justify_center()
-        .bg(if on { theme.accent } else { theme.fill_2 })
+        .bg(if on { theme.accent } else { theme.fill_hover })
         .text_color(if on { theme.accent_ink } else { theme.ink })
         .child(icon(glyph))
 }
@@ -157,16 +163,20 @@ pub fn check(id: impl Into<ElementId>, on: bool, theme: &Theme) -> impl IntoElem
     ))
 }
 
-/// Uppercase section label, like "OTHER NETWORKS".
+/// A section label, like "Other networks".
 pub fn label(text: impl Into<SharedString>, theme: &Theme) -> impl IntoElement {
     div()
-        .px(px(6.))
-        .pt(px(12.))
-        .pb(px(6.))
-        .text_size(px(10.5))
-        .font_weight(FontWeight::SEMIBOLD)
-        .text_color(theme.ink_3)
-        .child(text.into().to_uppercase())
+        .flex()
+        .items_center()
+        .h(px(24.))
+        .px(px(10.))
+        .mt(px(8.))
+        .mb(px(2.))
+        .text_size(px(12.))
+        .line_height(px(16.))
+        .font_weight(FontWeight::MEDIUM)
+        .text_color(theme.ink_2)
+        .child(text.into())
 }
 
 /// A popover's title row.
@@ -176,10 +186,11 @@ pub fn header(title: impl Into<SharedString>, trailing: impl IntoElement) -> imp
         .items_center()
         .justify_between()
         .gap(px(12.))
-        .px(px(4.))
-        .pt(px(2.))
-        .pb(px(10.))
-        .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(title.into()))
+        .pt(px(8.))
+        .pr(px(6.))
+        .pb(px(8.))
+        .pl(px(10.))
+        .child(div().text_size(px(15.)).line_height(px(20.)).font_weight(FontWeight::SEMIBOLD).child(title.into()))
         .child(trailing)
 }
 
@@ -193,11 +204,11 @@ pub fn link(id: impl Into<ElementId>, text: impl Into<SharedString>, theme: &The
         .id(id)
         .px(px(8.))
         .py(px(6.))
-        .rounded(px(8.))
+        .rounded(RADIUS_SM)
         .text_size(px(12.5))
         .text_color(theme.ink_2)
         .cursor_pointer()
-        .hover(|s| s.bg(theme.fill_2).text_color(theme.ink))
+        .hover(|s| s.bg(theme.fill_hover).text_color(theme.ink))
         .child(text.into())
 }
 
@@ -215,7 +226,7 @@ pub fn footer(note: impl Into<SharedString>, action: impl IntoElement, theme: &T
 }
 
 pub fn separator(theme: &Theme) -> impl IntoElement {
-    div().h(px(1.)).mx(px(4.)).my(px(8.)).bg(theme.hair)
+    div().h(px(1.)).mx(px(4.)).my(px(8.)).bg(theme.line)
 }
 
 /// A centered message for empty states.
@@ -244,7 +255,7 @@ pub fn media_button(id: impl Into<ElementId>, glyph: Icon, main: bool, theme: &T
         .justify_center()
         .cursor_pointer()
         .when(main, |el| el.bg(theme.ink).text_color(theme.on_ink))
-        .when(!main, |el| el.hover(|s| s.bg(theme.fill_2)))
+        .when(!main, |el| el.hover(|s| s.bg(theme.fill_hover)))
         .child(icon_sized(glyph, if main { 20. } else { 18. }))
 }
 
@@ -263,22 +274,31 @@ pub fn segmented(
         .id(id.clone())
         .relative()
         .flex()
-        .p(px(3.))
-        .rounded(px(11.))
+        .gap(px(2.))
+        .p(px(2.))
+        .rounded(RADIUS_MD)
         .bg(theme.fill)
-        .border_1()
-        .border_color(theme.hair)
         .child(
-            div()
-                .absolute()
-                .top(px(3.))
-                .bottom(px(3.))
-                .w(relative((1. / count as f32) * 0.985))
-                .rounded(px(8.))
-                .bg(theme.fill_3)
-                .with_spring((id.clone(), "thumb"), indicator_spring(theme, selected as f32), move |el, i| {
-                    el.left(relative(0.008 + i / count as f32 * 0.985))
-                }),
+            // The thumb slides across the inner area; its 1 px sides stand in for the gap.
+            div().absolute().top(px(2.)).bottom(px(2.)).left(px(1.)).right(px(1.)).child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .w(relative(1. / count as f32))
+                    .px(px(1.))
+                    .with_spring((id.clone(), "thumb"), indicator_spring(theme, selected as f32), move |el, i| {
+                        el.left(relative(i / count as f32))
+                    })
+                    .child(
+                        div()
+                            .size_full()
+                            .rounded(RADIUS_SM)
+                            .bg(theme.surface)
+                            .border_1()
+                            .border_color(theme.line_strong),
+                    ),
+            ),
         )
         .children(options.iter().enumerate().map(|(i, name)| {
             let on_select = on_select.clone();
@@ -290,7 +310,7 @@ pub fn segmented(
                 .flex()
                 .items_center()
                 .justify_center()
-                .rounded(px(8.))
+                .rounded(RADIUS_SM)
                 .text_size(px(12.))
                 .font_weight(FontWeight::MEDIUM)
                 .cursor_pointer()
@@ -337,25 +357,15 @@ pub fn slider(
         .relative()
         .h(px(28.))
         .w_full()
-        .rounded(px(14.))
-        .bg(theme.slider_track)
-        .border_1()
-        .border_color(theme.hair)
+        .rounded_full()
+        .bg(theme.fill_press)
         .overflow_hidden()
         .cursor_pointer()
         .child(
-            div()
-                .absolute()
-                .top_0()
-                .bottom_0()
-                .left_0()
-                .min_w(px(28.))
-                .w(relative(value))
-                .rounded(px(14.))
-                .bg(theme.slider_fill),
+            div().absolute().top_0().bottom_0().left_0().min_w(px(28.)).w(relative(value)).rounded_full().bg(theme.ink),
         )
         .when_some(glyph, |el, glyph| {
-            el.child(div().absolute().left(px(6.)).top(px(5.)).text_color(theme.slider_icon).child(icon(glyph)))
+            el.child(div().absolute().left(px(6.)).top(px(5.)).text_color(theme.on_ink).child(icon(glyph)))
         })
         .child(
             canvas(
@@ -408,12 +418,12 @@ pub fn pill(id: impl Into<ElementId>, text: impl Into<SharedString>, on: bool, t
         .px(px(10.))
         .flex()
         .items_center()
-        .rounded(px(13.))
+        .rounded_full()
         .text_size(px(12.))
         .cursor_pointer()
         .border_1()
         .when(on, |el| el.bg(theme.accent_soft).text_color(theme.ink).border_color(theme.accent))
-        .when(!on, |el| el.text_color(theme.ink_2).border_color(theme.hair_2))
+        .when(!on, |el| el.text_color(theme.ink_2).border_color(theme.line_strong))
         .child(text.into())
 }
 
@@ -432,15 +442,15 @@ pub fn footer_button(
         .items_center()
         .justify_center()
         .gap(px(7.))
-        .rounded(px(10.))
+        .rounded(RADIUS_SM)
         .text_size(px(12.))
         .font_weight(FontWeight::MEDIUM)
         .text_color(theme.ink_2)
         .bg(theme.fill)
         .border_1()
-        .border_color(theme.hair)
+        .border_color(theme.line)
         .cursor_pointer()
-        .hover(|s| s.bg(theme.fill_2).text_color(theme.ink))
+        .hover(|s| s.bg(theme.fill_hover).text_color(theme.ink))
         .child(icon_sized(glyph, 14.))
         .child(text.into())
 }

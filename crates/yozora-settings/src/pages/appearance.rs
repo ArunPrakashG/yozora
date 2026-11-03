@@ -4,7 +4,7 @@ use gpui::{
     AnyElement, Context, IntoElement, ParentElement, StatefulInteractiveElement, Styled, Window, div, px, rgba,
 };
 use yozora_config::theme::{Accent, Glass, ThemeConfig, ThemeMode};
-use yozora_ui::{Theme, controls::segmented};
+use yozora_ui::{Theme, controls::segmented, theme::RADIUS_XS};
 
 use crate::{
     view::{InputTarget, SettingsView, THEME_FILE},
@@ -45,7 +45,7 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                 .top(px(18.))
                 .w(px(62.))
                 .h(px(46.))
-                .rounded(px(6.))
+                .rounded(RADIUS_XS)
                 .bg(if light { rgba(0xF8FAFDDB) } else { rgba(0x0E131FCC) })
                 .border_1()
                 .border_color(if light { rgba(0x14285A1F) } else { rgba(0xAAC8FF33) }),
@@ -70,7 +70,7 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
     let font_value = view.doc(THEME_FILE).value("font").and_then(|v| v.as_str().map(String::from)).unwrap_or_default();
     let font = view.input(
         "theme-font",
-        "Geist",
+        "Inter",
         false,
         InputTarget::String { file: THEME_FILE.into(), key: "font".into(), secret: false },
         &font_value,

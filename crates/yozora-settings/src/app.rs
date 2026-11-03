@@ -90,7 +90,7 @@ pub fn apply_theme(config: &ThemeConfig, cx: &mut App) {
     let dark = cx.global::<SystemDark>().0;
     // Settings is a normal window; its glass doesn't depend on the bar's blur rule.
     let mut theme = Theme::new(config, dark, false);
-    theme.font = yozora_ui::theme::resolve_font(cx, &config.font);
+    theme.resolve_fonts(cx, &config.font);
     if cx.reduce_motion() {
         theme.motion.reduced = true;
     }

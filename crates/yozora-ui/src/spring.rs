@@ -13,10 +13,11 @@ pub struct SpringConfig {
 }
 
 impl SpringConfig {
-    /// Popovers: about 3.9% overshoot, at rest by about 490 ms.
-    pub const POPOVER: Self = Self { stiffness: 380.0, damping: 28.0 };
-    /// Workspace indicator, switches, highlights.
-    pub const INDICATOR: Self = Self { stiffness: 520.0, damping: 34.0 };
+    /// Popovers: scale 0.98 to 1 and a 6 px drop, about 0.3% overshoot.
+    pub const POP: Self = Self { stiffness: 520.0, damping: 40.0 };
+    /// Everything else that arrives or moves: critically damped, no overshoot. Toasts, the
+    /// workspace pill, switches, stack reflow.
+    pub const SETTLE: Self = Self { stiffness: 700.0, damping: 53.0 };
 }
 
 #[derive(Clone, Debug)]
@@ -126,16 +127,19 @@ mod tests {
     }
 
     #[test]
-    fn popover_spring_overshoots_slightly_and_settles() {
-        let (peak, elapsed) = run(SpringConfig::POPOVER);
-        assert!((1.03..1.045).contains(&peak), "peak {peak}");
-        assert!(elapsed < Duration::from_millis(700), "settled after {elapsed:?}");
+    fn pop_barely_overshoots_and_settle_never_does() {
+        let (peak, elapsed) = run(SpringConfig::POP);
+        assert!((1.0..1.006).contains(&peak), "peak {peak}");
+        assert!(elapsed < Duration::from_millis(600), "settled after {elapsed:?}");
+        let (peak, elapsed) = run(SpringConfig::SETTLE);
+        assert!(peak <= 1.0005, "peak {peak}");
+        assert!(elapsed < Duration::from_millis(600), "settled after {elapsed:?}");
     }
 
     #[test]
     fn motion_is_independent_of_refresh_rate() {
         let sample = |frame_us: u64| {
-            let mut spring = Spring::new(0.0, SpringConfig::POPOVER);
+            let mut spring = Spring::new(0.0, SpringConfig::POP);
             spring.set_target(1.0);
             let frame = Duration::from_micros(frame_us);
             let mut t = Duration::ZERO;
@@ -153,7 +157,7 @@ mod tests {
 
     #[test]
     fn retargeting_keeps_velocity() {
-        let mut spring = Spring::new(0.0, SpringConfig::POPOVER);
+        let mut spring = Spring::new(0.0, SpringConfig::POP);
         spring.set_target(1.0);
         spring.step(Duration::from_millis(50));
         let before = spring.value();
@@ -164,14 +168,14 @@ mod tests {
 
     #[test]
     fn closed_form_matches_stepping() {
-        let mut spring = Spring::new(0.0, SpringConfig::POPOVER);
+        let mut spring = Spring::new(0.0, SpringConfig::POP);
         spring.set_target(1.0);
         for _ in 0..150 {
             spring.step(std::time::Duration::from_millis(1));
         }
-        let closed = step_response(SpringConfig::POPOVER, 0.150);
+        let closed = step_response(SpringConfig::POP, 0.150);
         assert!((spring.value() - closed).abs() < 0.01, "{} vs {closed}", spring.value());
-        let settle = settle_time(SpringConfig::POPOVER).as_millis();
-        assert!((350..700).contains(&settle), "settles in {settle} ms");
+        let settle = settle_time(SpringConfig::POP).as_millis();
+        assert!((200..600).contains(&settle), "settles in {settle} ms");
     }
 }

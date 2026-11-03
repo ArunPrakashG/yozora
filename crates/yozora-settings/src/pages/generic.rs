@@ -10,6 +10,7 @@ use yozora_ui::{
     Icon, Theme,
     controls::{segmented, switch},
     icon_sized,
+    theme::{RADIUS_SM, RADIUS_XS},
 };
 
 use crate::{
@@ -144,13 +145,13 @@ fn field_row(
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(px(9.))
-                    .bg(theme.fill_2)
+                    .rounded(RADIUS_SM)
+                    .bg(theme.fill_hover)
                     .border_1()
-                    .border_color(theme.hair)
+                    .border_color(theme.line)
                     .text_size(px(15.))
                     .cursor_pointer()
-                    .hover(|s| s.bg(theme.fill_3))
+                    .hover(|s| s.bg(theme.fill_press))
                     .child(glyph)
                     .on_click(cx.listener(move |this, _, _, cx| {
                         let next = clamp(n + delta);
@@ -218,8 +219,8 @@ fn field_row(
                                 .h(px(26.))
                                 .pl(px(9.))
                                 .pr(px(4.))
-                                .rounded(px(8.))
-                                .bg(theme.fill_2)
+                                .rounded(RADIUS_SM)
+                                .bg(theme.fill_hover)
                                 .font_family(theme.mono.clone())
                                 .text_size(px(11.5))
                                 .child(item.clone())
@@ -227,13 +228,13 @@ fn field_row(
                                     div()
                                         .id(id(&format!("rm{i}")))
                                         .size(px(18.))
-                                        .rounded(px(5.))
+                                        .rounded(RADIUS_XS)
                                         .flex()
                                         .items_center()
                                         .justify_center()
                                         .text_color(theme.ink_3)
                                         .cursor_pointer()
-                                        .hover(|s| s.bg(theme.fill_3).text_color(theme.ink))
+                                        .hover(|s| s.bg(theme.fill_press).text_color(theme.ink))
                                         .child(icon_sized(Icon::Close, 11.))
                                         .on_click(cx.listener(move |this, _, _, cx| {
                                             let mut items = items.clone();
@@ -261,7 +262,7 @@ fn field_row(
         .min_h(px(58.))
         .px(px(18.))
         .py(px(10.))
-        .when(!first, |el| el.border_t_1().border_color(theme.hair))
+        .when(!first, |el| el.border_t_1().border_color(theme.line))
         .child(
             div()
                 .flex_1()

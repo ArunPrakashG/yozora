@@ -44,7 +44,6 @@ pub enum UiEvent {
     /// Show a toast, or update the one with this id in place.
     Show(Box<Notification>),
     Close(u32),
-    CloseAll,
     /// The center opened: toasts that can time out go to it now.
     ExpireAll,
     /// The screen is being shared, or stopped being.
@@ -176,11 +175,22 @@ struct Center {
 
 #[interface(name = "dev.yozora.Notify1")]
 impl Center {
-    /// Everything in the center but snoozed notifications, newest first, with the same keys as
-    /// mako's `ListHistory` plus `time`, `icon` and `image`.
+    /// Everything in the center, newest first, with the same keys as mako's `ListHistory` plus
+    /// `time`, `icon`, `image`, `pinned`, `snoozed-until` (0 unless snoozed), `unread` and
+    /// `actions` (key, label, key, label… without the default action or inline reply).
     fn list(&self) -> Vec<HashMap<String, OwnedValue>> {
         let inner = self.shared.lock();
-        inner.store.list().filter(|n| n.snoozed_until == 0).map(to_dict).collect()
+        inner
+            .store
+            .list()
+            .map(|n| {
+                let mut d = to_dict(n);
+                if let Ok(v) = Value::from(inner.store.is_unread(n)).try_to_owned() {
+                    d.insert("unread".into(), v);
+                }
+                d
+            })
+            .collect()
     }
 
     /// Do Not Disturb, and whether anything arrived since the center was last opened that's
@@ -197,9 +207,9 @@ impl Center {
         }
     }
 
-    /// Hides a notification for `minutes`, then shows it again.
+    /// Hides a notification for `minutes`, then shows it again. 0 brings it back now.
     async fn snooze(&self, id: u32, minutes: u32, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
-        let until = now() + u64::from(minutes.clamp(1, 7 * 24 * 60)) * 60;
+        let until = if minutes == 0 { 0 } else { now() + u64::from(minutes.min(7 * 24 * 60)) * 60 };
         if self.shared.lock().store.snooze(id, until) {
             self.shared.ui(UiEvent::Close(id));
             let _ = Self::changed(&emitter).await;
@@ -220,13 +230,11 @@ impl Center {
     }
 
     async fn clear_all(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
-        let ids: Vec<u32> = {
-            let mut inner = self.shared.lock();
-            let ids = inner.store.list().map(|n| n.id).collect();
-            inner.store.clear();
-            ids
-        };
-        self.shared.ui(UiEvent::CloseAll);
+        // Pinned notifications stay, and so do their toasts.
+        let ids = self.shared.lock().store.clear();
+        for id in &ids {
+            self.shared.ui(UiEvent::Close(*id));
+        }
         let fdo = SignalEmitter::new(emitter.connection(), FDO_PATH);
         if let Ok(fdo) = fdo {
             for id in ids {
@@ -273,9 +281,11 @@ fn to_dict(n: &Notification) -> HashMap<String, OwnedValue> {
     put("urgency", n.urgency.byte().into());
     put("time", n.time.into());
     put("pinned", n.pinned.into());
+    put("snoozed-until", n.snoozed_until.into());
     put("icon", path(&n.icon).into());
     put("image", path(&n.image).into());
     put("default-action", n.has_action("default").into());
+    put("actions", n.buttons().flat_map(|(k, l)| [k.as_str(), l.as_str()]).collect::<Vec<_>>().into());
     d
 }
 
@@ -546,13 +556,19 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
                 continue;
             }
             Cmd::Tick => {
-                let due = shared.lock().store.due(now());
+                let (due, dnd, config) = {
+                    let mut inner = shared.lock();
+                    (inner.store.due(now()), inner.store.dnd, inner.config.clone())
+                };
                 if due.is_empty() {
                     continue;
                 }
                 for n in due {
-                    tracing::debug!("showing notification {} again", n.id);
-                    shared.ui(UiEvent::Show(Box::new(n)));
+                    // Back in the center either way; a toast only if one would show now.
+                    if should_toast(&n, dnd, &config) {
+                        tracing::debug!("showing notification {} again", n.id);
+                        shared.ui(UiEvent::Show(Box::new(n)));
+                    }
                 }
             }
         }
@@ -664,9 +680,12 @@ fn ipc(request: &yozora_ipc::Request, shared: &Shared) -> Response {
             }
         }
         "clear" => {
-            shared.lock().store.clear();
-            shared.ui(UiEvent::CloseAll);
-            Response::ok()
+            // Through the command loop, so apps hear their notifications closed.
+            let ids: Vec<u32> = shared.lock().store.list().filter(|n| !n.pinned).map(|n| n.id).collect();
+            for id in &ids {
+                let _ = shared.cmds.try_send(Cmd::Dismissed(*id));
+            }
+            Response::data(json!({ "cleared": ids }))
         }
         "quit" => {
             shared.ui(UiEvent::Quit);
