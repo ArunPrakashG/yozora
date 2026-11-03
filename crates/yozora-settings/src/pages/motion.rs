@@ -12,6 +12,7 @@ use yozora_ui::{
     controls::{segmented, switch},
     icon_sized,
     spring::{SpringConfig, settle_time, step_response},
+    theme::{RADIUS_MD, RADIUS_SM},
 };
 
 use crate::{
@@ -25,7 +26,7 @@ pub const SEARCH: &[(&str, &str)] = &[
 ];
 
 /// Crisp, Balanced, Soft: stiffness and damping.
-const FEELS: [(f32, f32); 3] = [(560., 40.), (380., 28.), (220., 20.)];
+const FEELS: [(f32, f32); 3] = [(700., 53.), (520., 40.), (380., 30.)];
 
 const GRAPH_W: f32 = 280.;
 const GRAPH_H: f32 = 150.;
@@ -59,16 +60,16 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
     // The preview popover follows the spring from the last replay.
     let elapsed = view.replay.map(|t| t.elapsed()).unwrap_or(Duration::from_secs(10));
     let progress = if motion.reduced {
-        (elapsed.as_secs_f32() / 0.12).min(1.)
+        (elapsed.as_secs_f32() / 0.1).min(1.)
     } else {
         step_response(spring, elapsed.as_secs_f32())
     };
-    let settled = elapsed > settle_time(spring).max(Duration::from_millis(120));
+    let settled = elapsed > settle_time(spring).max(Duration::from_millis(100));
     if !settled {
         window.request_animation_frame();
     }
 
-    let (accent, hair, ink_3) = (theme.accent, theme.hair, theme.ink_3);
+    let (accent, rule, ink_3) = (theme.accent, theme.line, theme.ink_3);
     let graph = canvas(
         |_, _, _| {},
         move |bounds, _, window, _| {
@@ -80,7 +81,7 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                 line.move_to(at(0., v));
                 line.line_to(at(GRAPH_MS, v));
                 if let Ok(path) = line.build() {
-                    window.paint_path(path, hair);
+                    window.paint_path(path, rule);
                 }
             }
             // A 200 ms ease-out, for comparison.
@@ -99,7 +100,7 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
             line.move_to(at(0., 0.));
             let mut ms = 0.;
             while ms <= GRAPH_MS {
-                let v = if motion.reduced { (ms / 120.).min(1.) } else { step_response(spring, ms / 1000.) };
+                let v = if motion.reduced { (ms / 100.).min(1.) } else { step_response(spring, ms / 1000.) };
                 line.line_to(at(ms, v));
                 ms += 4.;
             }
@@ -121,7 +122,7 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
 
     let lines = |el: gpui::Div, n: usize| {
         el.children((0..n).map(|i| {
-            div().h(px(5.)).rounded(px(3.)).bg(theme.fill_3).when(i % 2 == 1, |el| el.w(gpui::relative(0.58)))
+            div().h(px(5.)).rounded(px(3.)).bg(theme.fill_press).when(i % 2 == 1, |el| el.w(gpui::relative(0.58)))
         }))
     };
     let opacity = progress.clamp(0., 1.);
@@ -134,7 +135,7 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
             card(&theme)
                 .child(setting_row(
                     "Reduce motion",
-                    Some("Springs become a 120 ms fade. Nothing slides or scales.".into()),
+                    Some("Springs become a 100 ms fade. Nothing slides or scales.".into()),
                     switch("reduced", motion.reduced, &theme).on_click(cx.listener(move |this, _, _, cx| {
                         this.edit(THEME_FILE, cx, |d| d.set("motion.reduced", !motion.reduced));
                     })),
@@ -203,11 +204,11 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                         .flex_1()
                         .min_w(px(150.))
                         .h(px(200.))
-                        .rounded(px(12.))
+                        .rounded(RADIUS_MD)
                         .overflow_hidden()
                         .bg(crate::widgets::sky(!theme.dark))
                         .border_1()
-                        .border_color(theme.hair)
+                        .border_color(theme.line)
                         .child(
                             div()
                                 .absolute()
@@ -222,9 +223,9 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                                 .px(px(7.))
                                 .bg(theme.glass_bar)
                                 .border_b_1()
-                                .border_color(theme.hair)
-                                .child(div().w(px(12.)).h(px(5.)).rounded(px(3.)).bg(theme.fill_3))
-                                .child(div().w(px(12.)).h(px(5.)).rounded(px(3.)).bg(theme.fill_3))
+                                .border_color(theme.line)
+                                .child(div().w(px(12.)).h(px(5.)).rounded(px(3.)).bg(theme.fill_press))
+                                .child(div().w(px(12.)).h(px(5.)).rounded(px(3.)).bg(theme.fill_press))
                                 .child(div().size(px(10.)).rounded(px(3.)).bg(theme.accent)),
                         )
                         .child(lines(
@@ -237,10 +238,10 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                                 .flex()
                                 .flex_col()
                                 .gap(px(7.))
-                                .rounded(px(10.))
-                                .bg(theme.glass_pop)
+                                .rounded(RADIUS_SM)
+                                .bg(theme.surface)
                                 .border_1()
-                                .border_color(theme.hair_2)
+                                .border_color(theme.line_strong)
                                 .opacity(opacity),
                             5,
                         ))
@@ -256,12 +257,12 @@ pub fn render(view: &mut SettingsView, window: &mut Window, cx: &mut Context<Set
                                 .h(px(28.))
                                 .pl(px(9.))
                                 .pr(px(11.))
-                                .rounded(px(14.))
+                                .rounded_full()
                                 .text_size(px(12.))
                                 .font_weight(FontWeight::MEDIUM)
-                                .bg(theme.glass_pop)
+                                .bg(theme.surface)
                                 .border_1()
-                                .border_color(theme.hair_2)
+                                .border_color(theme.line_strong)
                                 .cursor_pointer()
                                 .child(icon_sized(Icon::Play, 13.))
                                 .child("Replay")
@@ -293,8 +294,9 @@ mod tests {
 
     #[test]
     fn balanced_matches_the_design() {
-        let c = curve(SpringConfig { stiffness: 380., damping: 28. });
-        assert!((3.0..5.0).contains(&c.overshoot), "{}", c.overshoot);
+        let c = curve(SpringConfig { stiffness: 520., damping: 40. });
+        // Barely any overshoot: popovers settle rather than bounce.
+        assert!(c.overshoot < 1.0, "{}", c.overshoot);
         assert!((150..260).contains(&c.t95_ms), "{}", c.t95_ms);
     }
 }

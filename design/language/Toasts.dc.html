@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Yozora toasts</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8BBEFF}a:hover{color:#B7D6FF}
+.wall-mid{background: radial-gradient(120% 80% at 85% 0%, #1B2A4D 0%, rgba(27,42,77,0) 55%), radial-gradient(90% 70% at 0% 100%, #1A1433 0%, rgba(26,20,51,0) 60%), #070A12;}
+.wall-day{background: radial-gradient(120% 80% at 85% 0%, #FFFFFF 0%, rgba(255,255,255,0) 55%), radial-gradient(90% 70% at 0% 100%, #D6DEF0 0%, rgba(214,222,240,0) 60%), #E4E9F2;}
+.yz-toast .yz-icon-btn{margin: -4px -6px -4px 0}
+.hovered{background: var(--yz-surface)}
+.hovered .yz-icon-btn{background: var(--yz-fill-hover); color: var(--yz-ink)}
+.av{width:32px;height:32px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font:600 12px/1 var(--yz-font);color:#fff}
+.field{flex:1 1 auto;height:32px;border-radius:6px;background:var(--yz-surface-2);border:1px solid var(--yz-accent);box-shadow:0 0 0 3px var(--yz-accent-soft);display:flex;align-items:center;padding:0 10px;font:var(--yz-text-body);color:var(--yz-ink);box-sizing:border-box}
+.bar-strip{height:36px;border-radius:8px;background:var(--yz-glass-bar);border:1px solid var(--yz-line);display:flex;align-items:center;justify-content:space-between;padding:0 12px;box-sizing:border-box}
+</style>
+</helmet>
+<div class="yz-midnight" style="width: 1440px; min-height: 1160px; box-sizing: border-box; padding: 72px 60px; background: #0A0E17; color: var(--yz-ink); display: flex; flex-direction: column; gap: 40px;">
+
+  <header style="display: flex; align-items: flex-end; justify-content: space-between;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <h1 style="margin: 0; font: 600 40px/44px var(--yz-font); letter-spacing: -0.02em;">Toasts</h1>
+      <p style="margin: 0; font: 400 16px/24px var(--yz-font); color: var(--yz-ink-2);">380 wide, top right, newest on top, three at most. Close is always in the same place.</p>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <span class="yz-chip">Normal 6 s</span>
+      <span class="yz-chip">Low 4 s</span>
+      <span class="yz-chip accent">Critical stays</span>
+    </div>
+  </header>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+
+    <section aria-label="Stack, Midnight" class="yz-midnight wall-mid" style="border-radius: 12px; padding: 16px 22px 28px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--yz-line);">
+      <div class="bar-strip"><span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">Stack</span><span style="font: var(--yz-text-num); color: var(--yz-ink);">21:48</span></div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+
+        <article class="yz-toast yz-surface" aria-label="Signal: Priya Raman">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: #3A76F0;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12z"></path></svg></span>
+            <span class="yz-toast-app">Signal <span style="color: var(--yz-ink-3);">· now</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-main">
+            <span class="av" style="background: #7E5BD6;">PR</span>
+            <div class="yz-toast-text">
+              <span class="yz-toast-summary">Priya Raman</span>
+              <span class="yz-toast-body">Are we still on for the review at 4? I moved the room to Kestrel.</span>
+            </div>
+          </div>
+          <div class="yz-toast-actions">
+            <button class="yz-btn grow" type="button">Reply</button>
+            <button class="yz-btn grow" type="button">Mark read</button>
+          </div>
+          <i class="yz-toast-timer" style="width: 100%; transform: scaleX(0.82);"></i>
+        </article>
+
+        <article class="yz-toast yz-surface hovered" aria-label="GitHub: CI passed, hovered">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: #2B3240;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></span>
+            <span class="yz-toast-app">GitHub <span style="color: var(--yz-ink-3);">· 1 min</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-text">
+            <span class="yz-toast-summary">CI passed on #28</span>
+            <span class="yz-toast-body">Rebuild notifications on the new tokens · 4 checks in 3 m 12 s</span>
+          </div>
+          <i class="yz-toast-timer" style="width: 100%; transform: scaleX(0.46); opacity: 0.25;"></i>
+        </article>
+
+        <article class="yz-toast yz-surface" aria-label="Firefox: download complete">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: #E8590C;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M6 11l6 6 6-6M5 20h14"></path></svg></span>
+            <span class="yz-toast-app">Firefox <span style="color: var(--yz-ink-3);">· 2 min</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-text">
+            <span class="yz-toast-summary">Download complete</span>
+            <span class="yz-toast-body">hyprland-0.56.2.tar.gz · 14.8 MB</span>
+          </div>
+          <i class="yz-toast-timer" style="width: 100%; transform: scaleX(0.21);"></i>
+        </article>
+
+        <button class="yz-chip" type="button" style="align-self: flex-end; border: 1px solid var(--yz-line-strong); background: var(--yz-surface); cursor: pointer;">2 more</button>
+      </div>
+    </section>
+
+    <section aria-label="States, Midnight" class="yz-midnight wall-mid" style="border-radius: 12px; padding: 16px 22px 28px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--yz-line);">
+      <div class="bar-strip"><span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">States</span><span style="font: var(--yz-text-num); color: var(--yz-ink);">21:48</span></div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+
+        <article class="yz-toast yz-surface" aria-label="Signal: replying">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: #3A76F0;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12z"></path></svg></span>
+            <span class="yz-toast-app">Signal <span style="color: var(--yz-ink-3);">· now</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-main">
+            <span class="av" style="background: #7E5BD6;">PR</span>
+            <div class="yz-toast-text">
+              <span class="yz-toast-summary">Priya Raman</span>
+              <span class="yz-toast-body">Are we still on for the review at 4?</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <label class="field" for="reply">
+              <span id="reply" style="flex: 1 1 auto;">Yes, see you there<span style="display: inline-block; width: 1px; height: 14px; background: var(--yz-accent); vertical-align: -2px; margin-left: 1px;"></span></span>
+            </label>
+            <button class="yz-btn primary" type="button" aria-label="Send" style="width: 32px; padding: 0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+          </div>
+        </article>
+
+        <article class="yz-toast yz-surface" aria-label="Firefox: downloading, 64 percent">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: #E8590C;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M6 11l6 6 6-6M5 20h14"></path></svg></span>
+            <span class="yz-toast-app">Firefox <span style="color: var(--yz-ink-3);">· now</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-text">
+            <span class="yz-toast-summary">Downloading yozora-git.pkg.tar.zst</span>
+            <span class="yz-toast-body">34 of 52 MB</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div role="progressbar" aria-valuenow="64" aria-label="Download progress" style="flex: 1 1 auto; height: 4px; border-radius: 2px; background: var(--yz-fill-press); overflow: hidden;"><div style="width: 64%; height: 100%; background: var(--yz-accent); border-radius: 2px;"></div></div>
+            <span style="font: var(--yz-text-num); color: var(--yz-ink-2);">64%</span>
+          </div>
+        </article>
+
+        <article class="yz-toast yz-surface critical" aria-label="Critical: disk almost full">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: var(--yz-danger); color: var(--yz-accent-ink);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><path d="M12 6v7M12 18v.5"></path></svg></span>
+            <span class="yz-toast-app">System <span style="color: var(--yz-ink-3);">· now</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-text">
+            <span class="yz-toast-summary">Disk almost full</span>
+            <span class="yz-toast-body">/ has 1.2 GB left. Builds and updates will start failing.</span>
+          </div>
+          <div class="yz-toast-actions">
+            <button class="yz-btn grow" type="button">Open Disk Usage</button>
+          </div>
+        </article>
+
+        <article class="yz-toast yz-surface" aria-label="Signal: content hidden while sharing">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: #3A76F0;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12z"></path></svg></span>
+            <span class="yz-toast-app">Signal <span style="color: var(--yz-ink-3);">· now</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--yz-ink-3);"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg>
+            <span style="font: var(--yz-text-body); color: var(--yz-ink-2);">Hidden while you share your screen</span>
+          </div>
+          <i class="yz-toast-timer" style="width: 100%; transform: scaleX(0.7);"></i>
+        </article>
+      </div>
+    </section>
+
+    <section aria-label="Stack, Daybreak" class="yz-daybreak wall-day" style="border-radius: 12px; padding: 16px 22px 28px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--yz-line); color: var(--yz-ink);">
+      <div class="bar-strip"><span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">Daybreak</span><span style="font: var(--yz-text-num); color: var(--yz-ink);">09:12</span></div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+
+        <article class="yz-toast yz-surface" aria-label="Signal: Priya Raman">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: #3A76F0;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12z"></path></svg></span>
+            <span class="yz-toast-app">Signal <span style="color: var(--yz-ink-3);">· now</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-main">
+            <span class="av" style="background: #7E5BD6;">PR</span>
+            <div class="yz-toast-text">
+              <span class="yz-toast-summary">Priya Raman</span>
+              <span class="yz-toast-body">Are we still on for the review at 4? I moved the room to Kestrel.</span>
+            </div>
+          </div>
+          <div class="yz-toast-actions">
+            <button class="yz-btn grow" type="button">Reply</button>
+            <button class="yz-btn grow" type="button">Mark read</button>
+          </div>
+          <i class="yz-toast-timer" style="width: 100%; transform: scaleX(0.82);"></i>
+        </article>
+
+        <article class="yz-toast yz-surface" aria-label="Calendar: design review in 10 minutes">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: #0B7562;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M4 10h16"></path></svg></span>
+            <span class="yz-toast-app">Calendar <span style="color: var(--yz-ink-3);">· 3 min</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-text">
+            <span class="yz-toast-summary">Design review in 10 minutes</span>
+            <span class="yz-toast-body">Kestrel · 16:00 to 16:30</span>
+          </div>
+          <div class="yz-toast-actions">
+            <button class="yz-btn primary grow" type="button">Join</button>
+            <button class="yz-btn grow" type="button">Snooze 5 min</button>
+          </div>
+          <i class="yz-toast-timer" style="width: 100%; transform: scaleX(0.5);"></i>
+        </article>
+
+        <article class="yz-toast yz-surface critical" aria-label="Critical: disk almost full">
+          <div class="yz-toast-head">
+            <span class="yz-app-glyph" style="background: var(--yz-danger);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><path d="M12 6v7M12 18v.5"></path></svg></span>
+            <span class="yz-toast-app">System <span style="color: var(--yz-ink-3);">· now</span></span>
+            <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div class="yz-toast-text">
+            <span class="yz-toast-summary">Disk almost full</span>
+            <span class="yz-toast-body">/ has 1.2 GB left.</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <section aria-label="Anatomy" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; border-top: 1px solid var(--yz-line); padding-top: 28px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font: var(--yz-text-strong);">Head, 20 px</span><span style="font: var(--yz-text-body); color: var(--yz-ink-2);">App glyph, app name and age, close. Close never moves and never hides.</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font: var(--yz-text-strong);">Body</span><span style="font: var(--yz-text-body); color: var(--yz-ink-2);">Avatar or image only when the app sends one. Summary one line, body three.</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font: var(--yz-text-strong);">Actions</span><span style="font: var(--yz-text-body); color: var(--yz-ink-2);">Up to three, equal width. Reply opens a field in place. Clicking the card runs the default action.</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font: var(--yz-text-strong);">Timer, 2 px</span><span style="font: var(--yz-text-body); color: var(--yz-ink-2);">Drains on the wall clock. Hover pauses and dims it; leaving resumes with what was left, at least 1.5 s.</span></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

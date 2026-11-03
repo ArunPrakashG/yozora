@@ -56,6 +56,12 @@ pub struct Notification {
     /// Clicking it opens something in the app.
     pub default_action: bool,
     pub pinned: bool,
+    /// Buttons, as key and label, without the default action. Yozora Notify only.
+    pub actions: Vec<(String, String)>,
+    /// Unix seconds when a snoozed notification comes back, or 0.
+    pub snoozed_until: u64,
+    /// Arrived since the center was last opened.
+    pub unread: bool,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -77,8 +83,11 @@ pub enum Cmd {
     Activate(u32),
     /// Pins or unpins one. Yozora Notify only.
     Pin(u32, bool),
-    /// Hides one for this many minutes, then shows it again. Yozora Notify only.
+    /// Hides one for this many minutes, then shows it again; 0 brings it back now. Yozora
+    /// Notify only.
     Snooze(u32, u32),
+    /// Runs one of a notification's buttons. Yozora Notify only.
+    Action(u32, String),
 }
 
 pub fn start(cx: &mut App, fake: bool) -> Entity<Notifications> {
@@ -166,6 +175,14 @@ fn parse(list: Vec<HashMap<String, OwnedValue>>) -> Vec<Notification> {
                 seen: dbus::get::<u64>(&n, "time").filter(|t| *t > 0),
                 default_action: dbus::get(&n, "default-action").unwrap_or(false),
                 pinned: dbus::get(&n, "pinned").unwrap_or(false),
+                actions: dbus::get::<Vec<String>>(&n, "actions")
+                    .unwrap_or_default()
+                    .chunks(2)
+                    .filter(|c| c.len() == 2)
+                    .map(|c| (c[0].clone(), c[1].clone()))
+                    .collect(),
+                snoozed_until: dbus::get(&n, "snoozed-until").unwrap_or(0),
+                unread: dbus::get(&n, "unread").unwrap_or(false),
             }
         })
         .collect()
@@ -224,6 +241,9 @@ async fn snapshot(conn: &Connection, saved: &mut Saved, first: bool) -> anyhow::
     }
     items.retain(|n| saved.visible(n.id));
     items.sort_by_key(|n| std::cmp::Reverse(n.id));
+    for n in &mut items {
+        n.unread = n.id > saved.last_read;
+    }
     Ok(State {
         unread: items.iter().any(|n| n.id > saved.last_read),
         items,
@@ -275,6 +295,9 @@ async fn run_yozora(link: &Link<State, Cmd>, conn: &Connection) -> anyhow::Resul
                     Cmd::Pin(id, on) => dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "Pin", &(id, on)).await?,
                     Cmd::Snooze(id, minutes) => {
                         dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "Snooze", &(id, minutes)).await?
+                    }
+                    Cmd::Action(id, key) => {
+                        dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "InvokeAction", &(id, key.as_str())).await?
                     }
                 }
             }
@@ -329,7 +352,7 @@ async fn run_mako(link: &Link<State, Cmd>, conn: &Connection) -> anyhow::Result<
                     saved.save();
                 }
                 // mako runs actions from its own popups only, and has no pins or snoozes.
-                Cmd::Activate(_) | Cmd::Pin(..) | Cmd::Snooze(..) => {}
+                Cmd::Activate(_) | Cmd::Pin(..) | Cmd::Snooze(..) | Cmd::Action(..) => {}
             },
         }
         link.publish(snapshot(&conn, &mut saved, false).await?);
@@ -348,17 +371,25 @@ fn run_fake(link: Link<State, Cmd>) {
         icon_path: None,
         urgency: 1,
         seen: Some(t - ago),
+        unread: ago < 600,
         ..Default::default()
     };
     let mut state = State {
         items: vec![
+            Notification {
+                pinned: true,
+                ..n(9, "Calendar", "Ship the notifications rebuild", "Due Friday 18:00", 7200)
+            },
+            n(8, "Signal", "Priya Raman", "Are we still on for the review at 4? I moved the room to Kestrel.", 20),
             n(7, "Signal", "Sam", "Are you still coming at 5? I'm outside", 60),
-            n(6, "Slack", "Deploy failed", "prod-api: rollout stuck, 3/8 pods crashlooping", 300),
-            n(4, "Terminal", "Build finished", "yozora-bar · 0 warnings", 120),
-            n(3, "Firefox", "Download complete", "hyprland-0.56.2.tar.gz", 720),
-            n(5, "Steam", "Summer Sale", "Up to 90% off", 1800),
-            n(2, "Software Update", "Updates available", "14 packages can be upgraded", 3600),
-            n(1, "Syncthing", "Folder up to date", "Projects/yozora", 3 * 3600),
+            n(6, "Signal", "Priya Raman", "Sent a photo", 400),
+            Notification {
+                actions: vec![("join".into(), "Join".into()), ("later".into(), "Snooze 5 min".into())],
+                ..n(5, "Calendar", "Design review in 10 minutes", "Kestrel · 16:00 to 16:30", 180)
+            },
+            n(4, "GitHub", "CI passed on #28", "Rebuild notifications on the new tokens · 4 checks in 3 m 12 s", 70),
+            n(3, "Firefox", "Download complete", "hyprland-0.56.2.tar.gz · 14.8 MB", 120),
+            Notification { snoozed_until: t + 1800, ..n(2, "Calendar", "Standup notes", "", 3600) },
         ],
         dnd: false,
         unread: true,
@@ -370,8 +401,16 @@ fn run_fake(link: Link<State, Cmd>) {
             Cmd::SetDnd(on) => state.dnd = on,
             Cmd::Dismiss(id) => state.items.retain(|n| n.id != id),
             Cmd::ClearAll => state.items.clear(),
-            Cmd::MarkRead => state.unread = false,
-            Cmd::Activate(id) | Cmd::Snooze(id, _) => state.items.retain(|n| n.id != id),
+            Cmd::MarkRead => {
+                state.unread = false;
+                state.items.iter_mut().for_each(|n| n.unread = false);
+            }
+            Cmd::Activate(id) | Cmd::Action(id, _) => state.items.retain(|n| n.id != id),
+            Cmd::Snooze(id, minutes) => {
+                if let Some(n) = state.items.iter_mut().find(|n| n.id == id) {
+                    n.snoozed_until = if minutes == 0 { 0 } else { now() + u64::from(minutes) * 60 };
+                }
+            }
             Cmd::Pin(id, on) => {
                 if let Some(n) = state.items.iter_mut().find(|n| n.id == id) {
                     n.pinned = on;

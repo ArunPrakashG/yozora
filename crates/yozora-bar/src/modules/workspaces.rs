@@ -1,10 +1,10 @@
 //! Workspace buttons with a sprung indicator, and the focused window's title.
 
 use gpui::{
-    AnyElement, Context, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString, Styled,
-    Window, div, prelude::*, px,
+    AnyElement, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled, Window, div, prelude::*,
+    px,
 };
-use yozora_ui::{Icon, Theme, icon_sized};
+use yozora_ui::Theme;
 
 use crate::{
     app::Config,
@@ -12,9 +12,8 @@ use crate::{
     services::{Services, hyprland},
 };
 
-const SLOT: f32 = 28.;
-const GAP: f32 = 2.;
-const PAD: f32 = 3.;
+const DOT: f32 = 6.;
+const PILL: f32 = 20.;
 
 /// Workspace ids shown on `bar`'s monitor, in order.
 pub fn slots(bar: &Bar, cx: &gpui::App) -> Vec<i32> {
@@ -57,33 +56,33 @@ pub fn render(bar: &mut Bar, theme: &Theme, window: &mut Window, cx: &mut Contex
     let active = state.monitor(&bar.monitor).map(|m| m.active_workspace);
     let target = active.and_then(|a| ids.iter().position(|&id| id == a));
     let pos = bar.indicator_position(target, theme.motion.reduced, window, cx);
-    let current = target.unwrap_or(usize::MAX);
-    let (fill_2, accent_glow) = (theme.fill_2, theme.accent_glow());
-
     let buttons = ids.iter().enumerate().map(|(i, &id)| {
-        let cur = i == current;
+        // The current one is a 20 px accent pill; it stretches and shrinks between dots as the
+        // indicator spring moves.
+        let near = (1. - (pos - i as f32).abs()).max(0.);
         let occupied = state.occupied(id);
         let hypr = hypr.clone();
         div()
             .id(("workspace", i))
-            .relative()
-            .w(px(SLOT))
-            .h(px(20.))
-            .rounded(px(7.))
+            .h(px(26.))
+            .px(px(2.))
             .flex()
             .items_center()
-            .justify_center()
-            .text_size(px(12.))
-            .font_weight(FontWeight::SEMIBOLD)
-            .text_color(if cur {
-                theme.accent_ink
-            } else if occupied {
-                theme.ink
-            } else {
-                theme.ink_3
-            })
-            .when(!cur, |el| el.hover(move |s| s.bg(fill_2)))
-            .child(SharedString::from(id.to_string()))
+            .cursor_pointer()
+            .child(
+                div()
+                    .h(px(DOT))
+                    .w(px(DOT + (PILL - DOT) * near))
+                    .rounded_full()
+                    .bg(if near > 0.5 {
+                        theme.accent
+                    } else if occupied {
+                        theme.ink_2
+                    } else {
+                        theme.ink_3
+                    })
+                    .when(near <= 0.5, |el| el.hover(|s| s.bg(theme.ink))),
+            )
             .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                 hypr.read(cx).send(hyprland::Cmd::Workspace(id));
             })
@@ -93,24 +92,9 @@ pub fn render(bar: &mut Bar, theme: &Theme, window: &mut Window, cx: &mut Contex
     Some(
         div()
             .id("workspaces")
-            .relative()
             .flex()
-            .gap(px(GAP))
-            .p(px(PAD))
-            .mx(px(4.))
-            .rounded(px(10.))
-            .bg(theme.fill)
-            .child(
-                div()
-                    .absolute()
-                    .top(px(PAD))
-                    .left(px(PAD + pos * (SLOT + GAP)))
-                    .w(px(SLOT))
-                    .h(px(20.))
-                    .rounded(px(7.))
-                    .bg(theme.accent)
-                    .shadow(accent_glow),
-            )
+            .items_center()
+            .px(px(2.))
             .children(buttons)
             .on_scroll_wheel(move |e, _, cx| {
                 let dy = match e.delta {
@@ -130,38 +114,28 @@ pub fn render(bar: &mut Bar, theme: &Theme, window: &mut Window, cx: &mut Contex
     )
 }
 
-/// The focused window on this monitor: app icon, title and class.
+/// The focused window on this monitor: its app and title.
 pub fn window_title(bar: &mut Bar, theme: &Theme, cx: &mut Context<Bar>) -> Option<AnyElement> {
     let hypr = Services::get(cx).hyprland.clone()?;
     let state = &hypr.read(cx).state;
     let max = Config::get(cx).settings.bar.window.max_length;
     let Some(w) = state.window_on(&bar.monitor) else {
         let label = format!("Workspace {}", state.monitor(&bar.monitor)?.active_workspace);
-        return Some(div().px(px(6.)).text_color(theme.ink_2).child(label).into_any_element());
+        return Some(div().px(px(8.)).text_size(px(12.)).text_color(theme.ink_2).child(label).into_any_element());
     };
     let (title, class) = split_title(&w.title, &w.class);
+    let title = super::ellipsize(&title, max);
     Some(
         div()
-            .flex()
-            .items_center()
-            .gap(px(9.))
-            .px(px(4.))
+            .px(px(8.))
             .min_w_0()
-            .overflow_hidden()
-            .child(
-                div()
-                    .size(px(20.))
-                    .flex_none()
-                    .rounded(px(6.))
-                    .bg(theme.fill_2)
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .text_color(theme.accent)
-                    .child(icon_sized(Icon::App, 13.)),
-            )
-            .child(div().font_weight(FontWeight::MEDIUM).flex_none().child(super::ellipsize(&title, max)))
-            .when_some(class, |el, c| el.child(div().text_color(theme.ink_2).truncate().child(format!("— {c}"))))
+            .truncate()
+            .text_size(px(12.))
+            .text_color(theme.ink_2)
+            .child(match class {
+                Some(app) => format!("{app} · {title}"),
+                None => title,
+            })
             .into_any_element(),
     )
 }

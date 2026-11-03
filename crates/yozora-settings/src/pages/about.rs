@@ -4,7 +4,7 @@ use gpui::{
     AnyElement, Context, FontWeight, IntoElement, ParentElement, StatefulInteractiveElement, Styled, div,
     prelude::FluentBuilder, px,
 };
-use yozora_ui::{Icon, Theme, icon_sized};
+use yozora_ui::{Icon, Theme, icon_sized, theme::RADIUS_LG};
 
 use crate::{
     apps::{self, AppEntry, Status},
@@ -92,15 +92,14 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                     div()
                         .size(px(72.))
                         .flex_none()
-                        .rounded(px(20.))
+                        .rounded(RADIUS_LG)
                         .flex()
                         .items_center()
                         .justify_center()
                         .bg(theme.midnight)
                         .text_color(theme.accent)
                         .border_1()
-                        .border_color(theme.hair_2)
-                        .shadow(theme.accent_glow())
+                        .border_color(theme.line_strong)
                         .child(icon_sized(Icon::Logo, 36.)),
                 )
                 .child(

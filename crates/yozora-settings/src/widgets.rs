@@ -4,7 +4,10 @@ use gpui::{
     Div, ElementId, FontWeight, Hsla, InteractiveElement, IntoElement, ParentElement, Rgba, SharedString, Stateful,
     Styled, div, linear_color_stop, linear_gradient, prelude::FluentBuilder, px, rgba,
 };
-use yozora_ui::{Icon, Theme, icon_sized};
+use yozora_ui::{
+    Icon, Theme, icon_sized,
+    theme::{RADIUS_LG, RADIUS_SM, RADIUS_XL},
+};
 
 /// The small uppercase label above a group of settings.
 pub fn group_label(text: impl Into<SharedString>, first: bool, theme: &Theme) -> Div {
@@ -19,7 +22,7 @@ pub fn group_label(text: impl Into<SharedString>, first: bool, theme: &Theme) ->
 }
 
 pub fn card(theme: &Theme) -> Div {
-    div().flex().flex_col().rounded(px(14.)).bg(theme.fill).border_1().border_color(theme.hair)
+    div().flex().flex_col().rounded(RADIUS_XL).bg(theme.fill).border_1().border_color(theme.line)
 }
 
 /// A setting: title and help on the left, its control on the right.
@@ -37,7 +40,7 @@ pub fn setting_row(
         .min_h(px(58.))
         .px(px(18.))
         .py(px(10.))
-        .when(!first, |el| el.border_t_1().border_color(theme.hair))
+        .when(!first, |el| el.border_t_1().border_color(theme.line))
         .child(text_block(title, help, theme))
         .child(control)
 }
@@ -68,12 +71,12 @@ pub fn option_card(
         .flex_1()
         .min_w_0()
         .p(px(8.))
-        .rounded(px(14.))
+        .rounded(RADIUS_LG)
         .bg(theme.fill)
         .cursor_pointer()
-        .hover(|s| s.bg(theme.fill_2))
+        .hover(|s| s.bg(theme.fill_hover))
         .border_2()
-        .border_color(if selected { theme.accent } else { theme.hair })
+        .border_color(if selected { theme.accent } else { theme.line })
         .child(thumb)
         .child(
             div()
@@ -100,7 +103,6 @@ pub fn option_card(
                     .justify_center()
                     .bg(theme.accent)
                     .text_color(theme.accent_ink)
-                    .shadow(theme.accent_glow())
                     .child(icon_sized(Icon::Check, 12.)),
             )
         })
@@ -138,7 +140,7 @@ pub fn mini_bar(floating: bool, light: bool, accent: Rgba) -> Div {
 }
 
 pub fn thumb(light: bool) -> Div {
-    div().relative().h(px(92.)).rounded(px(9.)).overflow_hidden().bg(sky(light))
+    div().relative().h(px(92.)).rounded(RADIUS_SM).overflow_hidden().bg(sky(light))
 }
 
 /// An accent swatch with a ring and check when selected.
@@ -183,12 +185,14 @@ pub fn button(
         .gap(px(7.))
         .h(px(32.))
         .px(px(13.))
-        .rounded(px(9.))
+        .rounded(RADIUS_SM)
         .text_size(px(12.5))
         .font_weight(FontWeight::MEDIUM)
         .cursor_pointer()
         .when(primary, |el| el.bg(theme.accent).text_color(theme.accent_ink))
-        .when(!primary, |el| el.bg(theme.fill_2).border_1().border_color(theme.hair).hover(|s| s.bg(theme.fill_3)))
+        .when(!primary, |el| {
+            el.bg(theme.fill_hover).border_1().border_color(theme.line).hover(|s| s.bg(theme.fill_press))
+        })
         .when_some(glyph, |el, g| el.child(icon_sized(g, 14.)))
         .child(text.into())
 }
@@ -203,7 +207,7 @@ pub fn link(id: impl Into<ElementId>, text: impl Into<SharedString>, theme: &The
         .gap(px(4.))
         .px(px(8.))
         .py(px(6.))
-        .rounded(px(8.))
+        .rounded(RADIUS_SM)
         .text_size(px(13.))
         .text_color(theme.accent)
         .cursor_pointer()
@@ -230,15 +234,15 @@ pub fn notice(
         .gap(px(12.))
         .items_start()
         .p(px(14.))
-        .rounded(px(14.))
+        .rounded(RADIUS_XL)
         .bg(theme.fill)
         .border_1()
-        .border_color(if danger { theme.danger } else { theme.hair })
+        .border_color(if danger { theme.danger } else { theme.line })
         .child(
             div()
                 .size(px(30.))
                 .flex_none()
-                .rounded(px(9.))
+                .rounded(RADIUS_SM)
                 .flex()
                 .items_center()
                 .justify_center()

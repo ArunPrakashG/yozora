@@ -40,7 +40,7 @@ pub struct SpringParams {
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Motion {
-    /// Replaces every spring with a 120 ms fade.
+    /// Replaces every spring with a 100 ms fade.
     pub reduced: bool,
     pub popover: SpringParams,
     pub indicator: SpringParams,
@@ -50,8 +50,8 @@ impl Default for Motion {
     fn default() -> Self {
         Self {
             reduced: false,
-            popover: SpringParams { stiffness: 380.0, damping: 28.0 },
-            indicator: SpringParams { stiffness: 520.0, damping: 34.0 },
+            popover: SpringParams { stiffness: 520.0, damping: 40.0 },
+            indicator: SpringParams { stiffness: 700.0, damping: 53.0 },
         }
     }
 }
@@ -75,7 +75,7 @@ impl Default for ThemeConfig {
             theme: ThemeMode::default(),
             accent: Accent::default(),
             glass: Glass::default(),
-            font: "Geist".into(),
+            font: "Inter".into(),
             motion: Motion::default(),
         }
     }

@@ -208,7 +208,7 @@ impl Pop {
             Pop::Battery => 296.,
             Pop::Notifications => 380.,
             Pop::Calendar => 308.,
-            Pop::ControlCenter => 344.,
+            Pop::ControlCenter => 380.,
             Pop::Tray(_) => 260.,
             Pop::Module(_) => 320.,
         })
@@ -282,18 +282,6 @@ pub struct PopUi {
     pub expanded: std::collections::BTreeSet<String>,
     /// A `module/<name>` action waiting for confirmation.
     pub module_confirm: Option<module::Pending>,
-}
-
-/// "3m", "2h", "4d": how long ago, from Unix seconds.
-pub fn ago(seen: u64) -> String {
-    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
-    let s = now.saturating_sub(seen);
-    match s {
-        0..60 => "now".into(),
-        60..3600 => format!("{}m", s / 60),
-        3600..86400 => format!("{}h", s / 3600),
-        _ => format!("{}d", s / 86400),
-    }
 }
 
 /// Shortens `s` to `max` characters with an ellipsis.

@@ -8,6 +8,7 @@ use yozora_config::bar::BarConfig;
 use yozora_ui::{
     Icon, Theme,
     controls::{segmented, switch},
+    theme::{RADIUS_LG, RADIUS_SM},
 };
 
 use crate::{
@@ -81,12 +82,11 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
             .top(px(offset_y + (m.y - min_y) as f32 * scale))
             .w(px(w))
             .h(px(h))
-            .rounded(px(8.))
+            .rounded(RADIUS_SM)
             .overflow_hidden()
             .bg(theme.midnight)
             .border_2()
-            .border_color(if is_selected { theme.accent } else { theme.hair_2 })
-            .when(is_selected, |el| el.shadow(theme.accent_glow()))
+            .border_color(if is_selected { theme.accent } else { theme.line_strong })
             .cursor_pointer()
             .child(
                 div()
@@ -150,10 +150,10 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
             div()
                 .relative()
                 .h(px(196.))
-                .rounded(px(14.))
+                .rounded(RADIUS_LG)
                 .bg(theme.fill)
                 .border_1()
-                .border_color(theme.hair)
+                .border_color(theme.line)
                 .flex()
                 .items_center()
                 .justify_center()

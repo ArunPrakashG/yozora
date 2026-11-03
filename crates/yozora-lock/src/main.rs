@@ -217,7 +217,7 @@ fn run(o: Options) -> ExitCode {
     let failed_in_app = failed.clone();
     application().with_assets(yozora_ui::Assets).with_quit_mode(gpui::QuitMode::Explicit).run(move |cx: &mut App| {
         let mut theme = Theme::new(&settings.theme, dark, false);
-        theme.font = yozora_ui::theme::resolve_font(cx, &settings.theme.font);
+        theme.resolve_fonts(cx, &settings.theme.font);
         if cx.reduce_motion() {
             theme.motion.reduced = true;
         }

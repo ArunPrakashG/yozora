@@ -18,6 +18,7 @@ use yozora_ui::{
     controls::indicator_spring,
     icon_sized,
     input::{InputEvent, TextInput},
+    theme::{RADIUS_LG, RADIUS_MD, RADIUS_SM, RADIUS_XS},
 };
 
 use crate::{
@@ -479,7 +480,7 @@ impl SettingsView {
             .pb(px(18.))
             .bg(side_bg)
             .border_r_1()
-            .border_color(theme.hair)
+            .border_color(theme.line)
             .child(
                 div()
                     .flex()
@@ -491,15 +492,14 @@ impl SettingsView {
                         div()
                             .size(px(32.))
                             .flex_none()
-                            .rounded(px(9.))
+                            .rounded(RADIUS_SM)
                             .flex()
                             .items_center()
                             .justify_center()
                             .bg(theme.midnight)
                             .text_color(theme.accent)
                             .border_1()
-                            .border_color(theme.hair_2)
-                            .shadow(theme.accent_glow())
+                            .border_color(theme.line_strong)
                             .child(icon_sized(Icon::Logo, 17.)),
                     )
                     .child(
@@ -523,9 +523,9 @@ impl SettingsView {
                         .top(px(7.))
                         .px(px(6.))
                         .py(px(1.))
-                        .rounded(px(5.))
+                        .rounded(RADIUS_XS)
                         .border_1()
-                        .border_color(theme.hair_2)
+                        .border_color(theme.line_strong)
                         .text_size(px(11.))
                         .text_color(theme.ink_3)
                         .child("Ctrl F"),
@@ -541,10 +541,10 @@ impl SettingsView {
                     div()
                         .mt(px(12.))
                         .p(px(12.))
-                        .rounded(px(12.))
+                        .rounded(RADIUS_MD)
                         .bg(theme.fill)
                         .border_1()
-                        .border_color(theme.hair)
+                        .border_color(theme.line)
                         .font_family(theme.mono.clone())
                         .child(
                             div()
@@ -593,7 +593,7 @@ impl SettingsView {
                     .h(px(ITEM))
                     .mb(px(GAP))
                     .px(px(10.))
-                    .rounded(px(9.))
+                    .rounded(RADIUS_SM)
                     .text_size(px(13.5))
                     .cursor_pointer()
                     .text_color(if on { theme.ink } else { theme.ink_2 })
@@ -665,7 +665,7 @@ impl SettingsView {
                         .left_0()
                         .right_0()
                         .h(px(ITEM))
-                        .rounded(px(9.))
+                        .rounded(RADIUS_SM)
                         .bg(theme.accent_soft)
                         .border_1()
                         .border_color(with_alpha(theme.accent, 0x42))
@@ -714,7 +714,7 @@ impl SettingsView {
                     .gap(px(1.))
                     .px(px(10.))
                     .py(px(7.))
-                    .rounded(px(9.))
+                    .rounded(RADIUS_SM)
                     .cursor_pointer()
                     // The first is what Enter opens.
                     .when(i == 0, |el| el.bg(theme.fill))
@@ -735,12 +735,12 @@ impl SettingsView {
                 .gap(px(8.))
                 .h(px(28.))
                 .px(px(12.))
-                .rounded(px(14.))
+                .rounded_full()
                 .text_size(px(12.))
                 .text_color(theme.ink_2)
                 .bg(theme.fill)
                 .border_1()
-                .border_color(theme.hair)
+                .border_color(theme.line)
                 .when_some(dot, |el, color| el.child(div().size(px(6.)).rounded_full().bg(color)))
                 .child(text)
         };
@@ -835,10 +835,10 @@ impl SettingsView {
                 .max_h_full()
                 .flex()
                 .flex_col()
-                .rounded(px(14.))
+                .rounded(RADIUS_LG)
                 .bg(code_bg)
                 .border_1()
-                .border_color(theme.hair)
+                .border_color(theme.line)
                 .overflow_hidden()
                 .font_family(theme.mono.clone())
                 .child(
@@ -850,7 +850,7 @@ impl SettingsView {
                         .h(px(38.))
                         .px(px(14.))
                         .border_b_1()
-                        .border_color(theme.hair)
+                        .border_color(theme.line)
                         .text_size(px(11.5))
                         .text_color(theme.ink_2)
                         .child(div().text_color(theme.ink).font_weight(FontWeight::MEDIUM).child(file))
@@ -978,7 +978,7 @@ impl SettingsView {
             .h(px(56.))
             .px(px(40.))
             .border_t_1()
-            .border_color(theme.hair)
+            .border_color(theme.line)
             .child(left)
             .when_some(file, |el, file| {
                 let open_path = self.config_dir.join(&file);

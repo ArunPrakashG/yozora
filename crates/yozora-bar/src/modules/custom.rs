@@ -30,7 +30,7 @@ pub fn render(name: &str, theme: &Theme, cx: &App) -> Option<AnyElement> {
         Some(e) if output.tooltip.is_empty() => e.clone(),
         _ => output.tooltip.clone(),
     };
-    let fill_2 = theme.fill_2;
+    let fill_hover = theme.fill_hover;
     let bounds = Rc::new(Cell::new(gpui::Bounds::default()));
     let track = bounds.clone();
     Some(
@@ -38,7 +38,7 @@ pub fn render(name: &str, theme: &Theme, cx: &App) -> Option<AnyElement> {
             .relative()
             .text_color(color)
             .text_size(px(12.5))
-            .when(on_click.is_some(), |el| el.cursor_pointer().hover(move |s| s.bg(fill_2)))
+            .when(on_click.is_some(), |el| el.cursor_pointer().hover(move |s| s.bg(fill_hover)))
             .child(canvas(move |b, _, _| track.set(b), |_, _, _, _| {}).absolute().top_0().left_0().size_full())
             .child(div().max_w(px(260.)).truncate().child(text))
             .when(!tip.is_empty(), |el| {

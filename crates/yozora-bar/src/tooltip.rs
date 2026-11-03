@@ -12,7 +12,7 @@ use gpui::{
     Styled, Window, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions, div, point, popup::*,
     prelude::*, px, size,
 };
-use yozora_ui::Theme;
+use yozora_ui::{Theme, theme::RADIUS_MD};
 
 /// How long the pointer rests before the tooltip shows.
 const DELAY: Duration = Duration::from_millis(450);
@@ -152,11 +152,11 @@ impl Render for Tooltip {
                 .flex_col()
                 .px(px(PAD_X))
                 .py(px(PAD_Y))
-                .rounded(px(10.))
-                .bg(theme.glass_pop)
+                .rounded(RADIUS_MD)
+                .bg(theme.surface)
                 .border_1()
-                .border_color(theme.hair_2)
-                .shadow(theme.popover_shadow())
+                .border_color(theme.line_strong)
+                .shadow(theme.raised_shadow())
                 .text_size(px(12.))
                 .line_height(px(LINE_HEIGHT))
                 .font_family(theme.font.clone())

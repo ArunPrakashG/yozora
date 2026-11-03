@@ -9,6 +9,7 @@ use yozora_ui::{
     Icon, Theme,
     controls::{segmented, switch},
     icon_sized,
+    theme::{RADIUS_MD, RADIUS_SM, RADIUS_XL, RADIUS_XS},
 };
 
 use crate::{
@@ -128,11 +129,11 @@ impl Render for Ghost {
             .gap(px(9.))
             .h(px(36.))
             .px(px(12.))
-            .rounded(px(10.))
-            .bg(theme.glass_pop)
+            .rounded(RADIUS_SM)
+            .bg(theme.surface)
             .border_1()
             .border_color(theme.accent)
-            .shadow(theme.popover_shadow())
+            .shadow(theme.raised_shadow())
             .text_size(px(13.))
             .font_weight(FontWeight::MEDIUM)
             .text_color(theme.ink)
@@ -203,7 +204,7 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                     .h(px(40.))
                     .pl(px(6.))
                     .pr(px(8.))
-                    .rounded(px(10.))
+                    .rounded(RADIUS_SM)
                     .hover(|s| s.bg(theme.fill))
                     .child(
                         div()
@@ -218,11 +219,11 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                         div()
                             .size(px(26.))
                             .flex_none()
-                            .rounded(px(8.))
+                            .rounded(RADIUS_SM)
                             .flex()
                             .items_center()
                             .justify_center()
-                            .bg(if is_on { theme.accent_soft } else { theme.fill_2 })
+                            .bg(if is_on { theme.accent_soft } else { theme.fill_hover })
                             .text_color(if is_on { theme.accent } else { theme.ink_2 })
                             .child(icon_sized(i.icon, 15.)),
                     )
@@ -313,17 +314,19 @@ pub fn render(view: &mut SettingsView, app: &AppEntry, cx: &mut Context<Settings
                     .id(SharedString::from(format!("zone-{}", zone.name())))
                     .flex()
                     .flex_col()
-                    .when(!empty, |el| el.p(px(4.)).rounded(px(14.)).bg(theme.fill).border_1().border_color(theme.hair))
+                    .when(!empty, |el| {
+                        el.p(px(4.)).rounded(RADIUS_XL).bg(theme.fill).border_1().border_color(theme.line)
+                    })
                     .when(empty, |el| {
                         el.h(px(46.))
                             .items_center()
                             .justify_center()
                             .flex_row()
                             .gap(px(8.))
-                            .rounded(px(12.))
+                            .rounded(RADIUS_MD)
                             .border_1()
                             .border_dashed()
-                            .border_color(theme.hair_2)
+                            .border_color(theme.line_strong)
                             .text_size(px(12.5))
                             .text_color(theme.ink_3)
                             .child(icon_sized(Icon::Plus, 15.))
@@ -401,15 +404,15 @@ fn add_card(custom: &[String], theme: &Theme) -> impl IntoElement + use<> {
         .gap(px(12.))
         .items_start()
         .p(px(14.))
-        .rounded(px(14.))
+        .rounded(RADIUS_XL)
         .bg(theme.fill)
         .border_1()
-        .border_color(theme.hair)
+        .border_color(theme.line)
         .child(
             div()
                 .size(px(30.))
                 .flex_none()
-                .rounded(px(9.))
+                .rounded(RADIUS_SM)
                 .flex()
                 .items_center()
                 .justify_center()
@@ -438,8 +441,8 @@ fn add_card(custom: &[String], theme: &Theme) -> impl IntoElement + use<> {
                         div()
                             .px(px(8.))
                             .py(px(3.))
-                            .rounded(px(7.))
-                            .bg(theme.fill_2)
+                            .rounded(RADIUS_XS)
+                            .bg(theme.fill_hover)
                             .text_color(theme.ink_2)
                             .font_family(theme.mono.clone())
                             .text_size(px(11.))

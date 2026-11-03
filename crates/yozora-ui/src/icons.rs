@@ -81,6 +81,8 @@ pub enum Icon {
     CapsLock,
     Spinner,
     Clock,
+    Pin,
+    Snooze,
     Alert,
     Window,
     Folder,
@@ -163,6 +165,8 @@ const ALL: &[Icon] = &[
     Icon::CapsLock,
     Icon::Spinner,
     Icon::Clock,
+    Icon::Pin,
+    Icon::Snooze,
     Icon::Alert,
     Icon::Window,
     Icon::Folder,
@@ -252,6 +256,8 @@ impl Icon {
             Icon::CapsLock => "caps-lock",
             Icon::Spinner => "spinner",
             Icon::Clock => "clock",
+            Icon::Pin => "pin",
+            Icon::Snooze => "snooze",
             Icon::Alert => "alert",
             Icon::Window => "window",
             Icon::Folder => "folder",
@@ -417,6 +423,8 @@ impl Icon {
             // Three quarters of a circle; turned by the caller.
             Icon::Spinner => r#"<path d="M12 3.5a8.5 8.5 0 1 1-8.5 8.5"/>"#,
             Icon::Clock => r#"<path d="M12 7.5V12l3 2"/><circle cx="12" cy="12" r="8.5"/>"#,
+            Icon::Pin => r#"<path d="M12 17v5M9 3h6l-1 6 4 3v2H6v-2l4-3z"/>"#,
+            Icon::Snooze => r#"<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M5 3L2 6M19 3l3 3"/>"#,
             Icon::Alert => {
                 r#"<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5"/><circle class="f" cx="12" cy="16.2" r="1.1"/>"#
             }

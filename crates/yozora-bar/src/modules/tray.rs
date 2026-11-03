@@ -4,7 +4,7 @@ use gpui::{
     AnyElement, Context, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
     StatefulInteractiveElement, Styled, div, img, prelude::*, px,
 };
-use yozora_ui::{Icon, IconElement, Theme, controls, icon, icon_sized};
+use yozora_ui::{Icon, IconElement, Theme, controls, icon, icon_sized, theme::RADIUS_SM};
 
 use super::Pop;
 use crate::{
@@ -43,12 +43,12 @@ pub fn render(bar: &mut Bar, theme: &Theme, cx: &mut Context<Bar>) -> Option<Any
         let (left_key, right_key, middle_key, scroll_key) = (key.clone(), key.clone(), key.clone(), key.clone());
         let menu_only = item.item_is_menu;
         let has_menu = item.has_menu;
-        let fill_2 = theme.fill_2;
+        let fill_hover = theme.fill_hover;
         bi().id(("tray", i))
             .relative()
             .px(px(6.))
-            .when(active, |el| el.bg(theme.fill_3))
-            .when(!active, |el| el.hover(move |s| s.bg(fill_2)))
+            .when(active, |el| el.bg(theme.fill_press))
+            .when(!active, |el| el.hover(move |s| s.bg(fill_hover)))
             .when(item.status == Status::NeedsAttention, |el| el.border_1().border_color(theme.accent))
             .child(glyph)
             .child(bar.track(format!("tray/{key}")))
@@ -135,10 +135,10 @@ pub fn popover(p: &mut Popover, key: &str, theme: &Theme, cx: &mut Context<Popov
                 .flex()
                 .items_center()
                 .gap(px(6.))
-                .rounded(px(8.))
+                .rounded(RADIUS_SM)
                 .text_color(theme.ink_2)
                 .cursor_pointer()
-                .hover(|s| s.bg(theme.fill_2))
+                .hover(|s| s.bg(theme.fill_hover))
                 .child(icon_sized(Icon::ChevronLeft, 14.))
                 .child("Back")
                 .on_click(cx.listener(|p, _, _, cx| {
@@ -163,7 +163,7 @@ pub fn popover(p: &mut Popover, key: &str, theme: &Theme, cx: &mut Context<Popov
     let key = key.to_string();
     let entries = items.iter().enumerate().map(|(i, item)| {
         if item.separator {
-            return div().h(px(1.)).mx(px(6.)).my(px(4.)).bg(theme.hair).into_any_element();
+            return div().h(px(1.)).mx(px(6.)).my(px(4.)).bg(theme.line).into_any_element();
         }
         let (id, enabled, submenu) = (item.id, item.enabled, !item.children.is_empty());
         let key = key.clone();
@@ -180,7 +180,7 @@ pub fn popover(p: &mut Popover, key: &str, theme: &Theme, cx: &mut Context<Popov
             .flex()
             .items_center()
             .gap(px(8.))
-            .rounded(px(8.))
+            .rounded(RADIUS_SM)
             .when(!enabled, |el| el.text_color(theme.ink_3))
             .when(enabled, |el| el.cursor_pointer().hover(|s| s.bg(theme.accent_soft)))
             .when(has_marks, |el| {

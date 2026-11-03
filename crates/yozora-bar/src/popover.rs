@@ -20,7 +20,7 @@ use yozora_ui::{
     Theme,
     frame_stats::FrameStats,
     spring::{Spring, SpringConfig, step_response},
-    theme::RADIUS_POPOVER,
+    theme::{RADIUS_XL, motion},
 };
 
 use crate::{
@@ -38,13 +38,11 @@ const MAX_HEIGHT: Pixels = px(680.);
 /// How far the card drops while it fades in, and how far each row rises.
 const DROP: f32 = 8.;
 const RISE: f32 = 7.;
-/// When each row starts rising, from the design.
-const STAGGER_MS: [f32; 8] = [0., 22., 44., 66., 88., 110., 128., 144.];
-const FADE_IN: Duration = Duration::from_millis(160);
-const FADE_OUT: Duration = Duration::from_millis(130);
-const SLIDE_OUT: Duration = Duration::from_millis(160);
+const FADE_IN: Duration = motion::ENTER;
+const FADE_OUT: Duration = motion::EXIT;
+const SLIDE_OUT: Duration = motion::EXIT;
 /// Reduced motion: a plain fade.
-const REDUCED: Duration = Duration::from_millis(120);
+const REDUCED: Duration = motion::REDUCED;
 
 pub struct Popover {
     pub pop: Pop,
@@ -115,7 +113,8 @@ impl Popover {
             |window, cx| {
                 let handle = window.window_handle();
                 let view = cx.new(|cx| {
-                    let mut drop = Spring::new(0.0, SpringConfig::POPOVER);
+                    let feel = Theme::global(cx).motion.popover;
+                    let mut drop = Spring::new(0.0, SpringConfig { stiffness: feel.stiffness, damping: feel.damping });
                     drop.set_target(1.0);
                     let focus = cx.focus_handle();
                     tracing::debug!("opening {pop:?} on {monitor}");
@@ -280,7 +279,7 @@ impl Popover {
         } else {
             let settled = self.drop.step(dt);
             let o = (elapsed / FADE_IN.as_secs_f32()).min(1.0);
-            let rows_done = elapsed * 1000.0 > STAGGER_MS[STAGGER_MS.len() - 1] + 500.0;
+            let rows_done = elapsed > row_delay(usize::MAX) + 0.5;
             (1.0 - (1.0 - o).powi(3), (self.drop.value() - 1.0) * DROP, settled && o >= 1.0 && rows_done)
         };
         if !self.open_settled {
@@ -297,6 +296,11 @@ impl Popover {
     }
 }
 
+/// When row `i` starts rising, in seconds. Rows past the first few start together.
+fn row_delay(i: usize) -> f32 {
+    motion::STAGGER.as_secs_f32() * i.min(motion::STAGGER_MAX - 1) as f32
+}
+
 /// Wraps a popover's rows so each rises in after its stagger delay.
 fn stagger(rows: Vec<AnyElement>, elapsed: f32) -> Vec<AnyElement> {
     rows.into_iter()
@@ -305,8 +309,8 @@ fn stagger(rows: Vec<AnyElement>, elapsed: f32) -> Vec<AnyElement> {
             if elapsed == f32::MAX {
                 return row;
             }
-            let delay = STAGGER_MS[i.min(STAGGER_MS.len() - 1)] / 1000.0;
-            let t = step_response(SpringConfig::POPOVER, elapsed - delay);
+            let delay = row_delay(i);
+            let t = step_response(SpringConfig::POP, elapsed - delay);
             let fade = ((elapsed - delay) / 0.18).clamp(0.0, 1.0);
             div().relative().top(px((1.0 - t) * RISE)).opacity(fade).child(row).into_any_element()
         })
@@ -366,12 +370,12 @@ impl Render for Popover {
                     .max_h(MAX_HEIGHT)
                     .overflow_y_scroll()
                     .opacity(opacity.clamp(0., 1.))
-                    .rounded(RADIUS_POPOVER)
-                    .bg(theme.glass_pop)
+                    .rounded(RADIUS_XL)
+                    .bg(theme.surface)
                     .border_1()
-                    .border_color(theme.hair_2)
-                    .shadow(theme.popover_shadow())
-                    .p(px(10.))
+                    .border_color(theme.line_strong)
+                    .shadow(theme.raised_shadow())
+                    .p(px(8.))
                     .text_color(theme.ink)
                     .text_size(px(13.))
                     .font_family(theme.font.clone())

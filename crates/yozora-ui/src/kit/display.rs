@@ -9,7 +9,7 @@ use yozora_module::{Node, Size, Tone};
 use super::controls::{row_height, tone_color, tone_soft};
 use crate::{
     icons::{Icon, icon},
-    theme::{RADIUS_ROW, Theme},
+    theme::{RADIUS_SM, Theme},
 };
 
 /// How a row shares width between label and value.
@@ -181,7 +181,7 @@ pub fn section(heading: Option<&str>, rows: Vec<AnyElement>, theme: &Theme) -> D
 /// A pill badge with a soft tone background.
 pub fn badge(text: impl Into<SharedString>, tone: Tone, theme: &Theme) -> Div {
     let (bg, fg) = if tone == Tone::Neutral {
-        (theme.fill_3, theme.ink_2)
+        (theme.fill_press, theme.ink_2)
     } else {
         (tone_soft(tone, theme), tone_color(tone, theme))
     };
@@ -191,7 +191,7 @@ pub fn badge(text: impl Into<SharedString>, tone: Tone, theme: &Theme) -> Div {
 /// A list row. Label shrink and value truncation follow [`ROW_LAYOUT`].
 pub fn row(id: impl Into<ElementId>, props: RowProps, theme: &Theme) -> Stateful<Div> {
     let RowProps { icon: glyph, title, subtitle, value, badge: tag, tone, size, clickable } = props;
-    let tile_bg = if tone == Tone::Accent { theme.accent_soft } else { theme.fill_2 };
+    let tile_bg = if tone == Tone::Accent { theme.accent_soft } else { theme.fill_hover };
     let tile_fg = tone_color(tone, theme);
     let label = div()
         .flex()
@@ -210,14 +210,14 @@ pub fn row(id: impl Into<ElementId>, props: RowProps, theme: &Theme) -> Stateful
         .min_h(row_height(size))
         .px(px(8.))
         .py(px(8.))
-        .rounded(RADIUS_ROW)
-        .when(clickable, |el| el.cursor_pointer().hover(|s| s.bg(theme.fill_2)))
+        .rounded(RADIUS_SM)
+        .when(clickable, |el| el.cursor_pointer().hover(|s| s.bg(theme.fill_hover)))
         .when_some(glyph, |el, g| {
             el.child(
                 div()
                     .size(px(28.))
                     .flex_none()
-                    .rounded(px(8.))
+                    .rounded(RADIUS_SM)
                     .flex()
                     .items_center()
                     .justify_center()
@@ -260,7 +260,7 @@ pub fn progress(title: impl Into<SharedString>, subtitle: Option<SharedString>, 
                 .h(px(4.))
                 .w_full()
                 .rounded(px(2.))
-                .bg(theme.fill_2)
+                .bg(theme.fill_hover)
                 .overflow_hidden()
                 .child(div().h_full().w(relative(value)).bg(theme.accent)),
         )

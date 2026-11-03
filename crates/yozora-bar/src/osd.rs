@@ -29,8 +29,8 @@ use crate::{
     },
 };
 
-const WIDTH: f32 = 320.;
-const HEIGHT: f32 = 56.;
+const WIDTH: f32 = 260.;
+const HEIGHT: f32 = 44.;
 /// Room around the capsule for its shadow and the rise.
 const PAD_SIDE: f32 = 36.;
 const PAD_TOP: f32 = 20.;
@@ -308,7 +308,7 @@ pub struct OsdView {
 
 impl OsdView {
     fn new(shown: Shown, monitor: String, position: OsdPosition, timeout: Duration) -> Self {
-        let mut appear = Spring::new(0.0, SpringConfig::POPOVER);
+        let mut appear = Spring::new(0.0, SpringConfig::POP);
         appear.set_target(1.0);
         let level = shown.track().map_or(0.0, |t| t.1);
         let now = Instant::now();
@@ -318,7 +318,7 @@ impl OsdView {
             position,
             timeout,
             appear,
-            fill: Spring::new(level, SpringConfig::POPOVER),
+            fill: Spring::new(level, SpringConfig::POP),
             opened: now,
             hide_at: now + timeout,
             leaving: None,
@@ -331,7 +331,7 @@ impl OsdView {
     fn show(&mut self, shown: Shown, cx: &mut Context<Self>) {
         match (self.shown.track(), shown.track()) {
             (Some((a, _)), Some((b, level))) if a == b => self.fill.set_target(level),
-            (_, Some((_, level))) => self.fill = Spring::new(level, SpringConfig::POPOVER),
+            (_, Some((_, level))) => self.fill = Spring::new(level, SpringConfig::POP),
             _ => {}
         }
         if let Some(since) = self.leaving.take() {
@@ -375,7 +375,7 @@ impl OsdView {
 
         let elapsed = (now - self.opened).as_secs_f32();
         let (opacity, offset, moving) = if reduced {
-            self.fill = Spring::new(self.fill.target(), SpringConfig::POPOVER);
+            self.fill = Spring::new(self.fill.target(), SpringConfig::POP);
             let o = (elapsed / REDUCED.as_secs_f32()).min(1.0);
             (o, 0.0, o < 1.0)
         } else {
@@ -405,20 +405,20 @@ impl OsdView {
     }
 }
 
-/// A 6 px track filled to `level`, running to 150% with the extra warm when boosted.
+/// A 4 px track filled to `level`, running to 150% with the extra warm when boosted.
 fn track(level: f32, target: f32, off: bool, theme: &Theme) -> AnyElement {
     let boosted = target > 1.0 + 0.005;
     let max = if boosted { BOOST_MAX } else { 1.0 };
     let level = level.clamp(0.0, max);
-    let fill = if off { theme.ink_3 } else { theme.accent };
-    let mut t = div().relative().flex_1().h(px(6.)).rounded(px(3.)).bg(theme.fill_3).overflow_hidden().child(
+    let fill = if off { theme.ink_3 } else { theme.ink };
+    let mut t = div().relative().flex_1().h(px(4.)).rounded(px(2.)).bg(theme.fill_press).overflow_hidden().child(
         div()
             .absolute()
             .left_0()
             .top_0()
             .bottom_0()
             .w(relative(level.min(1.0) / max))
-            .rounded(px(3.))
+            .rounded(px(2.))
             .bg(fill)
             .when(off, |d| d.opacity(0.45)),
     );
@@ -430,7 +430,7 @@ fn track(level: f32, target: f32, off: bool, theme: &Theme) -> AnyElement {
                 .top_0()
                 .bottom_0()
                 .w(relative((level - 1.0) / max))
-                .rounded_r(px(3.))
+                .rounded_r(px(2.))
                 .bg(theme.warn)
                 .when(off, |d| d.opacity(0.45)),
         );
@@ -440,12 +440,14 @@ fn track(level: f32, target: f32, off: bool, theme: &Theme) -> AnyElement {
 
 fn value_label(text: String, off: bool, theme: &Theme) -> impl IntoElement {
     div()
-        .w(px(52.))
+        .min_w(px(22.))
         .flex_none()
         .flex()
         .justify_end()
-        .text_size(px(13.5))
-        .font_weight(if off { FontWeight::MEDIUM } else { FontWeight::SEMIBOLD })
+        .font_family(theme.mono.clone())
+        .text_size(px(12.))
+        .line_height(px(16.))
+        .font_weight(FontWeight::MEDIUM)
         .text_color(if off { theme.ink_2 } else { theme.ink })
         .child(text)
 }
@@ -456,9 +458,17 @@ fn words(title: String, detail: Option<String>, theme: &Theme) -> gpui::Div {
         .min_w_0()
         .flex()
         .flex_col()
-        .child(div().text_size(px(13.5)).font_weight(FontWeight::SEMIBOLD).truncate().child(title))
+        .child(div().text_size(px(13.)).line_height(px(18.)).font_weight(FontWeight::SEMIBOLD).truncate().child(title))
         .when_some(detail, |d, detail| {
-            d.child(div().mt(px(1.)).text_size(px(11.5)).text_color(theme.ink_2).truncate().child(detail))
+            d.child(
+                div()
+                    .text_size(px(12.))
+                    .line_height(px(16.))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(theme.ink_2)
+                    .truncate()
+                    .child(detail),
+            )
         })
 }
 
@@ -472,8 +482,8 @@ impl Render for OsdView {
         let (level, target) = (self.fill.value(), self.fill.target());
         let pct = |v: f32| sound::percent(v).to_string();
 
-        // The chip's look: normal, off (muted) or alarm (mic muted).
-        let (icon, chip_bg, chip_fg, body): (Icon, gpui::Rgba, gpui::Rgba, Vec<AnyElement>) = match &self.shown {
+        // The icon's color: normal, off (muted) or alarm (mic muted).
+        let (icon, color, body): (Icon, gpui::Rgba, Vec<AnyElement>) = match &self.shown {
             Shown::Volume { muted, .. } => {
                 let icon = if *muted || target <= 0.001 {
                     Icon::VolumeMute
@@ -482,25 +492,21 @@ impl Render for OsdView {
                 } else {
                     Icon::VolumeHigh
                 };
-                let (bg, fg) = if *muted { (theme.fill_3, theme.ink_2) } else { (theme.accent_soft, theme.accent) };
                 let label = if *muted { "Muted".to_string() } else { pct(target) };
                 (
                     icon,
-                    bg,
-                    fg,
+                    if *muted { theme.ink_3 } else { theme.ink },
                     vec![track(level, target, *muted, &theme), value_label(label, *muted, &theme).into_any_element()],
                 )
             }
             Shown::Output { name, kind, muted, .. } => {
-                let (bg, fg) = if *muted { (theme.fill_3, theme.ink_2) } else { (theme.accent_soft, theme.accent) };
                 let label = if *muted { "Muted".to_string() } else { pct(target) };
                 (
                     sound::kind_icon(*kind),
-                    bg,
-                    fg,
+                    if *muted { theme.ink_3 } else { theme.ink },
                     vec![
                         words(name.clone(), None, &theme)
-                            .child(div().mt(px(6.)).flex().child(track(level, target, *muted, &theme)))
+                            .child(div().mt(px(5.)).flex().child(track(level, target, *muted, &theme)))
                             .into_any_element(),
                         value_label(label, *muted, &theme).into_any_element(),
                     ],
@@ -508,32 +514,21 @@ impl Render for OsdView {
             }
             Shown::Mic { name, muted, toggled: true, .. } => {
                 let title = if *muted { "Microphone off" } else { "Microphone on" };
-                let (icon, bg, fg) = if *muted {
-                    (Icon::MicOff, gpui::Rgba { a: 0.16, ..theme.danger }, theme.danger)
-                } else {
-                    (Icon::Mic, theme.accent_soft, theme.accent)
-                };
+                let (icon, color) = if *muted { (Icon::MicOff, theme.danger) } else { (Icon::Mic, theme.ink) };
                 let detail = (!name.is_empty()).then(|| name.clone());
-                (icon, bg, fg, vec![words(title.into(), detail, &theme).into_any_element()])
+                (icon, color, vec![words(title.into(), detail, &theme).into_any_element()])
             }
             Shown::Mic { muted, .. } => {
-                let (bg, fg) = if *muted {
-                    (gpui::Rgba { a: 0.16, ..theme.danger }, theme.danger)
-                } else {
-                    (theme.accent_soft, theme.accent)
-                };
                 let label = if *muted { "Off".to_string() } else { pct(target) };
                 (
                     if *muted { Icon::MicOff } else { Icon::Mic },
-                    bg,
-                    fg,
+                    if *muted { theme.danger } else { theme.ink },
                     vec![track(level, target, *muted, &theme), value_label(label, *muted, &theme).into_any_element()],
                 )
             }
             Shown::Brightness(_) => (
                 Icon::Sun,
-                theme.accent_soft,
-                theme.accent,
+                theme.ink,
                 vec![track(level, target, false, &theme), value_label(pct(target), false, &theme).into_any_element()],
             ),
             Shown::Layout(k) => {
@@ -544,8 +539,7 @@ impl Render for OsdView {
                 };
                 (
                     Icon::Keyboard,
-                    theme.accent_soft,
-                    theme.accent,
+                    theme.ink,
                     vec![
                         words(k.layout.clone(), Some(detail), &theme).into_any_element(),
                         value_label(k.code.clone(), false, &theme).into_any_element(),
@@ -562,27 +556,16 @@ impl Render for OsdView {
                 .w(px(WIDTH))
                 .h(px(HEIGHT))
                 .opacity(opacity.clamp(0.0, 1.0))
-                .rounded(px(HEIGHT / 2.))
-                .bg(theme.glass_pop)
+                .rounded_full()
+                .bg(theme.surface)
                 .border_1()
-                .border_color(theme.hair_2)
-                .shadow(theme.popover_shadow())
-                .pl(px(10.))
-                .pr(px(18.))
+                .border_color(theme.line_strong)
+                .shadow(theme.raised_shadow())
+                .px(px(16.))
                 .flex()
                 .items_center()
                 .gap(px(12.))
-                .child(
-                    div()
-                        .size(px(36.))
-                        .flex_none()
-                        .rounded_full()
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .bg(chip_bg)
-                        .child(icon_sized(icon, 18.).text_color(chip_fg)),
-                )
+                .child(icon_sized(icon, 16.).flex_none().text_color(color))
                 .children(body),
         )
     }

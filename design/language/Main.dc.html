@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Yozora foundations</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8BBEFF}a:hover{color:#B7D6FF}
+</style>
+</helmet>
+<div class="yz-midnight" style="width: 1440px; min-height: 2480px; box-sizing: border-box; padding: 88px 96px; background: #0A0E17; color: var(--yz-ink); display: flex; flex-direction: column; gap: 96px;">
+
+  <header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 48px;">
+    <div style="display: flex; flex-direction: column; gap: 28px;">
+      <svg width="56" height="56" viewBox="0 0 100 100" role="img" aria-label="Yozora mark">
+        <g stroke="#8BBEFF" stroke-opacity="0.55" stroke-width="1.6" fill="none"><path d="M27 25 L50 53 L75 29 M50 53 L48 81"></path></g>
+        <circle cx="27" cy="25" r="3.2" fill="#EDF2FC"></circle>
+        <circle cx="75" cy="29" r="3.4" fill="#EDF2FC"></circle>
+        <circle cx="50" cy="53" r="5" fill="#8BBEFF"></circle>
+        <circle cx="48" cy="81" r="3.6" fill="#EDF2FC"></circle>
+      </svg>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <h1 style="margin: 0; font: 600 56px/60px var(--yz-font); letter-spacing: -0.02em;">Yozora</h1>
+        <p style="margin: 0; font: 400 20px/28px var(--yz-font); color: var(--yz-ink-2); max-width: 620px;">A Hyprland desktop that stays out of the way and answers in a frame.</p>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end; text-align: right;">
+      <span style="font: var(--yz-text-micro); color: var(--yz-accent); letter-spacing: 0.04em;">SIGNATURE</span>
+      <span style="font: 600 28px/32px var(--yz-font); letter-spacing: -0.01em;">Settle</span>
+      <span style="font: var(--yz-text-body); color: var(--yz-ink-2);">In 220 ms, out 140 ms. No bounce, no glow.</span>
+    </div>
+  </header>
+
+  <section style="display: flex; flex-direction: column; gap: 28px;">
+    <h2 style="margin: 0; font: var(--yz-text-display);">Color</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
+      <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+        <div class="{{ t.cls }}" style="background: var(--yz-bg); border: 1px solid var(--yz-line); border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 20px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between;">
+            <span style="font: var(--yz-text-title); color: var(--yz-ink);">{{ t.name }}</span>
+            <span style="font: var(--yz-text-num); color: var(--yz-ink-3);">.{{ t.cls }}</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+            <sc-for list="{{ t.swatches }}" as="s" hint-placeholder-count="16">
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="height: 52px; border-radius: 6px; border: 1px solid var(--yz-line); background: {{ s.css }};"></div>
+                <div style="display: flex; flex-direction: column; gap: 1px;">
+                  <span style="font: var(--yz-text-meta); color: var(--yz-ink);">{{ s.name }}</span>
+                  <span style="font: 500 11px/14px var(--yz-mono); color: var(--yz-ink-3);">{{ s.value }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <p style="margin: 0; font: var(--yz-text-body); color: var(--yz-ink-2); max-width: 760px;">One accent. Text tokens pass 4.5:1 on bg, surface and surface-2 in both themes. Toasts and popovers are opaque surfaces; only the bar is glass.</p>
+  </section>
+
+  <section style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 64px;">
+    <div style="display: flex; flex-direction: column; gap: 28px;">
+      <h2 style="margin: 0; font: var(--yz-text-display);">Type</h2>
+      <div style="display: flex; flex-direction: column; border-top: 1px solid var(--yz-line);">
+        <sc-for list="{{ type }}" as="ty" hint-placeholder-count="8">
+          <div style="display: grid; grid-template-columns: 120px 150px 1fr; align-items: center; gap: 16px; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--yz-line);">
+            <span style="font: var(--yz-text-num); color: var(--yz-accent);">{{ ty.token }}</span>
+            <span style="font: var(--yz-text-num); color: var(--yz-ink-3);">{{ ty.spec }}</span>
+            <span style="font: {{ ty.font }}; color: var(--yz-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ ty.sample }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font: var(--yz-text-body); color: var(--yz-ink-2);">Inter for everything, Geist Mono for numbers that change. Two weights do the work: 400 and 600.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 40px;">
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <h2 style="margin: 0; font: var(--yz-text-display);">Space</h2>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <sc-for list="{{ space }}" as="sp" hint-placeholder-count="9">
+            <div style="display: grid; grid-template-columns: 96px 44px 1fr; align-items: center; gap: 12px;">
+              <span style="font: var(--yz-text-num); color: var(--yz-ink-2);">{{ sp.token }}</span>
+              <span style="font: var(--yz-text-num); color: var(--yz-ink-3);">{{ sp.value }}</span>
+              <div style="height: 8px; width: {{ sp.value }}; background: var(--yz-accent); border-radius: 2px;"></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <h2 style="margin: 0; font: var(--yz-text-display);">Radius</h2>
+        <div style="display: flex; gap: 16px; align-items: flex-end;">
+          <sc-for list="{{ radius }}" as="r" hint-placeholder-count="5">
+            <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
+              <div style="width: 56px; height: 56px; background: var(--yz-surface-2); border: 1px solid var(--yz-line-strong); border-radius: {{ r.value }};"></div>
+              <span style="font: var(--yz-text-num); color: var(--yz-ink-2);">{{ r.name }}</span>
+              <span style="font: 500 11px/14px var(--yz-mono); color: var(--yz-ink-3);">{{ r.value }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font: var(--yz-text-body); color: var(--yz-ink-2);">Tight corners. An inner corner is never rounder than its container: a 12 px popover holds 6 px rows.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 28px;">
+    <h2 style="margin: 0; font: var(--yz-text-display);">Elevation</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <div style="height: 168px; border-radius: 12px; background: linear-gradient(160deg, #18233D 0%, #0B1020 60%, #120E22 100%); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="height: 36px; border-radius: 8px; background: var(--yz-glass-bar); border: 1px solid var(--yz-line);"></div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font: var(--yz-text-strong);">Glass</span>
+          <span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">The bar only. Tint plus compositor blur, hairline edge.</span>
+        </div>
+      </div>
+      <div style="height: 168px; border-radius: 12px; background: var(--yz-surface); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="height: 40px; border-radius: 8px; background: var(--yz-surface-2); border: 1px solid var(--yz-line);"></div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font: var(--yz-text-strong);">Flat</span>
+          <span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">Inside a surface: surface-2 and a hairline. Never a shadow.</span>
+        </div>
+      </div>
+      <div style="height: 168px; border-radius: 12px; background: #0A0E17; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; border: 1px dashed var(--yz-line);">
+        <div class="yz-surface" style="height: 40px; border-radius: 10px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font: var(--yz-text-strong);">Raised</span>
+          <span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">Toasts and popovers. One tight shadow, 14 px reach, never animated.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 28px;">
+    <h2 style="margin: 0; font: var(--yz-text-display);">Components</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
+      <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+        <div class="{{ t.cls }}" style="background: var(--yz-bg); border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 24px; border: 1px solid var(--yz-line);">
+          <div class="yz-surface" style="border-radius: var(--yz-radius-xl); padding: 8px; display: flex; flex-direction: column; gap: 8px; color: var(--yz-ink);">
+            <div style="display: flex; gap: 8px; padding: 8px 8px 4px;">
+              <button class="yz-btn primary" type="button">Reply</button>
+              <button class="yz-btn" type="button">Open</button>
+              <button class="yz-btn ghost" type="button">Later</button>
+              <button class="yz-btn danger" type="button">Clear all</button>
+              <span style="flex: 1 1 auto;"></span>
+              <button class="yz-icon-btn" type="button" aria-label="Close">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+              </button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0 8px;">
+              <button class="yz-tile on" type="button">
+                <span class="yz-tile-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a14.5 14.5 0 0 1 20 0"></path><circle cx="12" cy="19.5" r="0.8" fill="currentColor"></circle></svg></span>
+                <span style="display: flex; flex-direction: column; min-width: 0;"><span style="font: var(--yz-text-strong);">Wi-Fi</span><span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">Kestrel 5G</span></span>
+              </button>
+              <button class="yz-tile" type="button">
+                <span class="yz-tile-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg></span>
+                <span style="display: flex; flex-direction: column; min-width: 0;"><span style="font: var(--yz-text-strong);">Do Not Disturb</span><span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">Off</span></span>
+              </button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 4px 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--yz-ink-2); flex: none;"><path d="M11 5L6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path></svg>
+              <div class="yz-slider" style="flex: 1 1 auto;" role="slider" aria-label="Volume" aria-valuenow="62"><i style="width: 62%;"></i></div>
+              <span style="font: var(--yz-text-num); color: var(--yz-ink-2); width: 28px; text-align: right;">62</span>
+            </div>
+            <div class="yz-row">
+              <span style="flex: 1 1 auto; font: var(--yz-text-body);">Show previews on the lock screen</span>
+              <button class="yz-switch on" type="button" role="switch" aria-checked="true" aria-label="Show previews on the lock screen"></button>
+            </div>
+            <div class="yz-row">
+              <span style="flex: 1 1 auto; font: var(--yz-text-body);">Sounds</span>
+              <button class="yz-switch" type="button" role="switch" aria-checked="false" aria-label="Sounds"></button>
+            </div>
+            <div style="display: flex; gap: 6px; padding: 4px 8px 8px;">
+              <span class="yz-chip accent">3 new</span>
+              <span class="yz-chip">Pinned</span>
+              <span class="yz-chip">Snoozed 1 h</span>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const names = ['bg', 'surface', 'surface-2', 'glass-bar', 'fill', 'fill-hover', 'fill-press', 'line', 'line-strong', 'ink', 'ink-2', 'ink-3', 'accent', 'accent-soft', 'ok', 'warn', 'danger'];
+    const mid = ['#0A0E17', '#121826', '#1A2234', 'rgba(10,14,23,.72)', 'E8F1FF / 5%', 'E8F1FF / 8%', 'E8F1FF / 12%', 'A0BEFF / 10%', 'AAC8FF / 17%', '#EDF2FC', '#A6B1C7', '#8794AD', '#8BBEFF', '8BBEFF / 16%', '#8FE3CF', '#FFC58B', '#FF8F8F'];
+    const day = ['#EEF1F6', '#FFFFFF', '#F3F5F9', 'rgba(246,248,252,.78)', '0F1626 / 4%', '0F1626 / 7%', '0F1626 / 11%', '0F1E46 / 10%', '0F1E46 / 16%', '#0F1626', '#465270', '#5A6680', '#2A64CC', '2A64CC / 12%', '#0B7562', '#9A4F0B', '#B83426'];
+    const pick = ['bg', 'surface', 'surface-2', 'fill-hover', 'line-strong', 'ink', 'ink-2', 'ink-3', 'accent', 'accent-soft', 'ok', 'warn', 'danger', 'glass-bar', 'fill', 'fill-press'];
+    const sw = (vals) => pick.map((n) => ({ name: n, value: vals[names.indexOf(n)], css: 'var(--yz-' + n + ')' }));
+    return {
+      themes: [
+        { cls: 'yz-midnight', name: 'Midnight', swatches: sw(mid) },
+        { cls: 'yz-daybreak', name: 'Daybreak', swatches: sw(day) },
+      ],
+      type: [
+        { token: 'clock', spec: '64 / 64  600', font: 'var(--yz-text-clock)', sample: '21:48' },
+        { token: 'display', spec: '24 / 30  600', font: 'var(--yz-text-display)', sample: 'Notifications' },
+        { token: 'title', spec: '15 / 20  600', font: 'var(--yz-text-title)', sample: 'Quick settings' },
+        { token: 'strong', spec: '13 / 18  600', font: 'var(--yz-text-strong)', sample: 'Priya Raman' },
+        { token: 'body', spec: '13 / 18  400', font: 'var(--yz-text-body)', sample: 'Pushed 3 commits to yozora/main' },
+        { token: 'meta', spec: '12 / 16  500', font: 'var(--yz-text-meta)', sample: 'Signal  ·  2 min' },
+        { token: 'micro', spec: '11 / 14  600', font: 'var(--yz-text-micro)', sample: 'CRITICAL' },
+        { token: 'num', spec: '12 / 16  mono', font: 'var(--yz-text-num)', sample: '62%  14:02  3.4 GB' },
+      ],
+      space: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => ({ token: 'space-' + i, value: [2, 4, 6, 8, 12, 16, 20, 24, 32][i - 1] + 'px' })),
+      radius: [['xs', '4px'], ['sm', '6px'], ['md', '8px'], ['lg', '10px'], ['xl', '12px']].map(([name, value]) => ({ name, value })),
+    };
+  }
+}
+</script>
+</body>
+</html>

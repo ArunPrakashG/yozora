@@ -7,15 +7,18 @@ use gpui::{
     AnyElement, App, Context, Div, FontWeight, IntoElement, ParentElement, SharedString, StatefulInteractiveElement,
     Styled, div, prelude::*, px,
 };
-use yozora_ui::{Icon, Theme, controls, icon_sized};
+use yozora_ui::{Icon, Theme, controls, icon_sized, theme::RADIUS_SM};
 
 use crate::{app::Config, bar::bi, popover::Popover};
 
-pub fn item(_theme: &Theme, cx: &App) -> Div {
+pub fn item(theme: &Theme, cx: &App) -> Div {
     let format = &Config::get(cx).settings.bar.clock.format;
     let text = format_time(format);
     // Two spaces in the format separate groups, like the date and the time.
-    bi().gap(px(8.)).children(text.split("  ").map(|s| SharedString::from(s.to_string())).collect::<Vec<_>>())
+    bi().gap(px(8.))
+        .font_family(theme.mono.clone())
+        .font_weight(FontWeight::SEMIBOLD)
+        .children(text.split("  ").map(|s| SharedString::from(s.to_string())).collect::<Vec<_>>())
 }
 
 /// Formats now with `format`, falling back to the default if it is invalid.
@@ -78,13 +81,13 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
         div()
             .id(id)
             .size(px(28.))
-            .rounded(px(8.))
+            .rounded(RADIUS_SM)
             .flex()
             .items_center()
             .justify_center()
             .text_color(theme.ink_2)
             .cursor_pointer()
-            .hover(|s| s.bg(theme.fill_2).text_color(theme.ink))
+            .hover(|s| s.bg(theme.fill_hover).text_color(theme.ink))
             .child(icon_sized(glyph, 15.))
             .on_click(cx.listener(move |p, _, _, cx| {
                 p.ui.month_offset += delta;
@@ -153,10 +156,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, cx: &mut Context<Popover>) -> Vec
                         .when(outside, |el| el.text_color(theme.ink_3).opacity(0.7))
                         .when(!outside && weekend, |el| el.text_color(theme.ink_2))
                         .when(is_today, |el| {
-                            el.bg(theme.accent)
-                                .text_color(theme.accent_ink)
-                                .font_weight(FontWeight::BOLD)
-                                .shadow(theme.accent_glow())
+                            el.bg(theme.accent).text_color(theme.accent_ink).font_weight(FontWeight::BOLD)
                         })
                         .child(d.day().to_string()),
                 )

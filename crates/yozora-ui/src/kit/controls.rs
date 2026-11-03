@@ -10,7 +10,7 @@ use yozora_module::{Size, Tone};
 
 use crate::{
     controls::switch,
-    theme::{RADIUS_ROW, Theme},
+    theme::{RADIUS_SM, Theme},
 };
 
 /// Success colour in the dark theme (Aurora green).
@@ -56,7 +56,7 @@ pub fn toggle(id: impl Into<ElementId>, title: impl Into<SharedString>, on: bool
         .min_h(row_height(Size::Regular))
         .px(px(8.))
         .py(px(6.))
-        .rounded(RADIUS_ROW)
+        .rounded(RADIUS_SM)
         .text_size(px(13.))
         .child(div().flex_1().min_w_0().font_weight(FontWeight::MEDIUM).truncate().child(title.into()))
         .child(switch(id, on, theme))
@@ -85,7 +85,7 @@ pub fn slider(id: impl Into<ElementId>, title: impl Into<SharedString>, value: f
                 .h(px(22.))
                 .w_full()
                 .rounded_full()
-                .bg(theme.fill_2)
+                .bg(theme.fill_hover)
                 .overflow_hidden()
                 .child(div().h_full().w(relative(value)).bg(theme.accent)),
         )
@@ -107,7 +107,7 @@ pub fn button(
         .justify_center()
         .px(px(12.))
         .py(px(8.))
-        .rounded(RADIUS_ROW)
+        .rounded(RADIUS_SM)
         .text_size(px(13.))
         .font_weight(FontWeight::MEDIUM)
         .cursor_pointer()
@@ -115,7 +115,7 @@ pub fn button(
     let base = if primary {
         base.bg(theme.accent).text_color(theme.accent_ink).border_color(gpui::transparent_black())
     } else {
-        base.bg(theme.fill_2).border_color(theme.hair).text_color(if destructive {
+        base.bg(theme.fill_hover).border_color(theme.line).text_color(if destructive {
             tone_color(Tone::Danger, theme)
         } else {
             theme.ink

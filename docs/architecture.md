@@ -242,12 +242,16 @@ Ways to add a module:
   it requests the next frame; once position and velocity are within epsilon it stops, so a static
   bar renders nothing. Retargeting keeps velocity, which is what makes motion interruptible.
   Motion is time-based, so it looks the same at 144 Hz (DP-1) and 75 Hz (HDMI-A-1).
-  - Popover: stiffness 380, damping 28 (about 3.9% overshoot, at rest by about 490 ms).
-  - Indicator (workspaces, switches, highlights): stiffness 520, damping 34.
-  - Reduced motion: every spring becomes a 120 ms opacity fade.
+  - Popover: stiffness 520, damping 40, from `[motion.popover]` (under 1% overshoot).
+  - Settle (indicator, toasts, reflow): stiffness 700, damping 53, critically damped.
+  - Durations from the motion tokens: enter 220 ms, exit 140 ms ease-in, reflow 260 ms, rows
+    staggered 18 ms apart for the first six.
+  - Only opacity and position animate. The frame clock runs only while something moves.
+  - Reduced motion: every move becomes a 100 ms opacity fade with no travel.
 - **Compositor animations off.** Hyprland's own layer and popup animations are disabled for the
   `yozora-*` namespaces so motion is not applied twice.
-- **Assets.** Geist and Geist Mono are bundled (SIL OFL). Our icons are SVG assets on a 24-unit
+- **Assets.** Text uses Inter from the system, numbers Geist Mono, falling back to JetBrains Mono
+  or DejaVu Sans Mono. Our icons are SVG assets on a 24-unit
   grid, drawn at 16 px with a 1.8 stroke. Tray icons resolve through the freedesktop icon theme.
 
 ## Config and theme

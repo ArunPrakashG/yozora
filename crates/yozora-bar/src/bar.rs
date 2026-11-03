@@ -19,6 +19,7 @@ use yozora_ui::{
     Theme,
     frame_stats::{FrameStats, Summary},
     spring::{Spring, SpringConfig},
+    theme::{RADIUS_MD, RADIUS_SM},
 };
 
 use crate::{
@@ -106,7 +107,7 @@ impl Bar {
                         layout,
                         height,
                         handle,
-                        indicator: Spring::new(0.0, SpringConfig::INDICATOR),
+                        indicator: Spring::new(0.0, SpringConfig::SETTLE),
                         indicator_stats: FrameStats::default(),
                         indicator_last: None,
                         popover: None,
@@ -351,7 +352,7 @@ impl Bar {
             self.indicator.set_target(t as f32);
         }
         if reduced && !benching {
-            self.indicator = Spring::new(self.indicator.target(), SpringConfig::INDICATOR);
+            self.indicator = Spring::new(self.indicator.target(), SpringConfig::SETTLE);
             return self.indicator.value();
         }
         let dt = self.indicator_stats.frame(Instant::now());
@@ -423,12 +424,12 @@ impl Bar {
         cx: &Context<Self>,
         on_press: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
     ) -> AnyElement {
-        let fill_2 = theme.fill_2;
+        let fill_hover = theme.fill_hover;
         content
             .id(ElementId::Name(key.clone().into()))
             .relative()
-            .when(active, |el| el.bg(theme.fill_3))
-            .when(!active, |el| el.hover(move |s| s.bg(fill_2)))
+            .when(active, |el| el.bg(theme.fill_press))
+            .when(!active, |el| el.hover(move |s| s.bg(fill_hover)))
             .child(self.track(key))
             .on_mouse_down(MouseButton::Left, cx.listener(move |bar, _, window, cx| on_press(bar, window, cx)))
             .into_any_element()
@@ -454,13 +455,13 @@ impl Bar {
 pub fn bi() -> Div {
     div()
         .h(px(26.))
-        .min_w(px(30.))
+        .min_w(px(26.))
         .px(px(8.))
-        .rounded(px(8.))
+        .rounded(RADIUS_SM)
         .flex()
         .items_center()
         .justify_center()
-        .gap(px(7.))
+        .gap(px(6.))
         .flex_none()
 }
 
@@ -497,20 +498,23 @@ impl Render for Bar {
             }
         }
         let [left, center, right] = zones;
-        let zone = |items: Vec<AnyElement>| div().flex().items_center().gap(px(2.)).h_full().children(items);
+        let zone = |items: Vec<AnyElement>| div().flex().items_center().gap(px(4.)).h_full().children(items);
 
         div()
             .size_full()
             .flex()
             .items_center()
-            .px(px(6.))
+            .px(px(5.))
             .bg(theme.glass_bar)
             .text_color(theme.ink)
-            .text_size(px(13.))
+            .text_size(px(12.))
+            .line_height(px(16.))
             .font_family(theme.font.clone())
             .font_weight(FontWeight::MEDIUM)
-            .when(floating, |el| el.rounded(px(12.)).border_1().border_color(theme.hair_2))
-            .when(!floating, |el| el.border_b_1().border_color(theme.hair))
+            .when(floating, |el| {
+                el.rounded(RADIUS_MD).border_1().border_color(theme.line).shadow(vec![theme.inset_hi()])
+            })
+            .when(!floating, |el| el.border_b_1().border_color(theme.line))
             .child(div().flex_1().flex().justify_start().min_w_0().overflow_hidden().child(zone(left)))
             .child(div().flex_none().flex().justify_center().child(zone(center)))
             .child(div().flex_1().flex().justify_end().min_w_0().child(zone(right)))

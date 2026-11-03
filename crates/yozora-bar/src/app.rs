@@ -173,7 +173,7 @@ pub fn apply_theme(cx: &mut App) {
         config.theme = if dark { ThemeMode::Midnight } else { ThemeMode::Daybreak };
     }
     let mut theme = Theme::new(&config, shell.system_dark, !settings.bar.bar.blur);
-    theme.font = yozora_ui::theme::resolve_font(cx, &settings.theme.font);
+    theme.resolve_fonts(cx, &settings.theme.font);
     if cx.reduce_motion() {
         theme.motion.reduced = true;
     }

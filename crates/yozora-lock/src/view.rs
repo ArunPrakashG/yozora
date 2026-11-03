@@ -18,6 +18,7 @@ use yozora_config::lock::LockConfig;
 use yozora_ui::{
     Icon, Theme, icon_sized,
     spring::{SpringConfig, settle_time, step_response},
+    theme::{RADIUS_MD, RADIUS_SM, RADIUS_XL, RADIUS_XS},
 };
 
 use crate::{
@@ -253,7 +254,7 @@ fn scale(window: &Window) -> f32 {
 }
 
 fn shadow(theme: &Theme) -> Vec<BoxShadow> {
-    theme.popover_shadow()
+    theme.raised_shadow()
 }
 
 fn ring(color: Rgba, width: f32) -> BoxShadow {
@@ -341,7 +342,7 @@ impl Render for LockView {
                 .with_animation("enter", Animation::new(Duration::from_millis(120)), |el, t| el.opacity(t))
                 .into_any_element()
         } else {
-            let spring = SpringConfig::POPOVER;
+            let spring = SpringConfig::POP;
             let total = settle_time(spring);
             let secs = total.as_secs_f32();
             content
@@ -447,10 +448,10 @@ impl LockView {
             .flex()
             .items_center()
             .gap(px(4. * s))
-            .rounded(px(12. * s))
+            .rounded(RADIUS_MD * s)
             .bg(theme.glass_bar)
             .border_1()
-            .border_color(theme.hair_2)
+            .border_color(theme.line_strong)
             .text_size(px(12.5 * s))
             .font_weight(FontWeight::MEDIUM)
             .text_color(theme.ink_2);
@@ -461,7 +462,7 @@ impl LockView {
                     .px(px(5. * s))
                     .flex()
                     .items_center()
-                    .rounded(px(5. * s))
+                    .rounded(RADIUS_XS * s)
                     .border_1()
                     .border_color(theme.ink_2)
                     .text_size(px(10.5 * s))
@@ -535,7 +536,7 @@ impl LockView {
                 .text_color(theme.accent_ink)
                 .text_size(px(30. * s))
                 .font_weight(FontWeight::SEMIBOLD)
-                .shadow(vec![ring(with_alpha(theme.glass_bar, 1.), 4. * s), ring(theme.hair_2, 5. * s)]);
+                .shadow(vec![ring(with_alpha(theme.glass_bar, 1.), 4. * s), ring(theme.line_strong, 5. * s)]);
             match &lock.user.picture {
                 Some(p) => a.child(img(p.clone()).size_full().object_fit(ObjectFit::Cover)),
                 None => a.child(SharedString::from(lock.user.initial())),
@@ -544,7 +545,7 @@ impl LockView {
 
         let border = match phase {
             Phase::Wrong => theme.danger,
-            Phase::Waiting => theme.hair_2,
+            Phase::Waiting => theme.line_strong,
             _ => theme.accent,
         };
         let mut shadows = shadow(theme);
@@ -596,7 +597,7 @@ impl LockView {
             .flex()
             .items_center()
             .justify_center()
-            .bg(if lit { theme.accent } else { theme.fill_3 })
+            .bg(if lit { theme.accent } else { theme.fill_press })
             .text_color(if lit { theme.accent_ink } else { theme.ink_3 })
             .when(can_submit, |d| d.cursor_pointer())
             .child(go_icon)
@@ -611,8 +612,8 @@ impl LockView {
             .gap(px(10. * s))
             .pl(px(16. * s))
             .pr(px(6. * s))
-            .rounded(px(24. * s))
-            .bg(theme.glass_pop)
+            .rounded_full()
+            .bg(theme.surface)
             .border_1()
             .border_color(border)
             .shadow(shadows)
@@ -671,18 +672,18 @@ impl LockView {
             div()
                 .id(id)
                 .size(px(32. * s))
-                .rounded(px(9. * s))
+                .rounded(RADIUS_SM * s)
                 .flex()
                 .items_center()
                 .justify_center()
                 .cursor_pointer()
-                .hover(|d| d.bg(theme.fill_2))
+                .hover(|d| d.bg(theme.fill_hover))
                 .child(icon_sized(icon, 15. * s))
                 .on_click(cx.listener(move |this, _, _, cx| {
                     let _ = this.lock.read(cx).media_cmds.try_send(cmd);
                 }))
         };
-        let art = div().size(px(48. * s)).flex_none().rounded(px(10. * s)).overflow_hidden().bg(theme.fill_2);
+        let art = div().size(px(48. * s)).flex_none().rounded(RADIUS_SM * s).overflow_hidden().bg(theme.fill_hover);
         let art = match media.art {
             Some(p) => art.child(img(p).size_full().object_fit(ObjectFit::Cover)).into_any_element(),
             None => art
@@ -702,10 +703,10 @@ impl LockView {
             .items_center()
             .gap(px(12. * s))
             .p(px(10. * s))
-            .rounded(px(16. * s))
-            .bg(theme.glass_pop)
+            .rounded(RADIUS_XL * s)
+            .bg(theme.surface)
             .border_1()
-            .border_color(theme.hair_2)
+            .border_color(theme.line_strong)
             .shadow(shadow(theme))
             .child(art)
             .child(
@@ -737,10 +738,10 @@ impl LockView {
                 .flex()
                 .items_center()
                 .gap(px(9. * s))
-                .rounded(px(18. * s))
+                .rounded_full()
                 .bg(theme.glass_bar)
                 .border_1()
-                .border_color(theme.hair_2)
+                .border_color(theme.line_strong)
                 .text_size(px(12.5 * s))
                 .text_color(theme.ink_2)
                 .child(icon_sized(Icon::Bell, 16. * s).text_color(theme.ink))
@@ -780,8 +781,8 @@ impl LockView {
                             .bg(if confirming { theme.danger } else { theme.glass_bar })
                             .text_color(if confirming { theme.accent_ink } else { theme.ink })
                             .border_1()
-                            .border_color(theme.hair_2)
-                            .group_hover(id, |d| d.bg(if confirming { theme.danger } else { theme.fill_3 }))
+                            .border_color(theme.line_strong)
+                            .group_hover(id, |d| d.bg(if confirming { theme.danger } else { theme.fill_press }))
                             .child(icon_sized(icon, 18. * s)),
                     )
                     .child(div().text_color(if confirming { theme.danger } else { theme.ink_2 }).child(if confirming {

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Yozora motion</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8BBEFF}a:hover{color:#B7D6FF}
+.wall-mid{background: radial-gradient(120% 80% at 85% 0%, #1B2A4D 0%, rgba(27,42,77,0) 55%), radial-gradient(90% 70% at 0% 100%, #1A1433 0%, rgba(26,20,51,0) 60%), #070A12;}
+.demo-toast{position:absolute;top:0;right:0;height:96px;will-change:transform,opacity}
+.demo-toast .yz-icon-btn{margin:-4px -6px -4px 0}
+.demo-toast.paused{background: var(--yz-surface)}
+.tok{display:grid;grid-template-columns:150px 150px 1fr;gap:16px;align-items:center;min-height:40px;border-bottom:1px solid var(--yz-line)}
+</style>
+</helmet>
+<div class="yz-midnight" style="width: 1440px; min-height: 1040px; box-sizing: border-box; padding: 72px 60px; background: #0A0E17; color: var(--yz-ink); display: grid; grid-template-columns: 560px 1fr; gap: 56px;">
+
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <h1 style="margin: 0; font: 600 40px/44px var(--yz-font); letter-spacing: -0.02em;">Motion</h1>
+      <p style="margin: 0; font: 400 16px/24px var(--yz-font); color: var(--yz-ink-2);">Send a few, hover one, close one. These run on the real tokens.</p>
+    </div>
+
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <button class="yz-btn primary" type="button" onClick="{{ sendNormal }}">Send toast</button>
+      <button class="yz-btn" type="button" onClick="{{ sendCritical }}">Send critical</button>
+      <button class="yz-btn" type="button" onClick="{{ closeTop }}">Close newest</button>
+      <button class="yz-btn ghost" type="button" onClick="{{ togglePop }}" aria-pressed="{{ popOpen }}">Popover</button>
+      <span style="flex: 1 1 auto;"></span>
+      <label style="display: flex; align-items: center; gap: 8px; font: var(--yz-text-meta); color: var(--yz-ink-2);">
+        Reduced
+        <button class="{{ reducedCls }}" type="button" role="switch" aria-checked="{{ reduced }}" aria-label="Reduced motion" onClick="{{ toggleReduced }}"></button>
+      </label>
+    </div>
+
+    <div class="wall-mid" style="position: relative; height: 560px; border-radius: 12px; border: 1px solid var(--yz-line); overflow: hidden;">
+      <div style="position: absolute; left: 12px; right: 12px; top: 12px; height: 36px; border-radius: 8px; background: var(--yz-glass-bar); border: 1px solid var(--yz-line); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; box-sizing: border-box;">
+        <span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">{{ status }}</span>
+        <span style="font: var(--yz-text-num);">21:48</span>
+      </div>
+
+      <div style="position: absolute; top: 64px; right: 12px; width: 380px; height: 440px;">
+        <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0">
+          <article class="{{ t.cls }}" style="{{ t.style }}" aria-label="{{ t.summary }}" onMouseEnter="{{ t.enter }}" onMouseLeave="{{ t.leave }}">
+            <div class="yz-toast-head">
+              <span class="yz-app-glyph" style="{{ t.glyph }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></span>
+              <span class="yz-toast-app">{{ t.app }} <span style="color: var(--yz-ink-3);">· now</span></span>
+              <button class="yz-icon-btn" type="button" aria-label="Dismiss" onClick="{{ t.close }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </div>
+            <div class="yz-toast-text">
+              <span class="yz-toast-summary">{{ t.summary }}</span>
+              <span class="yz-toast-body" style="-webkit-line-clamp: 1;">{{ t.body }}</span>
+            </div>
+            <i class="yz-toast-timer" style="{{ t.timer }}"></i>
+          </article>
+        </sc-for>
+        <sc-if value="{{ hasMore }}" hint-placeholder-val="{{ false }}">
+          <span class="yz-chip" style="position: absolute; right: 0; top: 320px; border: 1px solid var(--yz-line-strong); background: var(--yz-surface);">{{ moreLabel }}</span>
+        </sc-if>
+      </div>
+
+      <div class="yz-surface" style="{{ popStyle }}" aria-hidden="{{ popHidden }}">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 10px;">
+          <span style="font: var(--yz-text-title);">Notifications</span>
+          <span class="yz-chip accent">{{ count }} new</span>
+        </div>
+        <div class="yz-row"><span class="yz-app-glyph" style="background: #3A76F0;"></span><span style="flex: 1 1 auto; font: var(--yz-text-body);">Priya Raman</span><span style="font: var(--yz-text-meta); color: var(--yz-ink-3);">now</span></div>
+        <div class="yz-row"><span class="yz-app-glyph" style="background: #2B3240;"></span><span style="flex: 1 1 auto; font: var(--yz-text-body);">CI passed on #28</span><span style="font: var(--yz-text-meta); color: var(--yz-ink-3);">1 min</span></div>
+        <div class="yz-row"><span class="yz-app-glyph" style="background: #E8590C;"></span><span style="flex: 1 1 auto; font: var(--yz-text-body);">Download complete</span><span style="font: var(--yz-text-meta); color: var(--yz-ink-3);">2 min</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 36px; padding-top: 6px;">
+    <section style="display: flex; flex-direction: column; gap: 14px;">
+      <h2 style="margin: 0; font: var(--yz-text-display);">Tokens</h2>
+      <div style="display: flex; flex-direction: column; border-top: 1px solid var(--yz-line);">
+        <sc-for list="{{ tokens }}" as="k" hint-placeholder-count="8">
+          <div class="tok">
+            <span style="font: var(--yz-text-num); color: var(--yz-accent);">{{ k.name }}</span>
+            <span style="font: var(--yz-text-num); color: var(--yz-ink);">{{ k.value }}</span>
+            <span style="font: var(--yz-text-body); color: var(--yz-ink-2);">{{ k.use }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+      <sc-for list="{{ curves }}" as="c" hint-placeholder-count="3">
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px; background: var(--yz-surface); border: 1px solid var(--yz-line); border-radius: 10px; padding: 16px;">
+          <svg width="100%" viewBox="0 0 220 120" role="img" aria-label="{{ c.label }}">
+            <line x1="0" y1="100" x2="220" y2="100" stroke="rgba(160,190,255,0.14)"></line>
+            <line x1="0" y1="20" x2="220" y2="20" stroke="rgba(160,190,255,0.14)" stroke-dasharray="3 4"></line>
+            <path d="{{ c.d }}" fill="none" stroke="#8BBEFF" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+          <figcaption style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font: var(--yz-text-strong);">{{ c.name }}</span>
+            <span style="font: var(--yz-text-num); color: var(--yz-ink-3);">{{ c.spec }}</span>
+          </figcaption>
+        </figure>
+      </sc-for>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 12px;">
+      <h2 style="margin: 0; font: var(--yz-text-display);">Rules</h2>
+      <ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font: var(--yz-text-body); color: var(--yz-ink-2);">
+        <li><span style="color: var(--yz-ink);">Only transform and opacity move.</span> Shadow, blur, size and large color fills never animate.</li>
+        <li><span style="color: var(--yz-ink);">At rest, nothing draws.</span> The frame clock runs only while a spring is moving.</li>
+        <li><span style="color: var(--yz-ink);">Interrupt, don't restart.</span> A new target keeps the spring's velocity.</li>
+        <li><span style="color: var(--yz-ink);">Timers use the wall clock.</span> A dropped frame never stretches a toast.</li>
+        <li><span style="color: var(--yz-ink);">Leaving is faster than arriving.</span> Exits are 140 ms and never wait for anything.</li>
+        <li><span style="color: var(--yz-ink);">Reduced motion is a 100 ms fade.</span> No travel, no scale.</li>
+      </ol>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { toasts: [], seq: 0, reduced: false, pop: false };
+    this.samples = [
+      { app: 'GitHub', summary: 'CI passed on #28', body: 'Rebuild notifications on the new tokens', color: '#2B3240' },
+      { app: 'Signal', summary: 'Priya Raman', body: 'Are we still on for the review at 4?', color: '#3A76F0' },
+      { app: 'Firefox', summary: 'Download complete', body: 'hyprland-0.56.2.tar.gz · 14.8 MB', color: '#E8590C' },
+      { app: 'Calendar', summary: 'Design review in 10 minutes', body: 'Kestrel · 16:00 to 16:30', color: '#0B7562' },
+      { app: 'Yozora', summary: 'Update installed', body: 'yozora-git r57 · restart the bar to finish', color: '#4C6FB8' },
+    ];
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => this.tick(50), 50);
+  }
+  componentWillUnmount() {
+    clearInterval(this.timer);
+    (this.pending || []).forEach(clearTimeout);
+  }
+  later(fn, ms) {
+    this.pending = this.pending || [];
+    this.pending.push(setTimeout(fn, ms));
+  }
+  patch(id, f) {
+    this.setState((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, ...f(t) } : t)) }));
+  }
+  tick(dt) {
+    const due = [];
+    this.setState((s) => ({
+      toasts: s.toasts.map((t) => {
+        if (t.phase !== 'shown' || t.paused || t.total == null) return t;
+        const left = t.left - dt;
+        if (left <= 0) due.push(t.id);
+        return { ...t, left: Math.max(0, left) };
+      }),
+    }), () => due.forEach((id) => this.close(id)));
+  }
+  send(critical) {
+    const id = this.state.seq + 1;
+    const base = critical
+      ? { app: 'System', summary: 'Disk almost full', body: '/ has 1.2 GB left', color: '#FF8F8F' }
+      : this.samples[id % this.samples.length];
+    const t = { ...base, id, critical, phase: 'enter', total: critical ? null : 6000, left: 6000, paused: false };
+    this.setState((s) => ({ seq: id, toasts: [t, ...s.toasts] }));
+    // One frame at the start position, then let the transition carry it home.
+    this.later(() => this.patch(id, () => ({ phase: 'shown' })), 24);
+  }
+  close(id) {
+    const live = this.state.toasts.filter((t) => t.phase !== 'out');
+    const slot = live.findIndex((t) => t.id === id);
+    if (slot < 0) return;
+    this.patch(id, () => ({ phase: 'out', slot }));
+    this.later(() => this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), this.state.reduced ? 100 : 140);
+  }
+  springPath(k, c, ms) {
+    const w0 = Math.sqrt(k), z = c / (2 * w0);
+    const f = (t) => {
+      if (z < 1) {
+        const wd = w0 * Math.sqrt(1 - z * z);
+        return 1 - Math.exp(-z * w0 * t) * (Math.cos(wd * t) + (z * w0 / wd) * Math.sin(wd * t));
+      }
+      return 1 - Math.exp(-w0 * t) * (1 + w0 * t);
+    };
+    let d = '';
+    for (let i = 0; i <= 80; i++) {
+      const t = (i / 80) * (ms / 1000);
+      d += (i ? ' L' : 'M') + ((i / 80) * 220).toFixed(1) + ' ' + (100 - f(t) * 80).toFixed(1);
+    }
+    return d;
+  }
+  exitPath() {
+    let d = '';
+    for (let i = 0; i <= 40; i++) {
+      const s = i / 40;
+      const x = 3 * (1 - s) * (1 - s) * s * 0.4 + 3 * (1 - s) * s * s + s * s * s;
+      const y = 3 * (1 - s) * s * s + s * s * s;
+      d += (i ? ' L' : 'M') + (x * 220 * (140 / 400)).toFixed(1) + ' ' + (20 + y * 80).toFixed(1);
+    }
+    return d;
+  }
+  renderVals() {
+    const s = this.state;
+    const H = 96, G = 8, MAX = 3;
+    const rise = s.reduced ? 0 : 8;
+    const ease = s.reduced ? 'linear' : 'var(--yz-ease-settle)';
+    const moveDur = s.reduced ? '100ms' : 'var(--yz-dur-move)';
+    const enterDur = s.reduced ? '100ms' : 'var(--yz-dur-enter)';
+    const exitDur = s.reduced ? '100ms' : 'var(--yz-dur-exit)';
+    let slot = 0;
+    const toasts = s.toasts.map((t) => {
+      const mine = t.phase === 'out' ? t.slot : slot++;
+      const y = Math.min(mine, MAX - 1) * (H + G);
+      const hidden = mine >= MAX && t.phase !== 'out';
+      let transform, opacity, transition;
+      if (t.phase === 'enter') {
+        transform = 'translate3d(0,' + (y - rise) + 'px,0)'; opacity = 0; transition = 'none';
+      } else if (t.phase === 'out') {
+        transform = 'translate3d(' + (s.reduced ? 0 : 12) + 'px,' + y + 'px,0)'; opacity = 0;
+        transition = 'transform ' + exitDur + ' var(--yz-ease-exit), opacity ' + exitDur + ' var(--yz-ease-exit)';
+      } else {
+        transform = 'translate3d(0,' + (hidden ? y + rise : y) + 'px,0)'; opacity = hidden ? 0 : 1;
+        transition = 'transform ' + moveDur + ' ' + ease + ', opacity ' + enterDur + ' ' + ease + ', background-color 120ms';
+      }
+      const frac = t.total == null ? 0 : t.left / t.total;
+      return {
+        ...t,
+        cls: 'yz-toast yz-surface demo-toast' + (t.critical ? ' critical' : '') + (t.paused ? ' paused' : ''),
+        style: 'transform:' + transform + ';opacity:' + opacity + ';transition:' + transition + ';z-index:' + (100 - mine) + ';pointer-events:' + (hidden || t.phase === 'out' ? 'none' : 'auto'),
+        glyph: 'background:' + t.color + (t.critical ? ';color:#0A0E17' : ''),
+        timer: t.total == null ? 'display:none' : 'width:100%;transform:scaleX(' + frac.toFixed(3) + ');transition:transform 50ms linear, opacity 120ms;opacity:' + (t.paused ? 0.25 : 0.55),
+        enter: () => this.patch(t.id, () => ({ paused: true })),
+        leave: () => this.patch(t.id, (x) => ({ paused: false, left: Math.max(x.left, 1500) })),
+        close: () => this.close(t.id),
+      };
+    });
+    const live = s.toasts.filter((t) => t.phase !== 'out').length;
+    const popOpen = s.pop;
+    const popStyle = 'position:absolute;left:12px;top:56px;width:300px;border-radius:12px;padding:8px;box-sizing:border-box;transform-origin:top left;'
+      + (popOpen
+        ? 'opacity:1;transform:' + (s.reduced ? 'none' : 'translate3d(0,0,0) scale(1)') + ';transition:transform ' + (s.reduced ? '100ms linear' : '260ms var(--yz-ease-pop)') + ',opacity ' + (s.reduced ? '100ms' : '120ms') + ' linear;'
+        : 'opacity:0;pointer-events:none;transform:' + (s.reduced ? 'none' : 'translate3d(0,-6px,0) scale(0.98)') + ';transition:transform 140ms var(--yz-ease-exit),opacity 140ms var(--yz-ease-exit);');
+    return {
+      toasts,
+      hasMore: live > MAX,
+      moreLabel: (live - MAX) + ' more',
+      count: Math.max(live, 3),
+      status: live ? live + ' on screen' : 'Nothing on screen',
+      reduced: s.reduced,
+      reducedCls: 'yz-switch' + (s.reduced ? ' on' : ''),
+      popOpen,
+      popHidden: !popOpen,
+      popStyle,
+      sendNormal: () => this.send(false),
+      sendCritical: () => this.send(true),
+      closeTop: () => { const top = s.toasts.find((t) => t.phase !== 'out'); if (top) this.close(top.id); },
+      togglePop: () => this.setState({ pop: !s.pop }),
+      toggleReduced: () => this.setState({ reduced: !s.reduced }),
+      tokens: [
+        { name: 'dur-press', value: '80 ms', use: 'Press feedback: scale 0.97 on buttons and tiles' },
+        { name: 'dur-hover', value: '120 ms', use: 'Hover fills and text color' },
+        { name: 'dur-exit', value: '140 ms  ease-exit', use: 'Anything leaving: fade and 12 px toward the edge' },
+        { name: 'dur-enter', value: '220 ms  settle', use: 'Toasts, OSD, rows: fade in, 8 px rise' },
+        { name: 'spring-settle', value: 'k 700  c 53', use: 'Critically damped. Enters, stack reflow, workspace pill' },
+        { name: 'spring-pop', value: 'k 520  c 40', use: 'Popovers: scale 0.98 to 1 and 6 px, 0.3% overshoot' },
+        { name: 'dur-move', value: '260 ms  settle', use: 'Reflow when something above leaves' },
+        { name: 'stagger', value: '18 ms  max 6', use: 'List rows when a popover opens; the 7th row waits no longer' },
+      ],
+      curves: [
+        { name: 'Settle', spec: 'k 700 · c 53 · 400 ms shown', d: this.springPath(700, 53, 400), label: 'Settle spring curve' },
+        { name: 'Pop', spec: 'k 520 · c 40 · 400 ms shown', d: this.springPath(520, 40, 400), label: 'Pop spring curve' },
+        { name: 'Exit', spec: '0.4, 0, 1, 1 · 140 ms', d: this.exitPath(), label: 'Exit easing curve' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

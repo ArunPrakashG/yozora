@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Yozora notification center</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8BBEFF}a:hover{color:#B7D6FF}
+.wall-mid{background: radial-gradient(120% 80% at 85% 0%, #1B2A4D 0%, rgba(27,42,77,0) 55%), radial-gradient(90% 70% at 0% 100%, #1A1433 0%, rgba(26,20,51,0) 60%), #070A12;}
+.wall-day{background: radial-gradient(120% 80% at 85% 0%, #FFFFFF 0%, rgba(255,255,255,0) 55%), radial-gradient(90% 70% at 0% 100%, #D6DEF0 0%, rgba(214,222,240,0) 60%), #E4E9F2;}
+.bar-strip{height:36px;border-radius:8px;background:var(--yz-glass-bar);border:1px solid var(--yz-line);display:flex;align-items:center;justify-content:flex-end;gap:4px;padding:0 6px;box-sizing:border-box}
+.bar-btn{height:26px;min-width:26px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:6px;color:var(--yz-ink);font:var(--yz-text-num);background:transparent;border:0}
+.bar-btn.open{background:var(--yz-fill-press)}
+.pop{border-radius:var(--yz-radius-xl);padding:8px;display:flex;flex-direction:column;gap:4px;color:var(--yz-ink);width:var(--yz-popover-w);box-sizing:border-box;align-self:flex-end}
+.pop-head{display:flex;align-items:center;gap:4px;padding:8px 6px 8px 10px}
+.group{display:flex;flex-direction:column;gap:4px;padding-top:6px}
+.group-head{display:flex;align-items:center;gap:8px;height:24px;padding:0 10px;font:var(--yz-text-meta);color:var(--yz-ink-2)}
+.card{background:var(--yz-surface-2);border:1px solid var(--yz-line);border-radius:var(--yz-radius-md);padding:10px 12px;display:flex;flex-direction:column;gap:2px;position:relative}
+.card-top{display:flex;align-items:center;gap:8px;height:18px}
+.card-sum{font:var(--yz-text-strong);flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-time{font:var(--yz-text-meta);color:var(--yz-ink-3)}
+.card-body{font:var(--yz-text-body);color:var(--yz-ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card.hover{background:var(--yz-fill-hover)}
+.tools{display:flex;gap:2px;margin:-6px -8px -6px 0}
+.tools .yz-icon-btn{width:26px;height:26px}
+.under{height:5px;margin:0 8px;border-radius:0 0 7px 7px;background:var(--yz-surface-2);border:1px solid var(--yz-line);border-top:0;margin-top:-4px}
+.under.two{margin:0 16px;margin-top:-4px;opacity:.6}
+</style>
+</helmet>
+<div class="yz-midnight" style="width: 1440px; min-height: 1160px; box-sizing: border-box; padding: 72px 60px; background: #0A0E17; color: var(--yz-ink); display: flex; flex-direction: column; gap: 40px;">
+
+  <header style="display: flex; flex-direction: column; gap: 10px;">
+    <h1 style="margin: 0; font: 600 40px/44px var(--yz-font); letter-spacing: -0.02em;">Notification center</h1>
+    <p style="margin: 0; font: 400 16px/24px var(--yz-font); color: var(--yz-ink-2);">Pinned first, then one group per app, newest first. A group of three or more collapses into a stack.</p>
+  </header>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start;">
+
+    <section aria-label="Center, Midnight" class="yz-midnight wall-mid" style="border-radius: 12px; padding: 12px 12px 24px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--yz-line); min-height: 900px; box-sizing: border-box;">
+      <div class="bar-strip">
+        <span class="bar-btn open" aria-label="Notifications, 6 unread"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>6</span>
+        <span class="bar-btn">21:48</span>
+      </div>
+      <div class="pop yz-surface" role="dialog" aria-label="Notifications">
+        <div class="pop-head">
+          <span style="font: var(--yz-text-title); flex: 1 1 auto;">Notifications</span>
+          <button class="yz-icon-btn" type="button" aria-label="Do Not Disturb" aria-pressed="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg></button>
+          <button class="yz-btn ghost" type="button" style="height: 28px; padding: 0 10px;">Clear</button>
+        </div>
+
+        <div class="group">
+          <div class="group-head"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5M9 3h6l-1 6 4 3v2H6v-2l4-3z"></path></svg>Pinned</div>
+          <article class="card" aria-label="Calendar: Ship notifications rebuild">
+            <div class="card-top"><span class="yz-app-glyph" style="background: #0B7562; width: 14px; height: 14px;"></span><span class="card-sum">Ship the notifications rebuild</span><span class="card-time">Fri</span></div>
+            <span class="card-body" style="padding-left: 22px;">Reminder from Calendar · due Friday 18:00</span>
+          </article>
+        </div>
+
+        <div class="group">
+          <div class="group-head"><span class="yz-app-glyph" style="background: #3A76F0; width: 14px; height: 14px;"></span><span style="flex: 1 1 auto;">Signal</span><span style="font: var(--yz-text-num); color: var(--yz-ink-3);">3</span></div>
+          <article class="card hover" aria-label="Signal: Priya Raman, hovered">
+            <div class="card-top">
+              <span class="card-sum">Priya Raman</span>
+              <span class="tools">
+                <button class="yz-icon-btn" type="button" aria-label="Pin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5M9 3h6l-1 6 4 3v2H6v-2l4-3z"></path></svg></button>
+                <button class="yz-icon-btn" type="button" aria-label="Snooze"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5M5 3L2 6M19 3l3 3"></path></svg></button>
+                <button class="yz-icon-btn" type="button" aria-label="Dismiss"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+              </span>
+            </div>
+            <span class="card-body">Are we still on for the review at 4? I moved the room to Kestrel.</span>
+          </article>
+          <div class="under"></div>
+          <div class="under two"></div>
+          <button class="yz-btn ghost" type="button" style="height: 26px; align-self: flex-start; margin-left: 4px; font: var(--yz-text-meta);">2 more from Signal</button>
+        </div>
+
+        <div class="group">
+          <div class="group-head"><span class="yz-app-glyph" style="background: #2B3240; width: 14px; height: 14px;"></span><span style="flex: 1 1 auto;">GitHub</span></div>
+          <article class="card" aria-label="GitHub: CI passed">
+            <div class="card-top"><span class="card-sum">CI passed on #28</span><span class="card-time">1 min</span></div>
+            <span class="card-body">Rebuild notifications on the new tokens · 4 checks in 3 m 12 s</span>
+          </article>
+          <article class="card" aria-label="GitHub: review requested">
+            <div class="card-top"><span class="card-sum">Review requested</span><span class="card-time">18 min</span></div>
+            <span class="card-body">sudo-toggle: say so when authentication fails</span>
+          </article>
+        </div>
+
+        <div class="group">
+          <div class="group-head"><span class="yz-app-glyph" style="background: #E8590C; width: 14px; height: 14px;"></span><span style="flex: 1 1 auto;">Firefox</span></div>
+          <article class="card" aria-label="Firefox: download complete">
+            <div class="card-top"><span class="card-sum">Download complete</span><span class="card-time">2 min</span></div>
+            <span class="card-body">hyprland-0.56.2.tar.gz · 14.8 MB</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Empty with Do Not Disturb, Midnight" class="yz-midnight wall-mid" style="border-radius: 12px; padding: 12px 12px 24px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--yz-line); min-height: 900px; box-sizing: border-box;">
+      <div class="bar-strip">
+        <span class="bar-btn open" aria-label="Notifications, Do Not Disturb on"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg></span>
+        <span class="bar-btn">21:48</span>
+      </div>
+      <div class="pop yz-surface" role="dialog" aria-label="Notifications">
+        <div class="pop-head">
+          <span style="font: var(--yz-text-title); flex: 1 1 auto;">Notifications</span>
+          <button class="yz-icon-btn" type="button" aria-label="Do Not Disturb" aria-pressed="true" style="background: var(--yz-accent-soft); color: var(--yz-accent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg></button>
+        </div>
+        <div style="margin: 0 2px; padding: 10px 12px; border-radius: 8px; background: var(--yz-accent-soft); display: flex; align-items: center; gap: 10px;">
+          <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 1px;">
+            <span style="font: var(--yz-text-strong); color: var(--yz-ink);">Do Not Disturb</span>
+            <span style="font: var(--yz-text-meta); color: var(--yz-ink-2);">Critical alerts still show</span>
+          </span>
+          <button class="yz-btn" type="button" style="height: 28px;">Turn off</button>
+        </div>
+        <div style="height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
+          <span style="width: 44px; height: 44px; border-radius: 50%; background: var(--yz-fill); display: flex; align-items: center; justify-content: center; color: var(--yz-ink-3);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg></span>
+          <span style="font: var(--yz-text-strong); color: var(--yz-ink-2);">No notifications</span>
+        </div>
+      </div>
+
+      <div class="pop yz-surface" role="dialog" aria-label="Snoozed notification" style="margin-top: 24px;">
+        <div class="group" style="padding-top: 2px;">
+          <div class="group-head"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5"></path></svg>Snoozed</div>
+          <article class="card" aria-label="Snoozed: Calendar">
+            <div class="card-top"><span class="yz-app-glyph" style="background: #0B7562; width: 14px; height: 14px;"></span><span class="card-sum">Design review in 10 minutes</span><span class="card-time" style="font: var(--yz-text-num); color: var(--yz-accent);">until 15:55</span></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Center, Daybreak" class="yz-daybreak wall-day" style="border-radius: 12px; padding: 12px 12px 24px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--yz-line); min-height: 900px; box-sizing: border-box; color: var(--yz-ink);">
+      <div class="bar-strip">
+        <span class="bar-btn open" aria-label="Notifications, 4 unread"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>4</span>
+        <span class="bar-btn">09:12</span>
+      </div>
+      <div class="pop yz-surface" role="dialog" aria-label="Notifications">
+        <div class="pop-head">
+          <span style="font: var(--yz-text-title); flex: 1 1 auto;">Notifications</span>
+          <button class="yz-icon-btn" type="button" aria-label="Do Not Disturb" aria-pressed="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg></button>
+          <button class="yz-btn ghost" type="button" style="height: 28px; padding: 0 10px;">Clear</button>
+        </div>
+        <div class="group">
+          <div class="group-head"><span class="yz-app-glyph" style="background: #3A76F0; width: 14px; height: 14px;"></span><span style="flex: 1 1 auto;">Signal</span></div>
+          <article class="card" aria-label="Signal: Priya Raman">
+            <div class="card-top"><span class="card-sum">Priya Raman</span><span class="card-time">now</span></div>
+            <span class="card-body">Are we still on for the review at 4? I moved the room to Kestrel.</span>
+          </article>
+        </div>
+        <div class="group">
+          <div class="group-head"><span class="yz-app-glyph" style="background: #0B7562; width: 14px; height: 14px;"></span><span style="flex: 1 1 auto;">Calendar</span></div>
+          <article class="card" aria-label="Calendar: design review">
+            <div class="card-top"><span class="card-sum">Design review in 10 minutes</span><span class="card-time">3 min</span></div>
+            <span class="card-body">Kestrel · 16:00 to 16:30</span>
+            <div style="display: flex; gap: 6px; padding-top: 8px;">
+              <button class="yz-btn primary grow" type="button" style="height: 28px;">Join</button>
+              <button class="yz-btn grow" type="button" style="height: 28px;">Snooze 5 min</button>
+            </div>
+          </article>
+        </div>
+        <div class="group">
+          <div class="group-head"><span class="yz-app-glyph" style="background: #2B3240; width: 14px; height: 14px;"></span><span style="flex: 1 1 auto;">GitHub</span></div>
+          <article class="card" aria-label="GitHub: CI passed">
+            <div class="card-top"><span class="card-sum">CI passed on #28</span><span class="card-time">1 min</span></div>
+            <span class="card-body">Rebuild notifications on the new tokens</span>
+          </article>
+          <article class="card" aria-label="GitHub: review requested">
+            <div class="card-top"><span class="card-sum">Review requested</span><span class="card-time">18 min</span></div>
+            <span class="card-body">sudo-toggle: say so when authentication fails</span>
+          </article>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -13,7 +13,7 @@ optdepends=(
   'networkmanager: network module'
   'upower: battery module'
   'bluez: bluetooth module'
-  'ttf-geist: the default font'
+  'inter-font: the default font'
   'wl-clipboard: copying from the launcher'
   'cliphist: clipboard history in the launcher'
   'plocate: file search in the launcher'

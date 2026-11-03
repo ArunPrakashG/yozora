@@ -145,7 +145,7 @@ async fn system_dark() -> bool {
 
 fn apply_theme(settings: &NotifySettings, dark: bool, cx: &mut App) {
     let mut theme = Theme::new(&settings.theme, dark, false);
-    theme.font = yozora_ui::theme::resolve_font(cx, &settings.theme.font);
+    theme.resolve_fonts(cx, &settings.theme.font);
     if cx.reduce_motion() {
         theme.motion.reduced = true;
     }
@@ -269,7 +269,6 @@ fn run(replace: bool, dir: PathBuf) -> ExitCode {
                 cx.update(|cx| match event {
                     UiEvent::Show(n) => Stack::show(*n, cx),
                     UiEvent::Close(id) => Stack::close(id, cx),
-                    UiEvent::CloseAll => Stack::close_all(cx),
                     UiEvent::ExpireAll => Stack::expire_all(cx),
                     UiEvent::Sharing(on) => Stack::set_sharing(on, cx),
                     UiEvent::Quit => cx.quit(),

@@ -11,7 +11,7 @@ use gpui::{
 };
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::theme::{RADIUS_ROW, Theme};
+use crate::theme::{RADIUS_SM, Theme};
 
 actions!(
     yozora_input,
@@ -644,10 +644,10 @@ impl Render for TextInput {
                 None => el
                     .h(px(32.))
                     .px(px(10.))
-                    .rounded(RADIUS_ROW)
+                    .rounded(RADIUS_SM)
                     .bg(theme.fill)
                     .border_1()
-                    .border_color(if focused { theme.accent } else { theme.hair_2 })
+                    .border_color(if focused { theme.accent } else { theme.line_strong })
                     .text_size(px(if self.mono { 12. } else { 13. }))
                     .line_height(px(18.)),
             })

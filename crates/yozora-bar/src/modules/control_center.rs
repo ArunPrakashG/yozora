@@ -15,20 +15,7 @@ use crate::{
 };
 
 pub fn item(_theme: &Theme) -> Div {
-    bi().px(px(9.)).child(icon(Icon::ControlCenter))
-}
-
-fn slider_caption(title: &str, value: String, theme: &Theme) -> impl IntoElement {
-    div()
-        .flex()
-        .justify_between()
-        .gap(px(12.))
-        .px(px(4.))
-        .pb(px(7.))
-        .text_size(px(12.))
-        .text_color(theme.ink_2)
-        .child(div().flex_none().child(title.to_string()))
-        .child(div().min_w_0().truncate().text_color(theme.ink).child(value))
+    bi().child(icon(Icon::ControlCenter))
 }
 
 fn tiles(theme: &Theme, cx: &App) -> AnyElement {
@@ -106,30 +93,35 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
         return super::launcher::confirm(action, theme, cx);
     }
     let mut rows: Vec<AnyElement> = vec![tiles(theme, cx)];
-    let gap = || div().h(px(14.));
-    if let Some(picker) = devices::profile_picker(theme, cx) {
-        rows.push(div().pt(px(14.)).child(picker).into_any_element());
-    }
     if let Some(audio) = Services::get(cx).audio.as_ref().map(|a| a.read(cx)) {
-        if let Some(sink) = audio.state.sink() {
-            let caption = slider_caption("Sound", sink.description.clone(), theme);
-            rows.push(div().pt(px(14.)).child(caption).children(sound::sink_slider(p, theme, cx)).into_any_element());
-        }
-        if let Some(source) = audio.state.source() {
-            let value = if source.muted { "Muted".into() } else { format!("{}%", sound::percent(source.volume)) };
+        let sliders: Vec<AnyElement> = [
+            audio.state.sink().and_then(|_| sound::sink_slider(p, theme, cx)),
+            audio.state.source().and_then(|_| sound::source_slider(p, theme, cx)),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        if !sliders.is_empty() {
             rows.push(
                 div()
-                    .pt(px(14.))
-                    .child(slider_caption("Microphone", value, theme))
-                    .children(sound::source_slider(p, theme, cx))
+                    .flex()
+                    .flex_col()
+                    .gap(px(6.))
+                    .mt(px(8.))
+                    .py(px(6.))
+                    .px(px(4.))
+                    .children(sliders)
                     .into_any_element(),
             );
         }
     }
     if let Some(mini) = media::mini(theme, cx) {
-        rows.push(div().pt(px(14.)).child(mini).into_any_element());
+        rows.push(div().mt(px(8.)).child(mini).into_any_element());
     }
-    rows.push(gap().into_any_element());
+    if let Some(picker) = devices::profile_picker(theme, cx) {
+        rows.push(div().mt(px(8.)).child(picker).into_any_element());
+    }
+    rows.push(div().h(px(8.)).into_any_element());
 
     let footer = if p.ui.power_choices {
         div().flex().gap(px(6.)).children([SessionAction::Logout, SessionAction::Reboot, SessionAction::Poweroff].map(

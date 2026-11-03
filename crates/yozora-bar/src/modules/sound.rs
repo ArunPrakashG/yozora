@@ -3,7 +3,7 @@
 use gpui::{
     AnyElement, App, Context, Div, IntoElement, ParentElement, StatefulInteractiveElement, Styled, div, prelude::*, px,
 };
-use yozora_ui::{Icon, Theme, controls, icon};
+use yozora_ui::{Icon, Theme, controls, icon, theme::RADIUS_SM};
 
 use crate::{
     bar::bi,
@@ -79,12 +79,12 @@ pub fn sink_slider(p: &Popover, theme: &Theme, cx: &App) -> Option<AnyElement> {
                     .id("mute")
                     .flex_none()
                     .size(px(28.))
-                    .rounded(px(8.))
+                    .rounded(RADIUS_SM)
                     .flex()
                     .items_center()
                     .justify_center()
                     .cursor_pointer()
-                    .hover(|s| s.bg(theme.fill_2))
+                    .hover(|s| s.bg(theme.fill_hover))
                     .text_color(if muted { theme.ink_3 } else { theme.ink })
                     .child(icon(volume_icon(Some(sink))))
                     .on_click(move |_, _, cx| send(Cmd::SinkMute(!muted), cx)),
@@ -97,8 +97,22 @@ pub fn sink_slider(p: &Popover, theme: &Theme, cx: &App) -> Option<AnyElement> {
                 theme,
                 |v, _, cx| send(Cmd::SinkVolume(v), cx),
             ))
+            .child(level(if muted { None } else { Some(volume) }, theme))
             .into_any_element(),
     )
+}
+
+/// The percentage after a slider, or a dash when muted.
+fn level(volume: Option<f32>, theme: &Theme) -> impl IntoElement {
+    div()
+        .flex_none()
+        .w(px(24.))
+        .text_right()
+        .font_family(theme.mono.clone())
+        .text_size(px(12.))
+        .font_weight(gpui::FontWeight::MEDIUM)
+        .text_color(theme.ink_2)
+        .child(volume.map_or("–".to_string(), |v| percent(v).to_string()))
 }
 
 pub fn source_slider(p: &Popover, theme: &Theme, cx: &App) -> Option<AnyElement> {
@@ -115,12 +129,12 @@ pub fn source_slider(p: &Popover, theme: &Theme, cx: &App) -> Option<AnyElement>
                     .id("mic-mute")
                     .flex_none()
                     .size(px(28.))
-                    .rounded(px(8.))
+                    .rounded(RADIUS_SM)
                     .flex()
                     .items_center()
                     .justify_center()
                     .cursor_pointer()
-                    .hover(|s| s.bg(theme.fill_2))
+                    .hover(|s| s.bg(theme.fill_hover))
                     .text_color(if muted { theme.ink_3 } else { theme.ink })
                     .child(icon(if muted { Icon::MicOff } else { Icon::Mic }))
                     .on_click(move |_, _, cx| send(Cmd::SourceMute(!muted), cx)),
@@ -128,6 +142,7 @@ pub fn source_slider(p: &Popover, theme: &Theme, cx: &App) -> Option<AnyElement>
             .child(controls::slider("mic", if muted { 0. } else { volume }, None, &p.ui.mic, theme, |v, _, cx| {
                 send(Cmd::SourceVolume(v), cx)
             }))
+            .child(level(if muted { None } else { Some(volume) }, theme))
             .into_any_element(),
     )
 }

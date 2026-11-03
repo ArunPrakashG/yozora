@@ -5,7 +5,7 @@ use gpui::{
     AnimationExt, AnyElement, Context, Div, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement,
     SharedString, StatefulInteractiveElement, Styled, Window, div, prelude::*, px,
 };
-use yozora_ui::{Icon, Theme, controls, icon_sized};
+use yozora_ui::{Icon, Theme, controls, icon_sized, theme::RADIUS_SM};
 
 use super::SessionAction;
 use crate::{app::Config, bar::bi, popover::Popover, services::run_shell};
@@ -69,7 +69,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
     for e in ENTRIES {
         match e {
             None => {
-                rows.push(div().h(px(1.)).mx(px(6.)).my(px(4.)).bg(theme.hair).into_any_element());
+                rows.push(div().h(px(1.)).mx(px(6.)).my(px(4.)).bg(theme.line).into_any_element());
                 y += SEP;
             }
             Some((label, key, code)) => {
@@ -85,7 +85,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
                         .flex()
                         .items_center()
                         .justify_between()
-                        .rounded(px(8.))
+                        .rounded(RADIUS_SM)
                         .child(SharedString::from(*label))
                         .when_some(*key, |el, k| el.child(div().text_size(px(11.5)).text_color(theme.ink_3).child(k)))
                         .on_hover(cx.listener(move |p, hovered: &bool, _, cx| {
@@ -111,7 +111,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
         .right(px(6.))
         .top_0()
         .h(px(ROW))
-        .rounded(px(8.))
+        .rounded(RADIUS_SM)
         .bg(theme.accent_soft)
         .border_1()
         .border_color(gpui::Rgba { a: 0.24, ..theme.accent })
@@ -131,13 +131,12 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
         .child(
             div()
                 .size(px(34.))
-                .rounded(px(10.))
+                .rounded(RADIUS_SM)
                 .flex()
                 .items_center()
                 .justify_center()
                 .bg(theme.midnight)
                 .text_color(theme.accent)
-                .shadow(theme.accent_glow())
                 .child(icon_sized(Icon::Logo, 18.)),
         )
         .child(
@@ -153,7 +152,7 @@ pub fn popover(p: &mut Popover, theme: &Theme, _window: &mut Window, cx: &mut Co
                 ),
         );
     let mut all =
-        vec![head.into_any_element(), div().h(px(1.)).mx(px(6.)).my(px(4.)).bg(theme.hair).into_any_element()];
+        vec![head.into_any_element(), div().h(px(1.)).mx(px(6.)).my(px(4.)).bg(theme.line).into_any_element()];
     all.extend(rows);
     // The highlight sits behind the rows, in one block so the stagger doesn't separate it.
     vec![div().relative().p(px(0.)).child(highlight).children(all).into_any_element()]
@@ -221,7 +220,7 @@ pub fn confirm(action: SessionAction, theme: &Theme, cx: &mut Context<Popover>) 
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded(px(10.))
+                    .rounded(RADIUS_SM)
                     .text_size(px(12.))
                     .font_weight(FontWeight::SEMIBOLD)
                     .bg(theme.danger)
