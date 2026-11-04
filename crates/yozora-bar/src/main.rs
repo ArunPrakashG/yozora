@@ -23,8 +23,6 @@ use std::{
 
 use gpui::App;
 use gpui_platform::application;
-use tracing_log::NormalizeEvent;
-use tracing_subscriber::{EnvFilter, Layer, filter::LevelFilter, layer::SubscriberExt, util::SubscriberInitExt};
 use yozora_config::paths;
 use yozora_ipc::{Request, Server};
 
@@ -198,11 +196,7 @@ fn run(config: Option<PathBuf>, fakes: services::Fakes) -> ExitCode {
     yozora_ui::gpu::prefer_vulkan();
     yozora_ui::fonts::cache_parsed();
     yozora_ui::malloc::tune();
-    let filter = EnvFilter::try_from_env("YOZORA_LOG").unwrap_or_else(|_| EnvFilter::new("info"));
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_filter(filter))
-        .with(ConnectionWatch.with_filter(LevelFilter::ERROR))
-        .init();
+    yozora_ui::logging::init("yozora-bar");
     install_panic_hook();
 
     let dir = config_dir(config);
@@ -225,6 +219,11 @@ fn run(config: Option<PathBuf>, fakes: services::Fakes) -> ExitCode {
     // Bind before starting GPUI so a second instance exits right away.
     let server = match Server::bind(&paths::socket_path(SOCKET_ID)) {
         Ok(s) => s,
+        // Started twice, say by systemd while a manual instance runs: not a failure to restart.
+        Err(e) if yozora_ipc::already_running(&e) => {
+            eprintln!("yozora-bar: {e:#}");
+            return ExitCode::SUCCESS;
+        }
         Err(e) => {
             eprintln!("yozora-bar: {e:#}");
             return ExitCode::FAILURE;
@@ -256,24 +255,5 @@ fn run(config: Option<PathBuf>, fakes: services::Fakes) -> ExitCode {
         // The event loop gave up, usually on a lost Wayland connection. Failing lets systemd restart.
         eprintln!("yozora-bar: the event loop stopped unexpectedly");
         ExitCode::FAILURE
-    }
-}
-
-/// Exits when the Wayland connection dies, so systemd restarts the bar.
-///
-/// A protocol error or broken socket is fatal to the connection, and wayland-backend logs it once
-/// when it happens. GPUI does not always stop its event loop then: after a bad `wp_viewport` request
-/// it kept spinning with no surfaces (#32). That log line is the one signal every path shares.
-struct ConnectionWatch;
-
-impl<S: tracing::Subscriber> Layer<S> for ConnectionWatch {
-    fn on_event(&self, event: &tracing::Event<'_>, _: tracing_subscriber::layer::Context<'_, S>) {
-        let normalized = event.normalized_metadata();
-        let target = normalized.as_ref().unwrap_or_else(|| event.metadata()).target();
-        // Only the client's own errors: libwayland's log, under `wayland_backend`, also carries warnings.
-        if target.starts_with("wayland_backend::") && target.ends_with("::client_impl") {
-            eprintln!("yozora-bar: lost the Wayland connection; exiting so the service restarts");
-            std::process::exit(1);
-        }
     }
 }

@@ -76,8 +76,26 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(2);
 /// How long the app may take to answer, which covers benchmarks that animate for a while.
 const REPLY_TIMEOUT: Duration = Duration::from_secs(120);
 
+/// Another live process already answers on the socket. A service that finds this has nothing to
+/// do, so it should exit cleanly rather than fail into a restart loop.
+#[derive(Debug)]
+pub struct AlreadyRunning(pub PathBuf);
+
+impl std::fmt::Display for AlreadyRunning {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "already running (socket {})", self.0.display())
+    }
+}
+
+impl std::error::Error for AlreadyRunning {}
+
+/// Whether `error` is [`AlreadyRunning`].
+pub fn already_running(error: &anyhow::Error) -> bool {
+    error.downcast_ref::<AlreadyRunning>().is_some()
+}
+
 impl Server {
-    /// Binds `path`. Fails if another live process already answers there; a stale socket left by
+    /// Binds `path`. Fails with [`AlreadyRunning`] if another live process already answers there; a stale socket left by
     /// a crash is replaced.
     pub fn bind(path: &Path) -> anyhow::Result<Self> {
         if let Some(dir) = path.parent() {
@@ -86,7 +104,7 @@ impl Server {
         }
         if path.exists() {
             if is_alive(path) {
-                anyhow::bail!("already running (socket {})", path.display());
+                return Err(AlreadyRunning(path.to_path_buf()).into());
             }
             std::fs::remove_file(path)?;
         }
