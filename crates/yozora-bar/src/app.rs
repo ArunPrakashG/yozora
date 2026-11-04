@@ -9,6 +9,7 @@ use std::{
 
 use gpui::{App, AppContext, DisplayId, Global, WindowHandle};
 use serde_json::json;
+use uuid::Uuid;
 use yozora_config::{
     Warning,
     bar::{BarSettings, BarStyle},
@@ -193,14 +194,21 @@ impl Shell {
     }
 }
 
-/// The Hyprland monitor at a display's position. GPUI's display bounds don't account for
-/// rotation, but their origin is the output's position in the layout, which is unique.
-fn monitor_name(display: &dyn gpui::PlatformDisplay, hypr: Option<&hyprland::State>, index: usize) -> String {
+/// The Hyprland monitor showing a display, or `None` while Hyprland doesn't know it yet.
+///
+/// GPUI derives a Wayland display's UUID from the output name, which stays right while outputs
+/// move or rescale. The display's origin, its position in the layout, is the fallback. Without
+/// Hyprland, displays are named by index.
+fn monitor_name(display: &dyn gpui::PlatformDisplay, hypr: Option<&hyprland::State>, index: usize) -> Option<String> {
+    let Some(hypr) = hypr else { return Some(format!("display-{index}")) };
+    if let Ok(uuid) = display.uuid()
+        && let Some(m) = hypr.monitors.iter().find(|m| Uuid::new_v5(&Uuid::NAMESPACE_DNS, m.name.as_bytes()) == uuid)
+    {
+        return Some(m.name.clone());
+    }
     let origin = display.bounds().origin;
     let (x, y) = (f32::from(origin.x).round() as i32, f32::from(origin.y).round() as i32);
-    hypr.and_then(|h| h.monitors.iter().find(|m| m.x == x && m.y == y))
-        .map(|m| m.name.clone())
-        .unwrap_or_else(|| format!("display-{index}"))
+    hypr.monitors.iter().find(|m| m.x == x && m.y == y).map(|m| m.name.clone())
 }
 
 /// The focused monitor's name and display, for surfaces that follow focus like the OSD.
@@ -208,8 +216,11 @@ pub fn focused_display(cx: &App) -> Option<(String, DisplayId)> {
     let hypr = Services::get(cx).hyprland.as_ref().filter(|h| h.read(cx).ready).map(|h| h.read(cx).state.clone());
     let focused = hypr.as_ref().and_then(|h| h.monitors.iter().find(|m| m.focused)).map(|m| m.name.clone());
     let displays = cx.displays();
-    let named: Vec<_> =
-        displays.iter().enumerate().map(|(i, d)| (monitor_name(d.as_ref(), hypr.as_ref(), i), d.id())).collect();
+    let named: Vec<_> = displays
+        .iter()
+        .enumerate()
+        .filter_map(|(i, d)| Some((monitor_name(d.as_ref(), hypr.as_ref(), i)?, d.id())))
+        .collect();
     named.iter().find(|(n, _)| Some(n) == focused.as_ref()).or(named.first()).cloned()
 }
 
@@ -224,7 +235,8 @@ pub fn reconcile(cx: &mut App) {
     let settings = Config::get(cx).settings.clone();
     let mut wanted: Vec<(String, DisplayId)> = Vec::new();
     for (i, display) in cx.displays().iter().enumerate() {
-        let name = monitor_name(display.as_ref(), hypr_state.as_ref(), i);
+        // An output Hyprland hasn't reported yet gets its bar on the next Hyprland update.
+        let Some(name) = monitor_name(display.as_ref(), hypr_state.as_ref(), i) else { continue };
         if settings.bar.shows_on(&name) {
             wanted.push((name, display.id()));
         }
