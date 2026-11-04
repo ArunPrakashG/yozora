@@ -14,7 +14,6 @@ use std::{
 
 use gpui::{App, AppContext};
 use gpui_platform::application;
-use tracing_subscriber::EnvFilter;
 use yozora_config::{notify::NotifySettings, paths};
 use yozora_ipc::{Request, Server};
 use yozora_ui::Theme;
@@ -157,13 +156,16 @@ fn run(replace: bool, dir: PathBuf) -> ExitCode {
     yozora_ui::gpu::prefer_vulkan();
     yozora_ui::fonts::cache_parsed();
     yozora_ui::malloc::tune();
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_env("YOZORA_LOG").unwrap_or_else(|_| EnvFilter::new("info")))
-        .init();
+    yozora_ui::logging::init("yozora-notify");
 
     let settings = load(&dir);
     let socket = match Server::bind(&paths::socket_path(SOCKET_ID)) {
         Ok(s) => s,
+        // Started twice, say by systemd while a manual instance runs: not a failure to restart.
+        Err(e) if yozora_ipc::already_running(&e) => {
+            eprintln!("yozora-notify: {e:#}");
+            return ExitCode::SUCCESS;
+        }
         Err(e) => {
             eprintln!("yozora-notify: {e:#}");
             return ExitCode::FAILURE;

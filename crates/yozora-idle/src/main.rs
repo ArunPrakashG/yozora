@@ -112,6 +112,11 @@ fn main() -> ExitCode {
     }
     match run(config.unwrap_or_else(paths::config_dir)) {
         Ok(()) => ExitCode::SUCCESS,
+        // Started twice, say by systemd while a manual instance runs: not a failure to restart.
+        Err(e) if yozora_ipc::already_running(&e) => {
+            eprintln!("yozora-idle: {e:#}");
+            ExitCode::SUCCESS
+        }
         Err(e) => {
             eprintln!("yozora-idle: {e:#}");
             ExitCode::FAILURE

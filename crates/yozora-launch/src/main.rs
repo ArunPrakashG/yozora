@@ -21,7 +21,6 @@ use std::{path::PathBuf, process::ExitCode, time::Duration};
 
 use gpui::{App, AppContext};
 use gpui_platform::application;
-use tracing_subscriber::EnvFilter;
 use yozora_config::{launch::LaunchSettings, paths};
 use yozora_ipc::{Incoming, Request, Response, Server};
 use yozora_ui::Theme;
@@ -100,18 +99,15 @@ fn msg(cmd: String, args: Vec<String>, config: Option<PathBuf>) -> ExitCode {
     let path = paths::socket_path(SOCKET_ID);
     let request = Request::new(cmd.clone(), args.clone());
     match yozora_ipc::request_timeout(&path, &request, Duration::from_secs(5)) {
-        Ok(r) if r.ok => {
-            if !r.data.is_null() {
-                println!("{}", r.data);
-            }
-            ExitCode::SUCCESS
-        }
-        Ok(r) => {
-            eprintln!("yozora-launch: {}", r.error.unwrap_or_else(|| "request failed".into()));
-            ExitCode::FAILURE
-        }
-        // Not running: become the launcher, opened.
+        Ok(r) => reply(r),
+        // Not running: start the service so systemd looks after it, or become the launcher where
+        // there is no service.
         Err(_) if cmd == "toggle" || cmd == "open" => {
+            if start_service(&path)
+                && let Ok(r) = yozora_ipc::request_timeout(&path, &request, Duration::from_secs(5))
+            {
+                return reply(r);
+            }
             run(config.unwrap_or_else(paths::config_dir), Some(args.into_iter().next().unwrap_or_default()))
         }
         Err(_) if cmd == "close" || cmd == "quit" => ExitCode::SUCCESS,
@@ -120,6 +116,39 @@ fn msg(cmd: String, args: Vec<String>, config: Option<PathBuf>) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn reply(r: Response) -> ExitCode {
+    if r.ok {
+        if !r.data.is_null() {
+            println!("{}", r.data);
+        }
+        ExitCode::SUCCESS
+    } else {
+        eprintln!("yozora-launch: {}", r.error.unwrap_or_else(|| "request failed".into()));
+        ExitCode::FAILURE
+    }
+}
+
+/// Starts `yozora-launch.service` and waits for its socket. False without the service, or when
+/// it doesn't answer in time.
+fn start_service(socket: &std::path::Path) -> bool {
+    let started = std::process::Command::new("systemctl")
+        .args(["--user", "--quiet", "start", "yozora-launch.service"])
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success());
+    if !started {
+        return false;
+    }
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while std::time::Instant::now() < deadline {
+        if yozora_ipc::is_alive(socket) {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    false
 }
 
 fn load(dir: &std::path::Path) -> LaunchSettings {
@@ -241,12 +270,15 @@ fn run(dir: PathBuf, open: Option<String>) -> ExitCode {
     yozora_ui::gpu::prefer_vulkan();
     yozora_ui::fonts::cache_parsed();
     yozora_ui::malloc::tune();
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_env("YOZORA_LOG").unwrap_or_else(|_| EnvFilter::new("info")))
-        .init();
+    yozora_ui::logging::init("yozora-launch");
 
     let socket = match Server::bind(&paths::socket_path(SOCKET_ID)) {
         Ok(s) => s,
+        // Started twice, say by systemd while a manual instance runs: not a failure to restart.
+        Err(e) if yozora_ipc::already_running(&e) => {
+            eprintln!("yozora-launch: {e:#}");
+            return ExitCode::SUCCESS;
+        }
         Err(e) => {
             eprintln!("yozora-launch: {e:#}");
             return ExitCode::FAILURE;

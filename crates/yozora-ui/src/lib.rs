@@ -9,6 +9,7 @@ pub mod icon_theme;
 pub mod icons;
 pub mod input;
 pub mod kit;
+pub mod logging;
 pub mod malloc;
 pub mod spring;
 pub mod theme;
