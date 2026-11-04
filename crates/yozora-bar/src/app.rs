@@ -493,6 +493,7 @@ pub fn handle_ipc(incoming: Incoming, cx: &mut App) {
         "profile" => crate::desktop::profile(&args, cx),
         "quit" => {
             incoming.reply(Response::ok());
+            crate::QUIT_REQUESTED.store(true, std::sync::atomic::Ordering::Relaxed);
             cx.quit();
             return;
         }
