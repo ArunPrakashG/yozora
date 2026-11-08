@@ -114,16 +114,17 @@ fn kind_glyph(kind: DeviceKind) -> &'static str {
     }
 }
 
-fn device_row(t: &Tokens, i: usize, d: &Device, on: bool) -> El {
+fn device_row(t: &Tokens, i: usize, d: &Device, on: bool, input: bool) -> El {
     let text_col = col().grow(1.0).min_w(0.0).gap(2.0)
         .child(label(t, 14.0, 500.0, d.description.clone(), t.ink).truncate())
         .children((!d.detail.is_empty()).then(|| label(t, 12.0, 400.0, d.detail.clone(), t.ink2).truncate()));
     let name = d.name.clone();
     let mut r = row().w_full().h(50.0).px(14.0).gap(14.0).center_y().radius(t.radii.ctl)
-        .child(cell(18.0, 18.0, glyph_el(t, kind_glyph(d.kind), 18.0, t.ink)))
+        .child(cell(18.0, 18.0, glyph_el(t, if input && d.muted { "micoff" } else { kind_glyph(d.kind) }, 18.0, t.ink)))
         .child(text_col)
-        .key(format!("sink{i}")).role("button").label(if on { format!("{}, selected", d.description) } else { d.description.clone() }).hit()
-        .on_press(move |s: &mut Stage| send(s, Cmd::DefaultSink(name.clone())));
+        .key(format!("{}{i}", if input { "source" } else { "sink" })).role("button")
+        .label(if on { format!("{}, selected", d.description) } else { d.description.clone() }).hit()
+        .on_press(move |s: &mut Stage| send(s, if input { Cmd::DefaultSource(name.clone()) } else { Cmd::DefaultSink(name.clone()) }));
     r = match (on, t.look) {
         (false, _) => r.hover(t.raised),
         (true, Look::Folio) => r.border_sides([0.0, 0.0, 0.0, 3.0], t.acc),
@@ -183,11 +184,19 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
     if !state.sinks.is_empty() {
         let current = state.sink().map(|d| d.name.clone());
         p = p.child(section(t, "Output")).child(
-            col().w_full().children(state.sinks.iter().enumerate().map(|(i, d)| device_row(t, i, d, Some(&d.name) == current.as_ref()))),
+            col().w_full().children(state.sinks.iter().enumerate().map(|(i, d)| device_row(t, i, d, Some(&d.name) == current.as_ref(), false))),
         );
     }
     if let Some(source) = state.source() {
-        p = p.child(section(t, &format!("Input · {}", source.description))).child(volume_row(t, source, true));
+        let heading = if state.sources.len() > 1 { "Input".to_owned() } else { format!("Input \u{b7} {}", source.description) };
+        p = p.child(section(t, &heading)).child(volume_row(t, source, true));
+        if state.sources.len() > 1 {
+            let current = source.name.clone();
+            p = p.child(col().w_full().children(state.sources.iter().enumerate().map(|(i, d)| device_row(t, i, d, d.name == current, true))));
+        }
+    }
+    if let Some(row) = crate::wifi::tool_row(t, "snd-settings", "Sound settings\u{2026}", &["pavucontrol"]) {
+        p = p.child(crate::wifi::sep(t)).child(row);
     }
     p
 }

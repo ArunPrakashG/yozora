@@ -1,11 +1,12 @@
 //! The Now playing popover: art, what is playing, a progress track, transport, and a picker when
 //! more than one player is running.
 
-use std::sync::{Arc, Mutex, Once, OnceLock, Weak};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::time::{Duration, Instant};
 
 use rune::tok::TextStyle;
-use rune::{Color, El, Image, ImageCache, SurfaceFit, col, row, text};
+use rune::{Color, Drag, El, Image, ImageCache, Phase, SurfaceFit, Tx, col, row, text};
 use yozora_services::media::{Cmd, Player, Status};
 use yozora_style::{Look, Tokens};
 
@@ -31,22 +32,36 @@ pub(crate) fn images(sh: &Arc<Shared>) -> &'static ImageCache {
     })
 }
 
-/// Redraws once a second for as long as the popover keeps being drawn while a song plays, so the
-/// position moves. It stops by itself when the popover closes or the song pauses.
-fn keep_time(sh: &Arc<Shared>) {
-    static LAST: Mutex<Option<(Instant, Weak<Shared>)>> = Mutex::new(None);
-    static THREAD: Once = Once::new();
-    *LAST.lock().unwrap() = Some((Instant::now(), Arc::downgrade(sh)));
-    THREAD.call_once(|| {
-        let spawned = std::thread::Builder::new().name("yz-seek".into()).spawn(|| loop {
-            std::thread::sleep(Duration::from_secs(1));
-            let live = LAST.lock().unwrap().as_ref().and_then(|(at, sh)| (at.elapsed() < Duration::from_millis(1500)).then(|| sh.upgrade()).flatten());
-            if let Some(sh) = live {
-                sh.redraw();
-            }
-        });
-        let _ = spawned;
+/// While a song plays and this screen is drawn, asks for one more draw a second later so the
+/// position keeps moving. At most one short timer runs; a closed popover or a pause lets it lapse.
+pub(crate) fn keep_time(sh: &Arc<Shared>) {
+    static PENDING: AtomicBool = AtomicBool::new(false);
+    if PENDING.swap(true, Ordering::AcqRel) {
+        return;
+    }
+    let sh = sh.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(1));
+        PENDING.store(false, Ordering::Release);
+        sh.redraw();
     });
+}
+
+/// Where the pointer has the position while seeking, 0 to 1, and when it let go. The track keeps
+/// showing it for a moment after, until the player reports the new position.
+static SCRUB: Mutex<Option<(f32, Option<Instant>)>> = Mutex::new(None);
+
+fn scrubbed() -> Option<f32> {
+    let mut held = SCRUB.lock().unwrap();
+    match *held {
+        Some((f, None)) => Some(f),
+        Some((f, Some(at))) if at.elapsed() < Duration::from_millis(700) => Some(f),
+        Some(_) => {
+            *held = None;
+            None
+        }
+        None => None,
+    }
 }
 
 fn clock(d: Duration) -> String {
@@ -54,23 +69,31 @@ fn clock(d: Duration) -> String {
     if s >= 3600 { format!("{}:{:02}:{:02}", s / 3600, s / 60 % 60, s % 60) } else { format!("{}:{:02}", s / 60, s % 60) }
 }
 
+/// Draws `p`'s cover into `base` (a box of height `px`), or a note glyph when it has none.
+pub(crate) fn cover(t: &Tokens, sh: &Arc<Shared>, p: &Player, base: El, px: f32) -> El {
+    static HELD: Mutex<Vec<(u32, Image)>> = Mutex::new(Vec::new());
+    match &p.art {
+        Some(path) => {
+            let img = images(sh).file(path, px, if px > 100.0 { 1.0 } else { 2.0 });
+            let e = base.pixels_fit(img.pixels(), SurfaceFit::Fill);
+            // The cache drops a picture nobody holds, so the latest one per size stays held.
+            let mut held = HELD.lock().unwrap();
+            held.retain(|(k, _)| *k != px as u32);
+            held.push((px as u32, img));
+            e
+        }
+        None => base.child(glyph_el(t, "music", (px * 0.4).clamp(16.0, 28.0), t.ink3)),
+    }
+}
+
 fn art(t: &Tokens, sh: &Arc<Shared>, p: &Player) -> El {
-    static HELD: Mutex<Option<Image>> = Mutex::new(None);
     let base = row().w_full().h(ART_H).center().radius(t.radii.card).fill(t.surf2);
     let base = match t.look {
         Look::Folio => base.border(1.0, t.ink),
         Look::Phosphor => base.border(1.0, t.rule),
         _ => base,
     };
-    match &p.art {
-        Some(path) => {
-            let img = images(sh).file(path, ART_H, 1.0);
-            let e = base.pixels_fit(img.pixels(), SurfaceFit::Fill);
-            *HELD.lock().unwrap() = Some(img);
-            e
-        }
-        None => base.child(glyph_el(t, "music", 28.0, t.ink3)),
-    }
+    cover(t, sh, p, base, ART_H)
 }
 
 /// A pill: the output name, or one player in the picker. `on` marks the chosen one.
@@ -111,16 +134,41 @@ fn chip(t: &Tokens, key: String, name: &str, glyph: Option<&str>, on: bool, pres
     r
 }
 
-/// Elapsed, the track, and the length. Nothing for a stream that has no length.
+/// Elapsed, the track, and the length. Nothing for a stream that has no length. A player that
+/// can seek gets a track you click or drag, and the arrow keys move it by five seconds.
 fn scrub(t: &Tokens, p: &Player) -> Option<El> {
     let length = p.length.filter(|l| !l.is_zero())?;
     let pos = p.position_now().min(length);
+    let frac = scrubbed().unwrap_or(pos.as_secs_f32() / length.as_secs_f32());
+    let shown = length.mul_f32(frac);
     let label_w = if length.as_secs() >= 3600 { 48.0 } else { 34.0 };
     let track_w = W - 36.0 - 16.0 - 2.0 * label_w - 24.0;
+    let mut bar = row().w(track_w).h(if t.look == Look::Prism { 14.0 } else { 20.0 }).center_y().child(track(t, track_w, frac, true));
+    if p.can_seek {
+        bar = bar.key("seek").role("slider").label("Seek").hit()
+            .on_drag(move |s: &mut Stage, d: &mut Drag, _: &mut Tx| {
+                if d.w <= 0.0 {
+                    return;
+                }
+                let f = (d.x / d.w).clamp(0.0, 1.0);
+                match d.phase {
+                    Phase::Up if d.cancelled() => *SCRUB.lock().unwrap() = None,
+                    Phase::Up => {
+                        *SCRUB.lock().unwrap() = Some((f, Some(Instant::now())));
+                        send(s, Cmd::SeekTo(length.mul_f32(f)));
+                    }
+                    _ => *SCRUB.lock().unwrap() = Some((f, None)),
+                }
+            })
+            .on_step(move |s: &mut Stage, by, _: &mut Tx| {
+                let to = (pos.as_secs_f32() + by as f32 * 5.0).clamp(0.0, length.as_secs_f32());
+                send(s, Cmd::SeekTo(Duration::from_secs_f32(to)));
+            });
+    }
     Some(
         row().w_full().px(8.0).py(4.0).gap(12.0).center_y()
-            .child(row().w(label_w).child(fig(t, 12.0, 500.0, clock(pos), t.ink2)))
-            .child(track(t, track_w, pos.as_secs_f32() / length.as_secs_f32(), true))
+            .child(row().w(label_w).child(fig(t, 12.0, 500.0, clock(shown), t.ink2)))
+            .child(bar)
             .child(row().w(label_w).justify_end().child(fig(t, 12.0, 500.0, clock(length), t.ink2))),
     )
 }
@@ -200,7 +248,7 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
     if state.players.len() > 1 {
         let chips = row().w_full().px(4.0).flex_wrap().gaps(8.0, 8.0).children(state.players.iter().enumerate().map(|(i, pl)| {
             let bus = pl.bus.clone();
-            chip(t, format!("player{i}"), &pl.identity, None, pl.bus == p.bus, move |s: &mut Stage| send(s, Cmd::Select(bus.clone())))
+            chip(t, format!("player{i}"), &pl.identity, Some(if pl.status == Status::Playing { "play" } else { "music" }), pl.bus == p.bus, move |s: &mut Stage| send(s, Cmd::Select(bus.clone())))
         }));
         out = out.child(section(t, "Players")).child(chips);
     }

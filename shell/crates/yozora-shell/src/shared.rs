@@ -11,6 +11,7 @@ use yozora_config::shell::ShellConfig;
 use yozora_style::{Fx, Look};
 
 use crate::bar::Bar;
+use crate::bar_config::Conf;
 use crate::stage::{Pop, Stage};
 
 pub struct Shared {
@@ -22,6 +23,31 @@ pub struct Shared {
     engine: OnceLock<yozora_search::Engine>,
     /// What the stages last drew as open, for the control sockets to report.
     shown: Mutex<Option<Pop>>,
+    /// Notices volume, microphone, output and layout changes and puts them on the focused monitor.
+    pub osd: crate::osd::Hub,
+    /// `bar.toml` as last loaded.
+    bar_conf: Mutex<Arc<Conf>>,
+    /// Each bar's output, width and what was last asked of its surface.
+    slots: Mutex<Vec<BarSlot>>,
+    /// Which popover each output's stage has open, so its bar can mark the item that opened it.
+    opened: Mutex<HashMap<String, Option<OpenState>>>,
+}
+
+/// What an output's stage shows: the popover, the bar button it grows from and, for a
+/// `module/<name>`, which module.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OpenState {
+    pub pop: Pop,
+    pub anchor: f32,
+    pub module: String,
+}
+
+/// One bar surface and the size, zone and visibility it was last given.
+pub struct BarSlot {
+    pub output: String,
+    pub width: f32,
+    pub handle: OverlayHandle<Bar>,
+    pub last: Option<(f32, i32, bool)>,
 }
 
 impl Shared {
@@ -31,7 +57,7 @@ impl Shared {
             [Kind::Audio, Kind::Bluetooth, Kind::Hyprland, Kind::Media, Kind::Network, Kind::Notifications, Kind::Power, Kind::Tray],
             &Default::default(),
         );
-        Arc::new(Shared { services: Mutex::new(services), config: Mutex::new(config), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()), engine: OnceLock::new(), shown: Mutex::new(None) })
+        Arc::new(Shared { services: Mutex::new(services), config: Mutex::new(config), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()), engine: OnceLock::new(), shown: Mutex::new(None), osd: Default::default(), bar_conf: Mutex::new(Arc::new(Conf::default())), slots: Mutex::new(Vec::new()), opened: Mutex::new(HashMap::new()) })
     }
 
     /// The look and effects in force now. Surface tension turns to Daybreak by day.
@@ -45,6 +71,8 @@ impl Shared {
 
     pub fn set_config(&self, config: ShellConfig) {
         *self.config.lock().unwrap() = config;
+        // A new look can mean a bar of another height.
+        crate::bar_config::sync_surfaces(self);
         self.redraw();
     }
 
@@ -52,12 +80,53 @@ impl Shared {
         self.stages.lock().unwrap().push((output.to_owned(), h));
     }
 
+    /// The stages, by output, for surfaces that pick one.
+    pub fn stage_handles(&self) -> Vec<(String, OverlayHandle<Stage>)> {
+        self.stages.lock().unwrap().clone()
+    }
+
+    pub fn bar_handles(&self) -> Vec<OverlayHandle<Bar>> {
+        self.bars.lock().unwrap().clone()
+    }
+
     pub fn attach_bar(&self, h: OverlayHandle<Bar>) {
         self.bars.lock().unwrap().push(h);
     }
 
+    /// A bar surface on `output`, which `bar_config::sync_surfaces` then sizes and shows.
+    pub fn attach_bar_on(&self, output: &str, width: f32, h: OverlayHandle<Bar>) {
+        self.slots.lock().unwrap().push(BarSlot { output: output.to_owned(), width, handle: h.clone(), last: None });
+        self.attach_bar(h);
+    }
+
+    pub fn each_bar(&self, mut f: impl FnMut(&mut BarSlot)) {
+        self.slots.lock().unwrap().iter_mut().for_each(&mut f);
+    }
+
+    pub fn bar_conf(&self) -> Arc<Conf> {
+        self.bar_conf.lock().unwrap().clone()
+    }
+
+    pub fn set_bar_conf(&self, c: Arc<Conf>) {
+        *self.bar_conf.lock().unwrap() = c;
+    }
+
+    /// The look's tokens, with the panel row following the bar's real height.
+    pub fn tokens(&self, look: Look) -> yozora_style::Tokens {
+        self.bar_conf().tokens(look)
+    }
+
+    /// Runs `f` on the stage of `output` without waking it for keys, for things like tooltips
+    /// that must not take focus.
+    pub fn with_stage(&self, output: &str, f: impl FnOnce(&mut Stage) + Send + 'static) {
+        if let Some((_, s)) = self.stages.lock().unwrap().iter().find(|(n, _)| n == output) {
+            s.update(move |st, _| f(st));
+        }
+    }
+
     /// Asks every surface to draw again.
     pub fn redraw(&self) {
+        self.osd.observe(self);
         for b in self.bars.lock().unwrap().iter() {
             b.update(|_, _| {});
         }
@@ -112,6 +181,40 @@ impl Shared {
             engine.start();
             engine
         })
+    }
+
+    /// Records what `output`'s stage draws as open, and redraws that output's bar when it changed
+    /// so the item that opened it stays marked.
+    pub fn note_open_on(&self, output: &str, pop: Option<Pop>, anchor: f32, module: &str) {
+        let now = pop.map(|pop| OpenState { pop, anchor, module: if pop == Pop::Module { module.to_owned() } else { String::new() } });
+        {
+            let mut map = self.opened.lock().unwrap();
+            if map.get(output) == Some(&now) {
+                return;
+            }
+            map.insert(output.to_owned(), now);
+        }
+        let slots = self.slots.lock().unwrap();
+        if let Some(s) = slots.iter().find(|s| s.output == output) {
+            s.handle.update(|_, _| {});
+        }
+    }
+
+    pub fn open_on(&self, output: &str) -> Option<OpenState> {
+        self.opened.lock().unwrap().get(output).cloned().flatten()
+    }
+
+    /// Opens or closes the popover of `module/<name>` on `output`.
+    pub fn open_module(&self, output: &str, name: &str, anchor_x: f32) {
+        for (n, s) in self.stages.lock().unwrap().iter() {
+            if n == output {
+                let name = name.to_owned();
+                s.update(move |st, _| st.open_module(&name, anchor_x));
+                s.request_keys();
+            } else {
+                s.update(|st, _| st.open = None);
+            }
+        }
     }
 
     pub fn note_open(&self, pop: Option<Pop>) {

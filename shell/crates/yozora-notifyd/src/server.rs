@@ -63,17 +63,41 @@ pub enum Cmd {
     Quit,
 }
 
+/// How long a toast keeps, at least, after the pointer leaves it.
+const MIN_RESUME: Duration = Duration::from_millis(1500);
+
+/// The time one toast has on screen. It runs while the toast is among the newest `max_visible`
+/// and nothing holds it; otherwise it keeps what is left.
+#[derive(Clone, Copy, Debug)]
+struct Clock {
+    /// Arrival order, to tell which toasts are the newest.
+    seq: u64,
+    total: Option<Duration>,
+    left: Option<Duration>,
+    since: Option<Instant>,
+}
+
+impl Clock {
+    fn left_at(&self, now: Instant) -> Option<Duration> {
+        let left = self.left?;
+        Some(self.since.map_or(left, |s| left.saturating_sub(now.saturating_duration_since(s))))
+    }
+}
+
 pub struct Inner {
     pub store: Store,
     pub config: NotifyConfig,
     pub sharing: bool,
-    /// Notifications that would be on screen as toasts, and when each times out, if it does.
-    shown: HashMap<u32, Option<Instant>>,
+    /// Notifications that would be on screen as toasts, and their clocks.
+    shown: HashMap<u32, Clock>,
+    /// Toasts the person is pointing at or typing into: their clocks stand still.
+    held: Vec<u32>,
+    seq: u64,
 }
 
 impl Inner {
     pub fn new(store: Store, config: NotifyConfig) -> Self {
-        Self { store, config, sharing: false, shown: HashMap::new() }
+        Self { store, config, sharing: false, shown: HashMap::new(), held: Vec::new(), seq: 0 }
     }
 
     fn unread(&self) -> bool {
@@ -82,20 +106,74 @@ impl Inner {
 
     /// Notes that `n` is on screen from `now`.
     fn show(&mut self, n: &Notification, now: Instant) {
-        let until = toast_timeout(n, &self.config).map(|d| now + d);
-        self.shown.insert(n.id, until);
+        let total = toast_timeout(n, &self.config);
+        self.seq += 1;
+        self.shown.insert(n.id, Clock { seq: self.seq, total, left: total, since: None });
+        self.settle(now);
+    }
+
+    /// Takes `id` off the screen, if it was on it.
+    fn unshow(&mut self, id: u32) {
+        if self.shown.remove(&id).is_some() {
+            self.settle(Instant::now());
+        }
     }
 
     fn remove(&mut self, id: u32) -> Option<Notification> {
-        self.shown.remove(&id);
+        self.unshow(id);
         self.store.remove(id)
+    }
+
+    /// The ids shown at once, newest first. The rest wait their turn.
+    fn visible(&self) -> Vec<u32> {
+        let mut ids: Vec<(u64, u32)> = self.shown.iter().map(|(id, c)| (c.seq, *id)).collect();
+        ids.sort_unstable_by(|a, b| b.cmp(a));
+        ids.into_iter().take(self.config.toasts.max_visible.max(1) as usize).map(|(_, id)| id).collect()
+    }
+
+    /// Starts the clocks of visible toasts nothing holds, and stops all the others.
+    fn settle(&mut self, now: Instant) {
+        let visible = self.visible();
+        for (id, c) in self.shown.iter_mut() {
+            let run = visible.contains(id) && !self.held.contains(id);
+            match (run, c.since) {
+                (true, None) => {
+                    // Coming back from a hold: never less than a moment to read.
+                    if let (Some(l), Some(t)) = (c.left, c.total)
+                        && l < t
+                    {
+                        c.left = Some(l.max(MIN_RESUME.min(t)));
+                    }
+                    c.since = Some(now);
+                }
+                (false, Some(_)) => {
+                    c.left = c.left_at(now);
+                    c.since = None;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Sets which toasts are held, from the shell.
+    fn hold(&mut self, ids: Vec<u32>, now: Instant) {
+        self.held = ids;
+        self.settle(now);
     }
 
     /// The ids whose time is up at `now`, no longer on screen.
     fn timed_out(&mut self, now: Instant) -> Vec<u32> {
-        let ids: Vec<u32> = self.shown.iter().filter(|(_, until)| until.is_some_and(|u| u <= now)).map(|(id, _)| *id).collect();
+        let ids: Vec<u32> = self
+            .shown
+            .iter()
+            .filter(|(_, c)| c.since.is_some() && c.left_at(now).is_some_and(|l| l.is_zero()))
+            .map(|(id, _)| *id)
+            .collect();
         for id in &ids {
             self.shown.remove(id);
+        }
+        if !ids.is_empty() {
+            self.settle(now);
         }
         ids
     }
@@ -111,6 +189,7 @@ impl Inner {
         for id in &ids {
             self.shown.remove(id);
         }
+        self.settle(Instant::now());
         ids
     }
 
@@ -118,8 +197,10 @@ impl Inner {
     /// Never more than 30 seconds away, so the clock jumping or a suspend can't leave it asleep.
     fn next_wake(&self, now: Instant) -> Instant {
         let mut at = now + Duration::from_secs(30);
-        if let Some(until) = self.shown.values().flatten().min() {
-            at = at.min(*until);
+        for c in self.shown.values() {
+            if let (Some(since), Some(left)) = (c.since, c.left) {
+                at = at.min(since + left);
+            }
         }
         if let Some(snooze) = self.store.next_snooze() {
             at = at.min(now + Duration::from_secs(snooze.saturating_sub(crate::store::now()) + 1));
@@ -182,7 +263,7 @@ impl Fdo {
             let added = inner.store.add(n, replaces_id);
             let stored = inner.store.get(added.id()).cloned();
             // An update that no longer toasts (Do Not Disturb came on) takes the old one off screen.
-            inner.shown.remove(&added.id());
+            inner.unshow(added.id());
             if let Some(n) = stored.filter(|_| show) {
                 inner.show(&n, Instant::now());
             }
@@ -226,15 +307,18 @@ struct Center {
 #[interface(name = "dev.yozora.Notify1")]
 impl Center {
     /// Everything in the center, newest first, with the same keys as mako's `ListHistory` plus
-    /// `time`, `icon`, `image`, `pinned`, `snoozed-until` (0 unless snoozed), `unread` and
+    /// `time`, `icon`, `image`, `preview`, `progress` (-1 for none), `reply-label`, the `toast` keys,
+    /// `pinned`, `snoozed-until` (0 unless snoozed), `unread` and
     /// `actions` (key, label, key, label… without the default action or inline reply).
     fn list(&self) -> Vec<HashMap<String, OwnedValue>> {
         let inner = self.shared.lock();
+        let (now, visible) = (Instant::now(), inner.visible());
         inner
             .store
             .list()
             .map(|n| {
                 let mut d = to_dict(n);
+                put_toast(&mut d, inner.shown.get(&n.id), visible.contains(&n.id), now);
                 if let Ok(v) = Value::from(inner.store.is_unread(n)).try_to_owned() {
                     d.insert("unread".into(), v);
                 }
@@ -248,6 +332,21 @@ impl Center {
     fn get_state(&self) -> (bool, bool) {
         let inner = self.shared.lock();
         (inner.store.dnd, inner.unread())
+    }
+
+    /// The toast settings the shell draws by: how many show at once and which monitor.
+    fn get_config(&self) -> (u32, String, bool) {
+        let inner = self.shared.lock();
+        let t = &inner.config.toasts;
+        (t.max_visible, t.monitor.clone(), inner.sharing)
+    }
+
+    /// Stops the clocks of these toasts, and starts every other one's. The shell calls this while
+    /// the pointer is on a toast or a reply is being typed.
+    async fn hold_toasts(&self, ids: Vec<u32>, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
+        self.shared.lock().hold(ids, Instant::now());
+        self.shared.wake();
+        let _ = Self::changed(&emitter).await;
     }
 
     /// Keeps a notification at the top of the center and through "Clear all", or stops.
@@ -265,7 +364,7 @@ impl Center {
             if !inner.store.snooze(id, until) {
                 return;
             }
-            inner.shown.remove(&id);
+            inner.unshow(id);
         }
         self.shared.wake();
         let _ = Self::changed(&emitter).await;
@@ -278,6 +377,11 @@ impl Center {
 
     async fn dismiss(&self, id: u32) {
         let _ = self.shared.cmds.send(Cmd::Dismissed(id)).await;
+    }
+
+    /// Takes a toast off the screen and keeps it in the center, as if its time ran out.
+    async fn expire_toast(&self, id: u32) {
+        let _ = self.shared.cmds.send(Cmd::Expired(id)).await;
     }
 
     async fn invoke_action(&self, id: u32, key: String) {
@@ -297,7 +401,7 @@ impl Center {
             let mut inner = self.shared.lock();
             let ids = inner.store.clear();
             for id in &ids {
-                inner.shown.remove(id);
+                inner.unshow(*id);
             }
             ids
         };
@@ -328,7 +432,8 @@ async fn changed(conn: &Connection) {
     }
 }
 
-/// `n` for the bar.
+/// `n` for the bar. The toast keys (`toast`, `toast-visible`, `toast-running`, `toast-left-ms`,
+/// `toast-total-ms`, -1 for none) are added by the caller.
 fn to_dict(n: &Notification) -> HashMap<String, OwnedValue> {
     let mut d = HashMap::new();
     let mut put = |k: &str, v: Value<'_>| {
@@ -351,8 +456,26 @@ fn to_dict(n: &Notification) -> HashMap<String, OwnedValue> {
     put("icon", path(&n.icon).into());
     put("image", path(&n.image).into());
     put("default-action", n.has_action("default").into());
+    put("progress", n.progress.map_or(-1, i32::from).into());
+    put("preview", n.preview.into());
+    put("reply-label", n.reply_label().unwrap_or_default().into());
     put("actions", n.buttons().flat_map(|(k, l)| [k.as_str(), l.as_str()]).collect::<Vec<_>>().into());
     d
+}
+
+/// Says whether `n` is a toast right now, and how long it has left.
+fn put_toast(d: &mut HashMap<String, OwnedValue>, clock: Option<&Clock>, visible: bool, now: Instant) {
+    let ms = |t: Option<Duration>| t.map_or(-1, |t| t.as_millis().min(i64::MAX as u128) as i64);
+    let mut put = |k: &str, v: Value<'_>| {
+        if let Ok(v) = v.try_to_owned() {
+            d.insert(k.to_string(), v);
+        }
+    };
+    put("toast", clock.is_some().into());
+    put("toast-visible", (clock.is_some() && visible).into());
+    put("toast-running", clock.is_some_and(|c| c.since.is_some()).into());
+    put("toast-left-ms", clock.map_or(-1, |c| ms(c.left_at(now))).into());
+    put("toast-total-ms", clock.map_or(-1, |c| ms(c.total)).into());
 }
 
 /// Whether a new notification gets a toast. The center keeps it either way.
@@ -601,7 +724,7 @@ pub async fn serve(conn: Connection, shared: Shared, cmds: Receiver<Cmd>) -> any
         match cmd {
             Cmd::Expired(id) => {
                 let mut inner = shared.lock();
-                inner.shown.remove(&id);
+                inner.unshow(id);
                 inner.store.expired(id);
                 drop(inner);
                 let _ = Fdo::notification_closed(&fdo, id, Reason::Expired as u32).await;
@@ -673,6 +796,7 @@ async fn timer(fdo: &SignalEmitter<'static>, shared: &Shared) {
         // Drop screen entries for notifications that history limits pushed out.
         let Inner { store, shown, .. } = &mut *inner;
         shown.retain(|id, _| store.get(*id).is_some());
+        inner.settle(Instant::now());
         (expired, due, inner.store.dnd, inner.config.clone())
     };
     for id in expired {
@@ -770,7 +894,7 @@ fn ipc(request: &yozora_ipc::Request, shared: &Shared) -> Response {
             let snoozed = {
                 let mut inner = shared.lock();
                 let snoozed = inner.store.snooze(id, until);
-                inner.shown.remove(&id);
+                inner.unshow(id);
                 snoozed
             };
             if snoozed {

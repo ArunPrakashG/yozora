@@ -12,7 +12,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     path::PathBuf,
     sync::Mutex,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,34 @@ pub enum Daemon {
     Mako,
 }
 
+/// A notification that is on screen as a toast. The daemon keeps the clock; this is what it said
+/// at `at`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Toast {
+    /// Among the newest ones drawn now. The rest wait for room.
+    pub visible: bool,
+    /// The clock is ticking, rather than held or waiting.
+    pub running: bool,
+    /// Time left when `at` was read; none for toasts that stay until closed.
+    pub left: Option<Duration>,
+    pub total: Option<Duration>,
+    pub at: Instant,
+}
+
+impl Toast {
+    /// Time left now.
+    pub fn remaining(&self, now: Instant) -> Option<Duration> {
+        let left = self.left?;
+        Some(if self.running { left.saturating_sub(now.saturating_duration_since(self.at)) } else { left })
+    }
+
+    /// How much of the time is left, 1 down to 0, if it runs out.
+    pub fn fraction(&self, now: Instant) -> Option<f32> {
+        let (left, total) = (self.remaining(now)?, self.total?);
+        Some((left.as_secs_f32() / total.as_secs_f32().max(0.001)).clamp(0.0, 1.0))
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Notification {
     pub id: u32,
@@ -61,6 +89,16 @@ pub struct Notification {
     pub snoozed_until: u64,
     /// Arrived since the center was last opened.
     pub unread: bool,
+    /// A picture the app attached, sized for drawing. Yozora Notify only.
+    pub image: Option<PathBuf>,
+    /// The picture is wide: drawn under the body rather than as the avatar.
+    pub preview: bool,
+    /// The app's progress, 0 to 100.
+    pub progress: Option<u8>,
+    /// The label for the reply field, if the app takes inline replies.
+    pub reply: Option<String>,
+    /// On screen as a toast right now.
+    pub toast: Option<Toast>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -70,6 +108,9 @@ pub struct State {
     pub dnd: bool,
     pub unread: bool,
     pub daemon: Daemon,
+    /// How many toasts show at once, and the monitor they open on ("focused" or a connector).
+    pub toast_max: u32,
+    pub toast_monitor: String,
 }
 
 #[derive(Clone, Debug)]
@@ -87,6 +128,13 @@ pub enum Cmd {
     Snooze(u32, u32),
     /// Runs one of a notification's buttons. Yozora Notify only.
     Action(u32, String),
+    /// Answers a notification that takes inline replies. Yozora Notify only.
+    Reply(u32, String),
+    /// Takes a toast off the screen and leaves it in the center. Yozora Notify only.
+    Expire(u32),
+    /// Stops the timers of these toasts, and runs the rest: the pointer is on them or a reply is
+    /// being typed. Yozora Notify only.
+    Hold(Vec<u32>),
 }
 
 pub fn start(fake: bool) -> Notifications {
@@ -182,6 +230,20 @@ fn parse(list: Vec<HashMap<String, OwnedValue>>) -> Vec<Notification> {
                     .collect(),
                 snoozed_until: dbus::get(&n, "snoozed-until").unwrap_or(0),
                 unread: dbus::get(&n, "unread").unwrap_or(false),
+                image: Some(dbus::string(&n, "image")).filter(|p| !p.is_empty()).map(PathBuf::from),
+                preview: dbus::get(&n, "preview").unwrap_or(false),
+                progress: dbus::get::<i32>(&n, "progress").filter(|p| *p >= 0).map(|p| p.min(100) as u8),
+                reply: Some(dbus::string(&n, "reply-label")).filter(|l| !l.is_empty()),
+                toast: dbus::get::<bool>(&n, "toast").unwrap_or(false).then(|| {
+                    let ms = |k: &str| dbus::get::<i64>(&n, k).filter(|m| *m >= 0).map(|m| Duration::from_millis(m as u64));
+                    Toast {
+                        visible: dbus::get(&n, "toast-visible").unwrap_or(false),
+                        running: dbus::get(&n, "toast-running").unwrap_or(false),
+                        left: ms("toast-left-ms"),
+                        total: ms("toast-total-ms"),
+                        at: Instant::now(),
+                    }
+                }),
             }
         })
         .collect()
@@ -248,6 +310,8 @@ async fn snapshot(conn: &Connection, saved: &mut Saved, first: bool) -> anyhow::
         items,
         dnd: modes(conn).await?.iter().any(|m| m == DND_MODE),
         daemon: Daemon::Mako,
+        toast_max: 3,
+        toast_monitor: "focused".into(),
     })
 }
 
@@ -258,7 +322,10 @@ async fn yozora_state(conn: &Connection) -> anyhow::Result<(bool, bool)> {
 async fn yozora_snapshot(conn: &Connection) -> anyhow::Result<State> {
     let list: Vec<HashMap<String, OwnedValue>> = dbus::call(conn, DEST, YZ_PATH, YZ_IFACE, "List", &()).await?;
     let (dnd, unread) = yozora_state(conn).await?;
-    Ok(State { items: parse(list), dnd, unread, daemon: Daemon::Yozora })
+    // An older daemon has no settings call: show three, on the focused monitor.
+    let (toast_max, toast_monitor, _): (u32, String, bool) =
+        dbus::call(conn, DEST, YZ_PATH, YZ_IFACE, "GetConfig", &()).await.unwrap_or((3, "focused".into(), false));
+    Ok(State { items: parse(list), dnd, unread, daemon: Daemon::Yozora, toast_max, toast_monitor })
 }
 
 async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
@@ -298,6 +365,11 @@ async fn run_yozora(link: &Link<State, Cmd>, conn: &Connection) -> anyhow::Resul
                     Cmd::Action(id, key) => {
                         dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "InvokeAction", &(id, key.as_str())).await?
                     }
+                    Cmd::Reply(id, text) => {
+                        dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "Reply", &(id, text.as_str())).await?
+                    }
+                    Cmd::Expire(id) => dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "ExpireToast", &(id,)).await?,
+                    Cmd::Hold(ids) => dbus::invoke(conn, DEST, YZ_PATH, YZ_IFACE, "HoldToasts", &(ids,)).await?,
                 }
             }
         }
@@ -351,7 +423,7 @@ async fn run_mako(link: &Link<State, Cmd>, conn: &Connection) -> anyhow::Result<
                     saved.save();
                 }
                 // mako runs actions from its own popups only, and has no pins or snoozes.
-                Cmd::Activate(_) | Cmd::Pin(..) | Cmd::Snooze(..) | Cmd::Action(..) => {}
+                Cmd::Activate(_) | Cmd::Pin(..) | Cmd::Snooze(..) | Cmd::Action(..) | Cmd::Reply(..) | Cmd::Expire(_) | Cmd::Hold(_) => {}
             },
         }
         link.publish(snapshot(&conn, &mut saved, false).await?);
@@ -393,7 +465,10 @@ fn run_fake(link: Link<State, Cmd>) {
         dnd: false,
         unread: true,
         daemon: Daemon::Yozora,
+        toast_max: 3,
+        toast_monitor: "focused".into(),
     };
+    fake_toasts(&mut state, t);
     link.publish(state.clone());
     while let Ok(cmd) = link.cmds.recv_blocking() {
         match cmd {
@@ -415,11 +490,84 @@ fn run_fake(link: Link<State, Cmd>) {
                     n.pinned = on;
                 }
             }
+            Cmd::Reply(id, _) => state.items.retain(|n| n.id != id),
+            Cmd::Expire(id) => {
+                if let Some(n) = state.items.iter_mut().find(|n| n.id == id) {
+                    n.toast = None;
+                }
+            }
+            Cmd::Hold(_) => {}
         }
         if !link.publish(state.clone()) {
             break;
         }
     }
+}
+
+/// With `YZ_TOASTS` set to a list of ids, adds a few richer notifications to the demo list and
+/// shows the listed ones as toasts that stand still, a little over half way through their time.
+fn fake_toasts(state: &mut State, t: u64) {
+    let Some(ids) = std::env::var("YZ_TOASTS").ok().filter(|v| !v.is_empty()) else { return };
+    let (avatar, preview) = fake_images();
+    let n = |id, app: &str, summary: &str, body: &str, ago: u64| Notification {
+        id,
+        app: app.into(),
+        summary: summary.into(),
+        body: body.into(),
+        urgency: 1,
+        seen: Some(t - ago),
+        unread: true,
+        ..Default::default()
+    };
+    state.items.splice(
+        0..0,
+        [
+            Notification {
+                image: avatar,
+                reply: Some("Reply".into()),
+                default_action: true,
+                ..n(13, "Signal", "Mira Okafor", "Did the build finish? I can merge once it is green.", 5)
+            },
+            Notification { image: preview, preview: true, ..n(12, "Screenshots", "Screenshot saved", "Pictures/Screenshots/shot-14-02.png", 8) },
+            Notification { urgency: 2, ..n(11, "System", "Backup failed", "The disk is full. 2 folders were not copied.", 12) },
+            Notification { progress: Some(64), ..n(10, "Downloads", "hyprland-0.56.2.tar.gz", "14.8 MB of 23.1 MB", 15) },
+        ],
+    );
+    let wanted: Vec<u32> = ids.split(',').filter_map(|i| i.trim().parse().ok()).collect();
+    for item in &mut state.items {
+        if wanted.contains(&item.id) {
+            let total = Duration::from_millis(if item.urgency == 2 { 0 } else { 6000 });
+            item.toast = Some(Toast {
+                visible: wanted.iter().position(|w| *w == item.id).is_some_and(|i| i < 3),
+                running: false,
+                left: (item.urgency != 2).then(|| total * 6 / 10),
+                total: (item.urgency != 2).then_some(total),
+                at: Instant::now(),
+            });
+        }
+    }
+    // Most recently listed first, like a stack of arrivals.
+    state.items.sort_by_key(|n| std::cmp::Reverse(n.id));
+}
+
+/// A square avatar and a wide picture for the demo list, written once to the temp directory.
+fn fake_images() -> (Option<PathBuf>, Option<PathBuf>) {
+    let dir = std::env::temp_dir().join("yozora-fake-notify");
+    let _ = std::fs::create_dir_all(&dir);
+    let make = |name: &str, w: u32, h: u32, f: &dyn Fn(u32, u32) -> [u8; 3]| {
+        let path = dir.join(name);
+        if !path.exists() {
+            let img = image::RgbImage::from_fn(w, h, |x, y| image::Rgb(f(x, y)));
+            img.save(&path).ok()?;
+        }
+        Some(path)
+    };
+    let avatar = make("avatar.png", 72, 72, &|x, y| [(80 + x * 2) as u8, (120 + y) as u8, 200]);
+    let preview = make("preview.png", 712, 300, &|x, y| {
+        let band = ((x / 40 + y / 40) % 2) as u8 * 18;
+        [(40 + x / 6) as u8 + band, (70 + y / 4) as u8 + band, 150 + band]
+    });
+    (avatar, preview)
 }
 
 pub async fn check() -> anyhow::Result<String> {

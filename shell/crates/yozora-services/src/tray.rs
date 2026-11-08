@@ -101,8 +101,79 @@ pub enum Cmd {
     MenuClick(String, i32),
 }
 
-pub fn start() -> Tray {
-    super::spawn("tray", false, |link| super::supervise(link, run))
+pub fn start(fake: bool) -> Tray {
+    if fake {
+        super::spawn("tray", true, run_fake)
+    } else {
+        super::spawn("tray", false, |link| super::supervise(link, run))
+    }
+}
+
+/// Two items with menus that exercise submenus, check and radio marks, separators and a
+/// disabled row. Clicking a mark flips it, a plain row does nothing.
+fn run_fake(link: Link<State, Cmd>) {
+    let row = |id: i32, label: &str, toggle: Toggle| MenuItem { id, label: label.into(), enabled: true, separator: false, toggle, children: Vec::new() };
+    let sep = |id: i32| MenuItem { id, label: String::new(), enabled: true, separator: true, toggle: Toggle::None, children: Vec::new() };
+    let item = |key: &str, title: &str, icon: &'static str| Item {
+        key: key.into(),
+        title: title.into(),
+        status: Status::Active,
+        icon: Some(Icon::Builtin(icon)),
+        has_menu: true,
+        item_is_menu: true,
+        dest: key.into(),
+        path: "/StatusNotifierItem".into(),
+        menu: Some("/Menu".into()),
+    };
+    let mut status = row(3, "Status", Toggle::None);
+    status.children = vec![row(31, "Online", Toggle::Radio(true)), row(32, "Away", Toggle::Radio(false)), row(33, "Invisible", Toggle::Radio(false))];
+    let mut more = row(6, "More", Toggle::None);
+    more.children = vec![row(61, "Preferences", Toggle::None), row(62, "Check for updates", Toggle::None)];
+    let mut disabled = row(5, "Sync paused", Toggle::None);
+    disabled.enabled = false;
+    let mut menus = HashMap::from([
+        ("fake.chat".to_string(), vec![row(1, "Open chat", Toggle::None), row(2, "Notifications", Toggle::Check(true)), status, sep(4), disabled, more, sep(7), row(8, "Quit", Toggle::None)]),
+        ("fake.sync".to_string(), vec![row(1, "Sync now", Toggle::None), row(2, "Pause syncing", Toggle::Check(false))]),
+    ]);
+    let mut state = State { items: vec![item("fake.chat", "Chat", "bt"), item("fake.sync", "Sync", "wifi")], menu: None };
+    link.publish(state.clone());
+    while let Ok(cmd) = link.cmds.recv_blocking() {
+        match cmd {
+            Cmd::LoadMenu(key) => {
+                if let Some(m) = menus.get(&key) {
+                    state.menu = Some((key, m.clone()));
+                }
+            }
+            Cmd::MenuClick(key, id) => {
+                if let Some(m) = menus.get_mut(&key) {
+                    flip(m, id);
+                    state.menu = Some((key, m.clone()));
+                }
+            }
+            _ => {}
+        }
+        if !link.publish(state.clone()) {
+            break;
+        }
+    }
+}
+
+/// A click on a check row flips it; on a radio row it selects it and clears its siblings.
+fn flip(items: &mut [MenuItem], id: i32) -> bool {
+    if let Some(i) = items.iter().position(|m| m.id == id) {
+        match items[i].toggle {
+            Toggle::Check(on) => items[i].toggle = Toggle::Check(!on),
+            Toggle::Radio(_) => {
+                for m in items.iter_mut().filter(|m| matches!(m.toggle, Toggle::Radio(_))) {
+                    m.toggle = Toggle::Radio(false);
+                }
+                items[i].toggle = Toggle::Radio(true);
+            }
+            Toggle::None => {}
+        }
+        return true;
+    }
+    items.iter_mut().any(|m| flip(&mut m.children, id))
 }
 
 /// Splits a watcher id into bus name and object path.

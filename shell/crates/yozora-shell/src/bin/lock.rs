@@ -5,6 +5,7 @@
 //!   yozora-lock status     whether the session is locked
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
@@ -13,14 +14,19 @@ use rune::{
     App, AppSpec, Color, Cx, DisplayTarget, El, ImageCache, Key, KeyEvent, KeyPolicy, OverlayHandle, OverlayInput, OverlayOptions, OverlayPlacement, OverlaySpec,
     RunOptions, Spring, SpringPair, SurfaceFit, Transition, Tx, WaylandLayer, WindowSpec, col, el, row, text,
 };
+use yozora_lockd::glance::MediaCmd;
+use yozora_lockd::power::{Power, Press};
+use yozora_lockd::system::Network;
 use yozora_lockd::{Engine, Phase, Tone, cli};
-use yozora_shell::kit::{glyph_el, label};
+use yozora_shell::kit::{cell, fig, glyph_el, label};
 use yozora_style::{FONTS, Look, Tokens, tokens};
 
 struct Lock {
     engine: Arc<Mutex<Engine>>,
     look: Look,
     output: String,
+    /// Which of the displays this is, in the order they were locked.
+    index: usize,
     size: (f32, f32),
     wallpaper: Arc<Mutex<Option<PathBuf>>>,
     leaving: bool,
@@ -28,6 +34,10 @@ struct Lock {
     kick: bool,
     preview: bool,
 }
+
+/// The display that carries the form and the extras: the one with the keyboard, which starts as
+/// the focused monitor. Every other display shows the clock and the wallpaper only.
+static MAIN: AtomicUsize = AtomicUsize::new(0);
 
 type Handles = Mutex<Vec<OverlayHandle<Lock>>>;
 
@@ -54,6 +64,10 @@ fn host(_: &(), _: &mut Cx<()>) -> El {
 fn on_key(s: &mut Lock, e: &KeyEvent, _: &mut Tx) -> bool {
     if s.leaving {
         return true;
+    }
+    // Typing on a display makes it the one with the form.
+    if MAIN.swap(s.index, Ordering::Relaxed) != s.index {
+        redraw();
     }
     let mut engine = s.engine.lock().unwrap();
     match &e.key {
@@ -120,7 +134,7 @@ fn form(s: &Lock, t: &Tokens) -> El {
     let now = Instant::now();
     let (tone, hint) = match engine.auth.waiting_for(now) {
         Some(d) => (Tone::Bad, format!("Too many tries · {}", yozora_lockd::countdown(d))),
-        None => engine.auth.hint(false),
+        None => engine.auth.hint(caps_lock()),
     };
     let hint_color = match tone {
         Tone::Plain => t.ink3,
@@ -137,7 +151,13 @@ fn form(s: &Lock, t: &Tokens) -> El {
     let mut pill = row().w(300.0).h(44.0).pl(20.0).pr(6.0).gap(8.0).center_y().radius(t.radii.pill).fill(t.fill);
     pill = if boxed { pill.border(1.0, t.ink) } else { pill.border(1.0, t.rule) };
     let go = row().size(32.0, 32.0).center().radius(t.radii.pill).fill(if boxed { t.ink } else { t.acc })
-        .child(glyph_el(t, "arrow", 16.0, if boxed { t.on_ink } else { t.on_acc }));
+        .child(glyph_el(t, "arrow", 16.0, if boxed { t.on_ink } else { t.on_acc }))
+        .key("go").role("button").label("Unlock").hit()
+        .on_press(|s: &mut Lock| {
+            if s.engine.lock().unwrap().submit() {
+                redraw();
+            }
+        });
     let field = row().grow(1.0).center_y().child(if n == 0 {
         label(t, 14.0, 400.0, if busy { "Checking…" } else { "Password" }, t.ink3)
     } else {
@@ -150,11 +170,116 @@ fn form(s: &Lock, t: &Tokens) -> El {
     let avatar = row().size(64.0, 64.0).center().radius(32.0).fill(t.raised).child(text(initial).font(TextStyle::new(32.0, 400.0).family(t.fonts.display)).color(t.ink));
     let who = label(t, 16.0, 600.0, name, t.ink);
     let align_left = t.look == Look::Phosphor;
-    let mut f = col().gap(16.0).items_center().child(avatar).child(who).child(pill).child(label(t, 13.0, 400.0, hint, hint_color));
+    let hint = if tone == Tone::Warn {
+        row().gap(6.0).center_y().child(glyph_el(t, "caps", 15.0, hint_color)).child(label(t, 13.0, 400.0, hint, hint_color))
+    } else {
+        row().center_y().child(label(t, 13.0, 400.0, hint, hint_color))
+    };
+    let mut f = col().gap(16.0).items_center().child(avatar).child(who).child(pill).child(hint);
     if align_left {
         f = f.items_start();
     }
     f
+}
+
+/// Whether Caps Lock is on. Rune does not report lock keys, so this reads the keyboard's LED.
+fn caps_lock() -> bool {
+    let Ok(dir) = std::fs::read_dir("/sys/class/leds") else { return false };
+    dir.flatten().any(|e| {
+        e.file_name().to_string_lossy().ends_with("::capslock")
+            && std::fs::read_to_string(e.path().join("brightness")).is_ok_and(|b| b.trim() != "0")
+    })
+}
+
+/// A floating capsule the extras sit in, drawn from the look's own surface tokens.
+fn capsule(t: &Tokens) -> El {
+    let boxed = matches!(t.look, Look::Folio | Look::Phosphor);
+    let c = row().center_y().radius(t.radii.pill).fill(t.raised);
+    if boxed { c.border(1.0, t.ink) } else { c.border(1.0, t.rule) }
+}
+
+/// Top right: the keyboard layout, the network and the battery.
+fn status(engine: &Engine, t: &Tokens) -> El {
+    let st = engine.status();
+    let mut pill = capsule(t).pin(None, Some(28.0), Some(48.0), None).h(34.0).px(12.0).gap(12.0);
+    if let Some(layout) = st.layout {
+        pill = pill.child(
+            row().h(18.0).px(5.0).center().radius(t.radii.chip).border(1.0, t.ink2)
+                .child(fig(t, 10.5, 700.0, layout, t.ink2)),
+        );
+    }
+    let net = match st.network {
+        Network::Wireless => "wifi",
+        Network::Wired => "ethernet",
+        Network::Offline => "wifioff",
+    };
+    pill = pill.child(glyph_el(t, net, 16.0, t.ink2));
+    if let Some((percent, charging)) = st.battery {
+        pill = pill.child(
+            row().gap(5.0).center_y()
+                .child(glyph_el(t, "battery", 16.0, if charging { t.acc } else { t.ink2 }))
+                .child(fig(t, 12.5, 500.0, format!("{percent}%"), t.ink2)),
+        );
+    }
+    pill
+}
+
+/// Bottom left: what is playing, with previous, play or pause, and next.
+fn media(engine: &Engine, t: &Tokens, m: yozora_lockd::glance::Media) -> El {
+    let mut art = row().size(48.0, 48.0).center().radius(t.radii.chip).fill(t.fill);
+    match &m.art {
+        Some(path) => art = art.pixels_fit(images().file(path, 48.0, 2.0).pixels(), SurfaceFit::Fill),
+        None => art = art.child(glyph_el(t, "music", 20.0, t.ink2)),
+    }
+    let _ = engine;
+    let button = |key: &'static str, name: &str, glyph: &str, cmd: MediaCmd| {
+        cell(32.0, 32.0, glyph_el(t, glyph, 16.0, t.ink)).radius(t.radii.ctl)
+            .key(key).role("button").label(name.to_owned()).hit().hover(t.fill)
+            .on_press(move |s: &mut Lock| s.engine.lock().unwrap().media(cmd))
+    };
+    let words = col().grow(1.0).min_w(0.0).gap(2.0)
+        .child(label(t, 13.0, 600.0, m.title, t.ink).truncate())
+        .child(label(t, 12.0, 400.0, m.artist, t.ink2).truncate());
+    let card = row().pin(Some(48.0), None, None, Some(44.0)).w(340.0).padding(10.0).gap(12.0).center_y().radius(t.radii.card).fill(t.raised)
+        .child(art).child(words)
+        .child(button("prev", "Previous", "prev", MediaCmd::Previous))
+        .child(button("play", if m.playing { "Pause" } else { "Play" }, if m.playing { "pause" } else { "play" }, MediaCmd::PlayPause))
+        .child(button("next", "Next", "next", MediaCmd::Next));
+    if matches!(t.look, Look::Folio | Look::Phosphor) { card.border(1.0, t.ink) } else { card.border(1.0, t.rule) }
+}
+
+/// Bottom centre: how many notifications arrived while locked. Their contents stay hidden.
+fn notes(t: &Tokens, n: usize) -> El {
+    let what = if n == 1 { "1 notification".to_owned() } else { format!("{n} notifications") };
+    col().pin(Some(0.0), None, Some(0.0), Some(52.0)).items_center().child(
+        capsule(t).h(36.0).pl(12.0).pr(16.0).gap(9.0)
+            .child(glyph_el(t, "bell", 16.0, t.ink))
+            .child(label(t, 12.5, 600.0, what, t.ink))
+            .child(label(t, 12.5, 400.0, "\u{b7} contents hidden until you unlock", t.ink2)),
+    )
+}
+
+/// Bottom right: suspend, restart and shut down. The last two ask twice.
+fn power(engine: &Engine, t: &Tokens) -> El {
+    let entries = [("suspend", "moon", "Suspend", Power::Suspend), ("restart", "restart", "Restart", Power::Reboot), ("shutdown", "power", "Shut down", Power::ShutDown)];
+    let mut r = row().pin(None, None, Some(48.0), Some(44.0)).gap(10.0);
+    for (key, glyph, name, action) in entries {
+        let confirming = engine.confirm.is_confirming(action);
+        let (fill, fg) = if confirming { (t.alert, t.on_ink) } else { (t.raised, t.ink) };
+        let disc = cell(48.0, 48.0, glyph_el(t, glyph, 18.0, fg)).radius(t.radii.pill).fill(fill);
+        let disc = if matches!(t.look, Look::Folio | Look::Phosphor) { disc.border(1.0, t.ink) } else { disc.border(1.0, t.rule) };
+        r = r.child(
+            col().w(88.0).gap(7.0).items_center()
+                .child(disc)
+                .child(label(t, 11.5, 400.0, if confirming { "Again to confirm" } else { name }, if confirming { t.alert } else { t.ink2 }))
+                .key(key).role("button").label(name).hit()
+                .on_press(move |s: &mut Lock| {
+                    let _: Press = s.engine.lock().unwrap().power(action);
+                    redraw();
+                }),
+        );
+    }
+    r
 }
 
 fn view(s: &Lock, _: &mut Cx<Lock>) -> El {
@@ -174,8 +299,29 @@ fn view(s: &Lock, _: &mut Cx<Lock>) -> El {
             .child(text(time).font(TextStyle::new(size, 400.0).family(t.fonts.display).features("'tnum' 1")).color(t.ink));
         let left = if s.look == Look::Phosphor { Some(w * 436.0 / 1440.0) } else { Some(0.0) };
         let right = if s.look == Look::Phosphor { None } else { Some(0.0) };
-        let form = col().pin(left, None, right, Some(FORM_BOTTOM)).items_center().justify_end().child(form(s, &t));
-        root = root.child(clock.transition(Transition::opacity())).child(form.transition(Transition::opacity()));
+        root = root.child(clock.transition(Transition::opacity()));
+        if MAIN.load(Ordering::Relaxed) == s.index {
+            let form = col().pin(left, None, right, Some(FORM_BOTTOM)).items_center().justify_end().child(form(s, &t));
+            root = root.child(form.transition(Transition::opacity()));
+            let engine = s.engine.lock().unwrap();
+            let show = &engine.config.show;
+            let (show_media, show_notes, show_power) = (show.media, show.notifications, show.power);
+            let glance = engine.glance();
+            let mut extras = vec![status(&engine, &t)];
+            if show_media && let Some(m) = glance.media {
+                extras.push(media(&engine, &t, m));
+            }
+            if show_notes && let Some(n) = glance.notifications.filter(|n| *n > 0) {
+                extras.push(notes(&t, n));
+            }
+            if show_power {
+                extras.push(power(&engine, &t));
+            }
+            drop(engine);
+            for e in extras {
+                root = root.child(e.transition(Transition::opacity()));
+            }
+        }
     }
     root
 }
@@ -225,7 +371,12 @@ fn main() {
     rune::run_windows_with(RunOptions { accessory: true }, move |displays| {
         let mut app = App::new(AppSpec { fonts: FONTS, ..AppSpec::new("Yozora lock", (10.0, 10.0), || (), host) }).windowless();
         let only = std::env::var("YZ_OUT").ok().filter(|_| preview);
-        for d in displays.iter().filter(|d| only.is_none() || d.name == only) {
+        let focused = yozora_lockd::system::monitors().into_iter().find(|m| m.focused).map(|m| m.name);
+        let shown: Vec<_> = displays.iter().filter(|d| only.is_none() || d.name == only).collect();
+        if let Some(i) = shown.iter().position(|d| d.name.is_some() && d.name == focused) {
+            MAIN.store(i, Ordering::Relaxed);
+        }
+        for (index, d) in shown.into_iter().enumerate() {
             let name = d.name.clone().unwrap_or_default();
             let size = (d.size.0 as f32 / d.scale as f32, d.size.1 as f32 / d.scale as f32);
             let wallpaper = Arc::new(Mutex::new(None));
@@ -248,7 +399,7 @@ fn main() {
                         ..Default::default()
                     })
                     .on_key(on_key),
-                Lock { engine: engine.clone(), look, output: name, size, wallpaper, leaving: false, kick: false, preview },
+                Lock { engine: engine.clone(), look, output: name, index, size, wallpaper, leaving: false, kick: false, preview },
             );
             handle.show();
             handle.request_keys();

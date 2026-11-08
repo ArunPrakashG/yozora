@@ -6,9 +6,9 @@ use yozora_services::bluetooth::{Cmd, Device, State};
 use yozora_services::power::{self, Charge, DeviceKind};
 use yozora_style::{Look, Tokens};
 
-use crate::kit::{fig, glyph_el, label};
+use crate::kit::{cell, fig, glyph_el, label};
 use crate::stage::Stage;
-use crate::wifi::{empty, head, ink, item, lead, section, shell, switch_button, text_el};
+use crate::wifi::{empty, head, ink, item, lead, section, sep, shell, switch_button, text_el, tool_row};
 
 pub const W: f32 = 340.0;
 
@@ -56,12 +56,14 @@ fn send(s: &Stage, cmd: Cmd) {
     }
 }
 
-fn device_row(t: &Tokens, i: usize, d: &Device) -> El {
+fn device_row(t: &Tokens, i: usize, d: &Device, near: bool) -> El {
     let connected = d.connected;
     let sub = if d.busy {
         if connected { "Disconnecting\u{2026}" } else { "Connecting\u{2026}" }
     } else if connected {
         "Connected"
+    } else if near {
+        "Ready to pair"
     } else {
         "Not connected"
     };
@@ -71,12 +73,12 @@ fn device_row(t: &Tokens, i: usize, d: &Device) -> El {
         (true, ..) => None,
         (_, true, Some(b)) => Some(ring(t, f32::from(b))),
         (_, true, None) => None,
-        _ => Some(label(t, 13.0, 400.0, "Connect", t.ink2)),
+        _ => Some(label(t, 13.0, 400.0, if near { "Pair" } else { "Connect" }, t.ink2)),
     };
     let path = d.path.clone();
     item(t, false, lead(t, device_glyph(&d.icon), if connected { main } else { faint }), &d.name, Some(sub), trail)
-        .key(format!("dev{i}")).role("button")
-        .label(format!("{} {}", if connected { "Disconnect" } else { "Connect" }, d.name)).hit()
+        .key(format!("{}{i}", if near { "near" } else { "dev" })).role("button")
+        .label(format!("{} {}", if connected { "Disconnect" } else if near { "Pair" } else { "Connect" }, d.name)).hit()
         .on_press(move |s: &mut Stage| send(s, if connected { Cmd::Disconnect(path.clone()) } else { Cmd::Connect(path.clone()) }))
 }
 
@@ -152,15 +154,40 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
         p = p.child(empty(t, &["No Bluetooth adapter.", "BlueZ is not running or found no hardware."]));
     } else if !on {
         p = p.child(empty(t, &["Bluetooth is off.", "Wired devices that report a battery still show here."]));
-    } else if state.devices.is_empty() {
-        p = p.child(empty(t, &["No paired devices.", "Pair new devices with a Bluetooth manager."]));
     } else {
-        let mut list = col().w_full().gap(10.0);
-        let ordered = state.devices.iter().filter(|d| d.connected).chain(state.devices.iter().filter(|d| !d.connected && d.paired));
-        for (i, d) in ordered.enumerate() {
-            list = list.child(device_row(t, i, d));
+        let scanning = state.scanning;
+        let paired: Vec<&Device> = state.devices.iter().filter(|d| d.connected).chain(state.devices.iter().filter(|d| !d.connected && d.paired)).collect();
+        let nearby: Vec<&Device> = state.devices.iter().filter(|d| !d.connected && !d.paired).collect();
+        let scan = {
+            let button = cell(28.0, 28.0, glyph_el(t, "sync", 15.0, if scanning { t.acc } else { t.ink2 }))
+                .key("bt-scan").role("button").label(if scanning { "Stop scanning" } else { "Scan for devices" }).hit()
+                .radius(t.radii.pill).on_press(move |s: &mut Stage| send(s, Cmd::Scan(!scanning)));
+            row().gap(4.0).center_y()
+                .children(scanning.then(|| label(t, 12.0, 400.0, "Scanning\u{2026}", t.ink2)))
+                .child(button)
+        };
+        p = p.child(section(t, "Paired", Some(scan)));
+        if paired.is_empty() {
+            p = p.child(empty(t, &["No paired devices.", "Scan to find a device to pair."]));
+        } else {
+            let mut list = col().w_full().gap(10.0);
+            for (i, d) in paired.into_iter().enumerate() {
+                list = list.child(device_row(t, i, d, false));
+            }
+            p = p.child(list);
         }
-        p = p.child(list);
+        if scanning || !nearby.is_empty() {
+            p = p.child(section(t, "Nearby", None));
+            if nearby.is_empty() {
+                p = p.child(empty(t, &["Looking for devices\u{2026}"]));
+            } else {
+                let mut list = col().w_full().gap(10.0);
+                for (i, d) in nearby.into_iter().enumerate() {
+                    list = list.child(device_row(t, i, d, true));
+                }
+                p = p.child(list);
+            }
+        }
     }
 
     // The system battery, and peripherals that report through UPower but not through Bluetooth.
@@ -193,6 +220,9 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
     if !power.profiles.is_empty() {
         let current = power.profile.clone().unwrap_or_default();
         p = p.child(section(t, "Power mode", None).mt(6.0)).child(col().w_full().px(2.0).child(profiles(t, &current, &power.profiles)));
+    }
+    if state.adapter.is_some() && let Some(row) = tool_row(t, "bt-manager", "Bluetooth manager\u{2026}", &["blueman-manager", "overskride", "blueberry"]) {
+        p = p.child(sep(t)).child(row);
     }
     p
 }

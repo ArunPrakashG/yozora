@@ -181,7 +181,7 @@ pub struct Fakes(pub BTreeSet<String>);
 impl Fakes {
     /// `--fake` with no list fakes the hardware the brief calls out: Wi-Fi, Bluetooth, battery.
     pub const DEFAULT: &[&str] = &["network", "bluetooth", "power"];
-    pub const ALL: &[&str] = &["network", "bluetooth", "power", "audio", "media", "notifications"];
+    pub const ALL: &[&str] = &["network", "bluetooth", "power", "audio", "media", "notifications", "tray"];
 
     pub fn has(&self, name: &str) -> bool {
         self.0.contains(name)
@@ -343,7 +343,7 @@ impl Services {
                 Kind::Network if self.network.is_none() => self.network = Some(network::start(fake("network"))),
                 Kind::Notifications if self.notifications.is_none() => self.notifications = Some(notifications::start(fake("notifications"))),
                 Kind::Power if self.power.is_none() => self.power = Some(power::start(fake("power"))),
-                Kind::Tray if self.tray.is_none() => self.tray = Some(tray::start()),
+                Kind::Tray if self.tray.is_none() => self.tray = Some(tray::start(fake("tray"))),
                 _ => {}
             }
         }

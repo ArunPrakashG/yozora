@@ -76,6 +76,7 @@ pub enum Cmd {
     SourceVolume(f32),
     SourceMute(bool),
     DefaultSink(String),
+    DefaultSource(String),
 }
 
 pub fn start(fake: bool) -> Audio {
@@ -181,6 +182,7 @@ fn apply(cmd: &Cmd, state: &State) -> anyhow::Result<()> {
         Cmd::SourceVolume(v) => pactl(&["set-source-volume", &source, &pct(*v)])?,
         Cmd::SourceMute(m) => pactl(&["set-source-mute", &source, if *m { "1" } else { "0" }])?,
         Cmd::DefaultSink(name) => pactl(&["set-default-sink", name])?,
+        Cmd::DefaultSource(name) => pactl(&["set-default-source", name])?,
     };
     Ok(())
 }
@@ -274,7 +276,10 @@ fn run_fake(link: Link<State, Cmd>) {
             dev("headphones", "Headphones", "Bluetooth · 80% battery", DeviceKind::Headphones, 0.45),
             dev("hdmi", "HDMI-A-1", "Display audio", DeviceKind::Display, 1.0),
         ],
-        sources: vec![dev("mic", "Microphone", "Built-in Audio", DeviceKind::Microphone, 0.38)],
+        sources: vec![
+            dev("mic", "Microphone", "Built-in Audio", DeviceKind::Microphone, 0.38),
+            dev("headset-mic", "Headset microphone", "Bluetooth", DeviceKind::Microphone, 0.7),
+        ],
         default_sink: "speakers".into(),
         default_source: "mic".into(),
         server: "fake".into(),
@@ -287,6 +292,7 @@ fn run_fake(link: Link<State, Cmd>) {
             Cmd::SourceVolume(v) => state.source_mut().into_iter().for_each(|d| d.volume = v),
             Cmd::SourceMute(m) => state.source_mut().into_iter().for_each(|d| d.muted = m),
             Cmd::DefaultSink(name) => state.default_sink = name,
+            Cmd::DefaultSource(name) => state.default_source = name,
         }
         if !link.publish(state.clone()) {
             break;

@@ -32,6 +32,8 @@ pub struct State {
     /// None when there is no adapter at all.
     pub adapter: Option<String>,
     pub powered: bool,
+    /// The adapter is looking for devices nearby. Unpaired devices it finds are listed.
+    pub scanning: bool,
     pub devices: Vec<Device>,
 }
 
@@ -46,7 +48,12 @@ pub enum Cmd {
     SetPowered(bool),
     Connect(String),
     Disconnect(String),
+    /// Start or stop looking for devices nearby. A scan stops by itself after a while.
+    Scan(bool),
 }
+
+/// How long a scan runs before it is stopped.
+const SCAN_FOR: Duration = Duration::from_secs(25);
 
 pub fn start(fake: bool) -> Bluetooth {
     if fake {
@@ -70,13 +77,15 @@ async fn snapshot(conn: &Connection) -> anyhow::Result<State> {
     if let Some((path, adapter)) = adapters.first() {
         state.adapter = Some(path.clone());
         state.powered = dbus::get(adapter, "Powered").unwrap_or(false);
+        state.scanning = dbus::get(adapter, "Discovering").unwrap_or(false);
     }
     for (path, ifaces) in &objects {
         let Some(d) = ifaces.get("org.bluez.Device1") else { continue };
         let paired: bool = dbus::get(d, "Paired").unwrap_or(false);
         let connected: bool = dbus::get(d, "Connected").unwrap_or(false);
-        // Unpaired devices nearby are noise unless we can talk to them already.
-        if !paired && !connected {
+        // Unpaired devices nearby are noise unless we can talk to them already, or the user
+        // asked to look. Even then, a device that gives no name is just an address.
+        if !paired && !connected && !(state.scanning && d.contains_key("Name")) {
             continue;
         }
         let name = dbus::get::<String>(d, "Alias").or_else(|| dbus::get(d, "Name")).unwrap_or_default();
@@ -91,7 +100,7 @@ async fn snapshot(conn: &Connection) -> anyhow::Result<State> {
             busy: false,
         });
     }
-    state.devices.sort_by(|a, b| b.connected.cmp(&a.connected).then(a.name.cmp(&b.name)));
+    state.devices.sort_by(|a, b| b.connected.cmp(&a.connected).then(b.paired.cmp(&a.paired)).then(a.name.cmp(&b.name)));
     Ok(state)
 }
 
@@ -123,7 +132,14 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
     let mut stream = dbus::signals_from(&conn, BLUEZ).await?;
     let mut state = snapshot(&conn).await?;
     link.publish(state.clone());
+    let mut scan_until: Option<std::time::Instant> = None;
     loop {
+        if scan_until.is_some_and(|t| t <= std::time::Instant::now()) {
+            scan_until = None;
+            if let Some(a) = &state.adapter {
+                let _ = dbus::invoke(&conn, BLUEZ, a, "org.bluez.Adapter1", "StopDiscovery", &()).await;
+            }
+        }
         match dbus::next(&link.cmds, &mut stream, Duration::from_millis(80)).await? {
             Wake::Quit => return Ok(()),
             Wake::Changed => {}
@@ -135,14 +151,34 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
                         }
                         None => Err(anyhow::anyhow!("no Bluetooth adapter")),
                     },
+                    Cmd::Scan(on) => match &state.adapter {
+                        Some(a) => {
+                            scan_until = on.then(|| std::time::Instant::now() + SCAN_FOR);
+                            let method = if *on { "StartDiscovery" } else { "StopDiscovery" };
+                            dbus::invoke(&conn, BLUEZ, a, "org.bluez.Adapter1", method, &()).await
+                        }
+                        None => Err(anyhow::anyhow!("no Bluetooth adapter")),
+                    },
                     Cmd::Connect(path) | Cmd::Disconnect(path) => {
                         // Connecting takes seconds; show it as busy meanwhile.
+                        let unpaired = state.devices.iter().any(|d| &d.path == path && !d.paired);
                         if let Some(d) = state.devices.iter_mut().find(|d| &d.path == path) {
                             d.busy = true;
                         }
                         link.publish(state.clone());
+                        let dev = "org.bluez.Device1";
+                        if unpaired && matches!(cmd, Cmd::Connect(_)) {
+                            // A device found by scanning is paired and trusted first, so it
+                            // reconnects by itself next time.
+                            match dbus::invoke(&conn, BLUEZ, path, dev, "Pair", &()).await {
+                                Ok(()) => {
+                                    let _ = dbus::set_prop(&conn, BLUEZ, path, dev, "Trusted", Value::from(true)).await;
+                                }
+                                Err(e) => tracing::warn!("bluetooth: pairing: {e:#}"),
+                            }
+                        }
                         let method = if matches!(cmd, Cmd::Connect(_)) { "Connect" } else { "Disconnect" };
-                        dbus::invoke(&conn, BLUEZ, path, "org.bluez.Device1", method, &()).await
+                        dbus::invoke(&conn, BLUEZ, path, dev, method, &()).await
                     }
                 };
                 if let Err(e) = result {
@@ -169,6 +205,7 @@ fn run_fake(link: Link<State, Cmd>) {
     let mut state = State {
         adapter: Some("/fake/hci0".into()),
         powered: true,
+        scanning: false,
         devices: vec![
             dev("Headphones", "audio-headphones", true, Some(80)),
             dev("Keyboard", "input-keyboard", true, Some(72)),
@@ -185,6 +222,15 @@ fn run_fake(link: Link<State, Cmd>) {
                     d.connected = on && d.battery.is_some();
                 }
             }
+            Cmd::Scan(on) => {
+                state.scanning = on && state.powered;
+                state.devices.retain(|d| d.paired);
+                if state.scanning {
+                    let mut found = dev("Soundbar", "audio-speakers", false, None);
+                    found.paired = false;
+                    state.devices.push(found);
+                }
+            }
             Cmd::Connect(path) | Cmd::Disconnect(path) => {
                 let i = state.devices.iter().position(|d| d.path == path);
                 if let Some(i) = i {
@@ -193,6 +239,7 @@ fn run_fake(link: Link<State, Cmd>) {
                     std::thread::sleep(Duration::from_millis(700));
                     let d = &mut state.devices[i];
                     d.busy = false;
+                    d.paired = true;
                     d.connected = !d.connected;
                 }
             }

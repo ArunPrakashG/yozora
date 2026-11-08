@@ -107,6 +107,8 @@ struct State {
     /// Bumped by each locate request; only the latest one's result is kept.
     locate_seq: u64,
     clips_fetching: bool,
+    /// Whether the app index has been built once.
+    apps_ready: bool,
     scripts: Vec<Script>,
     hosts: Vec<Host>,
     projects: Arc<Vec<Project>>,
@@ -175,6 +177,7 @@ impl Engine {
             home: std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| "/".into()),
             locate_seq: 0,
             clips_fetching: false,
+            apps_ready: false,
             scripts: Vec::new(),
             hosts: Vec::new(),
             projects: Arc::new(Vec::new()),
@@ -221,7 +224,11 @@ impl Engine {
 
     /// Swaps in a fresh app index.
     pub fn set_apps(&self, apps: Vec<Entry>) {
-        self.inner.state().apps = Arc::new(apps);
+        {
+            let mut st = self.inner.state();
+            st.apps = Arc::new(apps);
+            st.apps_ready = true;
+        }
         self.inner.changed();
     }
 
@@ -287,6 +294,25 @@ impl Engine {
         out.retain(|s| !s.rows.is_empty());
         tracing::trace!("searched {query:?} in {:?}", started.elapsed());
         out
+    }
+
+    /// What a search for `query` is still waiting on, for a UI to say so: the app index on a cold
+    /// start, the clipboard history, or the file locator. `None` once everything it reads is in.
+    pub fn loading(&self, query: &str) -> Option<&'static str> {
+        let st = self.inner.state();
+        let (mode, q) = search::parse_mode(query);
+        if !st.apps_ready && matches!(mode, search::Mode::All) && !q.is_empty() {
+            return Some("Indexing apps");
+        }
+        if mode == search::Mode::Clipboard && st.clips_fetching {
+            return Some("Reading the clipboard");
+        }
+        let wants_files = mode == search::Mode::Files
+            || (mode == search::Mode::All && st.settings.launch.files_in_search && q.chars().count() >= 3);
+        if wants_files && !q.is_empty() && st.located.0 != q {
+            return Some("Searching files");
+        }
+        None
     }
 
     /// Runs locate for `q` after a short pause, so typing quickly runs it once.
@@ -652,7 +678,11 @@ fn watch_apps(engine: std::sync::Weak<Inner>) {
     let publish = |engine: &std::sync::Weak<Inner>| -> bool {
         let Some(inner) = engine.upgrade() else { return false };
         let apps = index();
-        inner.state().apps = Arc::new(apps);
+        {
+            let mut st = inner.state();
+            st.apps = Arc::new(apps);
+            st.apps_ready = true;
+        }
         inner.changed();
         true
     };

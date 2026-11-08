@@ -42,6 +42,7 @@ pub struct Player {
     pub position_at: Option<Instant>,
     pub can_next: bool,
     pub can_previous: bool,
+    pub can_seek: bool,
 }
 
 impl Player {
@@ -76,6 +77,8 @@ pub enum Cmd {
     Next,
     Previous,
     Select(String),
+    /// Jump to this point in the current track.
+    SeekTo(Duration),
 }
 
 pub fn start(fake: bool) -> Media {
@@ -189,6 +192,7 @@ async fn player(
         position_at: Some(Instant::now()),
         can_next: dbus::get(&p, "CanGoNext").unwrap_or(false),
         can_previous: dbus::get(&p, "CanGoPrevious").unwrap_or(false),
+        can_seek: dbus::get(&p, "CanSeek").unwrap_or(false),
     })
 }
 
@@ -242,13 +246,22 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
             Wake::Quit => return Ok(()),
             Wake::Changed => {}
             Wake::Command(Cmd::Select(bus)) => state.selected = Some(bus),
+            Wake::Command(Cmd::SeekTo(to)) => {
+                if let Some(p) = state.current() {
+                    // MPRIS seeks by an offset from where the player is now.
+                    let offset = to.as_micros() as i64 - p.position_now().as_micros() as i64;
+                    if let Err(e) = dbus::invoke(&conn, &p.bus, PATH, PLAYER, "Seek", &(offset,)).await {
+                        tracing::warn!("media: {e:#}");
+                    }
+                }
+            }
             Wake::Command(cmd) => {
                 if let Some(p) = state.current() {
                     let method = match cmd {
                         Cmd::PlayPause => "PlayPause",
                         Cmd::Next => "Next",
                         Cmd::Previous => "Previous",
-                        Cmd::Select(_) => unreachable!(),
+                        Cmd::Select(_) | Cmd::SeekTo(_) => unreachable!(),
                     };
                     if let Err(e) = dbus::invoke(&conn, &p.bus, PATH, PLAYER, method, &()).await {
                         tracing::warn!("media: {e:#}");
@@ -259,6 +272,22 @@ async fn run(link: &Link<State, Cmd>) -> anyhow::Result<()> {
         state = snapshot(&conn, state.selected.clone(), &mut fetched).await?;
         link.publish(state.clone());
     }
+}
+
+/// A generated cover for the fake players, so screens that show art have something to show.
+fn fake_art(track: usize) -> Option<PathBuf> {
+    let dir = art_cache();
+    let file = dir.join(format!("fake-{track}.png"));
+    if !file.exists() {
+        std::fs::create_dir_all(&dir).ok()?;
+        let (a, b) = if track == 0 { ([236.0, 120.0, 92.0], [52.0, 38.0, 112.0]) } else { ([250.0, 196.0, 96.0], [28.0, 92.0, 120.0]) };
+        let img = image::RgbImage::from_fn(176, 176, |x, y| {
+            let t = (x + y) as f32 / 350.0;
+            image::Rgb([0, 1, 2].map(|i| (a[i] + (b[i] - a[i]) * t) as u8))
+        });
+        img.save(&file).ok()?;
+    }
+    Some(file)
 }
 
 fn run_fake(link: Link<State, Cmd>) {
@@ -273,13 +302,14 @@ fn run_fake(link: Link<State, Cmd>) {
             title: title.into(),
             artist: artist.into(),
             album: album.into(),
-            art: None,
+            art: fake_art(track),
             status,
             length: Some(Duration::from_secs(secs)),
             position,
             position_at: Some(Instant::now()),
             can_next: true,
             can_previous: true,
+            can_seek: true,
         }
     };
     let mpv = Player {
@@ -307,6 +337,7 @@ fn run_fake(link: Link<State, Cmd>) {
                 current = make(track, current.status, Duration::ZERO);
             }
             Cmd::Select(bus) => selected = Some(bus),
+            Cmd::SeekTo(to) => current = make(track, current.status, to),
         }
         if !publish(&current, &selected) {
             break;

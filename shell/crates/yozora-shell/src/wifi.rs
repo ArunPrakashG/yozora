@@ -155,6 +155,32 @@ pub(crate) fn empty(t: &Tokens, lines: &[&str]) -> El {
     c
 }
 
+/// Whether `command` is an executable on PATH. Remembered, since a screen asks on every draw.
+pub(crate) fn on_path(command: &str) -> bool {
+    static SEEN: std::sync::Mutex<Vec<(String, bool)>> = std::sync::Mutex::new(Vec::new());
+    let mut seen = SEEN.lock().unwrap();
+    if let Some((_, found)) = seen.iter().find(|(c, _)| c == command) {
+        return *found;
+    }
+    let found = std::env::var_os("PATH").is_some_and(|p| std::env::split_paths(&p).any(|d| d.join(command).is_file()));
+    seen.push((command.to_owned(), found));
+    found
+}
+
+/// A row at the foot of a panel that opens the first of `tools` that is installed. Nothing when
+/// none is.
+pub(crate) fn tool_row(t: &Tokens, key: &'static str, name: &str, tools: &[&'static str]) -> Option<El> {
+    let tool = *tools.iter().find(|c| on_path(c))?;
+    Some(
+        item(t, false, lead(t, "gear", t.ink2), name, None, None)
+            .key(key).role("button").label(name.to_owned()).hit()
+            .on_press(move |s: &mut Stage| {
+                yozora_services::run_shell(tool);
+                s.open = None;
+            }),
+    )
+}
+
 /// A signal-strength icon: strong networks draw full, weak ones small and faint.
 fn signal(t: &Tokens, strength: u8, selected: bool) -> El {
     let (main, _) = ink(t, selected);
@@ -199,7 +225,7 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
                         .on_press(|s: &mut Stage| send(s, Cmd::Disconnect)),
                 );
             }
-            if !others.is_empty() {
+            {
                 let rescan = cell(28.0, 28.0, glyph_el(t, "sync", 15.0, t.ink2)).key("rescan").role("button").label("Scan for networks").hit()
                     .radius(t.radii.pill).on_press(|s: &mut Stage| send(s, Cmd::Scan));
                 p = p.child(section(t, "Other networks", Some(rescan)));
@@ -210,6 +236,10 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
                     Some("Connecting\u{2026}")
                 } else if ap.known {
                     Some("Saved")
+                } else if !ap.secured {
+                    Some("Open network")
+                } else if !ap.security.is_empty() {
+                    Some(ap.security.as_str())
                 } else {
                     None
                 };
@@ -222,6 +252,8 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
             }
             if state.access_points.is_empty() {
                 p = p.child(empty(t, &["Looking for networks\u{2026}"]));
+            } else if state.access_points.iter().all(|a| a.active) {
+                p = p.child(empty(t, &["No other networks in range."]));
             }
         } else {
             p = p.child(empty(t, &["Wi-Fi is off.", "Wired connections stay up."]));
@@ -253,6 +285,9 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
                     .on_press(move |s: &mut Stage| send(s, Cmd::SetVpn(uuid.clone(), !on))),
             );
         }
+    }
+    if let Some(row) = tool_row(t, "net-settings", "Network settings\u{2026}", &["nm-connection-editor"]) {
+        p = p.child(sep(t)).child(row);
     }
     p
 }

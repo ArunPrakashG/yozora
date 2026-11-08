@@ -1,106 +1,142 @@
-//! The settings pages other than Appearance. The file-backed ones show the file as it is on disk,
-//! since the shell reloads it on every save; Displays, Motion and About show live state.
+//! The settings pages that show state rather than edit a file: displays, motion, and about.
 
 use rune::{El, col, row};
 use yozora_config::paths;
 use yozora_style::{Entrance, Fx, Look, Motion, Tokens};
 
 use crate::kit::{fig, label};
+use crate::settings_apps::{self, AppEntry, Status};
+use crate::settings_ui::{button, card, group, mono, notice, setting};
 use crate::stage::Stage;
 
-fn heading(t: &Tokens, page: &str, line: &str) -> El {
-    col().gap(6.0).child(label(t, 22.0, 600.0, page, t.ink)).child(label(t, 13.0, 400.0, line, t.ink2))
-}
+const REPO: &str = "https://github.com/ArunPrakashG/yozora";
 
-fn card(t: &Tokens) -> El {
-    col().w_full().padding(16.0).gap(8.0).radius(t.radii.card).fill(t.fill)
-}
-
-fn pair(t: &Tokens, k: &str, v: String) -> El {
-    row().w_full().h(28.0).items_center().justify_between()
+fn pair(t: &Tokens, first: bool, k: &str, v: String) -> El {
+    let r = row().w_full().h(44.0).px(18.0).items_center().justify_between()
         .child(label(t, 13.0, 500.0, k, t.ink2))
-        .child(fig(t, 13.0, 500.0, v, t.ink))
+        .child(fig(t, 13.0, 500.0, v, t.ink).truncate());
+    if first { r } else { r.border_sides([1.0, 0.0, 0.0, 0.0], t.rule) }
 }
 
-/// A config file shown as plain text: comments and all, so what is on screen is what is on disk.
-fn file(t: &Tokens, page: &str, line: &str, name: &str) -> El {
-    let path = paths::config_dir().join(name);
-    let text = std::fs::read_to_string(&path).ok().filter(|s| !s.trim().is_empty());
-    let mut body = card(t);
-    match text {
-        Some(text) => {
-            for l in text.lines().take(18) {
-                let shown = if l.is_empty() {
-                    " ".to_owned()
-                } else if l.chars().count() > 72 {
-                    format!("{}\u{2026}", l.chars().take(71).collect::<String>())
-                } else {
-                    l.to_owned()
-                };
-                body = body.child(fig(t, 12.0, 400.0, shown, t.ink));
-            }
-            if text.lines().count() > 18 {
-                body = body.child(label(t, 12.0, 400.0, "\u{2026}", t.ink2));
-            }
+fn rows(t: &Tokens, items: Vec<(String, String)>) -> El {
+    let mut c = card(t);
+    for (i, (k, v)) in items.into_iter().enumerate() {
+        c = c.child(pair(t, i == 0, &k, v));
+    }
+    c
+}
+
+pub fn displays(s: &Stage, t: &Tokens) -> Vec<El> {
+    let monitors = settings_apps::monitors().ok().unwrap_or_default();
+    let mut names = s.sh.outputs();
+    for m in monitors.iter() {
+        if !names.contains(&m.name) {
+            names.push(m.name.clone());
         }
-        None => body = body.child(label(t, 13.0, 400.0, format!("No {name} yet, so the defaults apply."), t.ink2)),
     }
-    col().gap(18.0).child(heading(t, page, line)).child(body)
-        .child(label(t, 12.0, 400.0, format!("{}  \u{b7}  saved changes apply at once", path.display()), t.ink2))
+    let items = names
+        .into_iter()
+        .map(|name| {
+            let mode = monitors.iter().find(|m| m.name == name).map(|m| format!("{} \u{d7} {} \u{b7} {:.0} Hz", m.mode.0, m.mode.1, m.refresh));
+            (name, mode.unwrap_or_else(|| "bar and panels".into()))
+        })
+        .collect();
+    vec![
+        rows(t, items),
+        label(t, 12.0, 400.0, "Choose which displays carry the bar on the Monitors tab of the Bar.", t.ink2).wrap(),
+    ]
 }
 
-fn displays(s: &Stage, t: &Tokens) -> El {
-    let mut body = card(t);
-    for name in s.sh.outputs() {
-        body = body.child(pair(t, &name, "bar and panels".into()));
-    }
-    col().gap(18.0).child(heading(t, "Displays", "The bar follows each connected display."))
-        .child(body)
-        .child(label(t, 12.0, 400.0, "Choose which displays carry the bar with monitors in bar.toml.", t.ink2))
-}
-
-fn motion(s: &Stage, t: &Tokens) -> El {
+pub fn motion(s: &Stage, t: &Tokens) -> Vec<El> {
     let fx = s.sh.look().1;
-    let name = match fx { Fx::Full => "Full", Fx::Calm => "Calm", Fx::Still => "Still" };
+    let name = match fx {
+        Fx::Full => "Full",
+        Fx::Calm => "Calm",
+        Fx::Still => "Still",
+    };
     let line = match fx {
         Fx::Full => "Every entrance, spring and ambient layer plays.",
         Fx::Calm => "Entrances play without overshoot; the ambient layer is off.",
         Fx::Still => "Panels appear at once. Nothing moves on its own.",
     };
-    let mut body = card(t);
-    for look in Look::ALL {
-        let m = Motion::of(look, fx);
-        let how = match m.entrance {
-            Entrance::Bud => "buds from the icon",
-            Entrance::Unfold => "unfolds from the rule",
-            Entrance::Scan => "scans in",
-            Entrance::Iris => "opens like an iris",
-        };
-        body = body.child(pair(t, look.name(), format!("{how} \u{b7} {:.2}s", m.open)));
-    }
-    col().gap(18.0).child(heading(t, "Motion", &format!("Effects are {name}. {line}"))).child(body)
-        .child(label(t, 12.0, 400.0, "Change effects on the Appearance page, or with yozora fx set.", t.ink2))
+    let items = Look::ALL
+        .into_iter()
+        .map(|look| {
+            let m = Motion::of(look, fx);
+            let how = match m.entrance {
+                Entrance::Bud => "buds from the icon",
+                Entrance::Unfold => "unfolds from the rule",
+                Entrance::Scan => "scans in",
+                Entrance::Iris => "opens like an iris",
+            };
+            (look.name().to_owned(), format!("{how} \u{b7} {:.2}s", m.open))
+        })
+        .collect();
+    vec![
+        notice(t, &format!("Effects are {name}"), line, false),
+        rows(t, items),
+        label(t, 12.0, 400.0, "Change effects on the Appearance page, or with yozora fx set.", t.ink2).wrap(),
+    ]
 }
 
-fn about(s: &Stage, t: &Tokens) -> El {
+pub fn about(s: &Stage, t: &Tokens) -> Vec<El> {
     let (look, fx) = s.sh.look();
-    let mut body = card(t)
-        .child(pair(t, "Version", env!("CARGO_PKG_VERSION").into()))
-        .child(pair(t, "Style", look.name().into()))
-        .child(pair(t, "Effects", fx.slug().into()))
-        .child(pair(t, "Config", paths::config_dir().display().to_string()));
-    body = body.child(pair(t, "Sockets", paths::runtime_dir().display().to_string()));
-    col().gap(18.0).child(heading(t, "About Yozora", "A Hyprland desktop shell, drawn on Rune.")).child(body)
+    let items = vec![
+        ("Version".to_owned(), env!("CARGO_PKG_VERSION").to_owned()),
+        ("Style".into(), look.name().into()),
+        ("Effects".into(), fx.slug().into()),
+        ("Config".into(), paths::config_dir().display().to_string()),
+        ("Sockets".into(), paths::runtime_dir().display().to_string()),
+    ];
+    vec![
+        rows(t, items),
+        row().gap(10.0)
+            .child(button(t, "about-source".into(), Some("code"), "Source", true, |_| settings_apps::open(REPO)))
+            .child(button(t, "about-docs".into(), Some("file"), "Docs", false, |_| settings_apps::open(&format!("{REPO}/tree/main/docs")))),
+    ]
 }
 
-pub fn view(s: &Stage, t: &Tokens, page: &str) -> El {
-    match page {
-        "Bar" => file(t, page, "Height, edges and the modules on each side.", "bar.toml"),
-        "Notifications" => file(t, page, "How long toasts stay and how many show.", "notify.toml"),
-        "Launcher" => file(t, page, "What the launcher searches and opens.", "launch.toml"),
-        "Lock and idle" => file(t, page, "The lock screen and when the session locks.", "lock.toml"),
-        "Displays" => displays(s, t),
-        "Motion" => motion(s, t),
-        _ => about(s, t),
+/// One app: whether it runs, where its files are, and what it warns about.
+pub fn app_about(s: &Stage, t: &Tokens, app: &AppEntry) -> Vec<El> {
+    let m = &app.manifest;
+    let (status, version, warnings) = match &app.status {
+        Status::Running { version, warnings } => ("Running", version.clone(), warnings.clone()),
+        Status::Stopped => ("Not running", None, Vec::new()),
+        Status::NoSocket => ("No control socket, so Settings can't tell", None, Vec::new()),
+        Status::Unknown => ("Checking\u{2026}", None, Vec::new()),
+    };
+    let start = if app.status == Status::Stopped && app.startable() {
+        let manifest = m.clone();
+        button(t, "about-start".into(), Some("power"), "Start", true, move |s: &mut Stage| {
+            if let Err(e) = settings_apps::start(&manifest) {
+                s.settings.fail(format!("{e:#}"));
+            }
+        })
+    } else {
+        row()
+    };
+    let _ = s;
+    let mut info = card(t)
+        .child(setting(t, true, "Status", Some(status.into()), None, start))
+        .child(setting(t, false, "Version", Some(version.unwrap_or_else(|| "Not reported".into())), None, row()));
+    if let Some(socket) = m.socket_path() {
+        info = info.child(setting(t, false, "Control socket", Some(socket.display().to_string()), None, row()));
     }
+    info = info
+        .child(setting(t, false, "Configuration", Some(m.config_path().display().to_string()), None, row()))
+        .child(setting(t, false, "Manifest", Some(m.dir.join(format!("{}.toml", m.id)).display().to_string()), None, row()));
+    let head = card(t).padding(20.0).gap(6.0)
+        .child(label(t, 20.0, 600.0, m.name.clone(), t.ink))
+        .child(label(t, 13.0, 400.0, m.description.clone().unwrap_or_default(), t.ink2).wrap())
+        .child(mono(t, format!("{} \u{b7} {}", m.id, m.binary), t.ink3));
+    let mut out = vec![head, group(t, "Running", None), info];
+    if !warnings.is_empty() {
+        out.push(group(t, "Configuration warnings", None));
+        let mut c = col().w_full().gap(8.0);
+        for w in warnings {
+            c = c.child(notice(t, "Warning", w, true));
+        }
+        out.push(c);
+    }
+    out
 }

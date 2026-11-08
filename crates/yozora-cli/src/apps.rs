@@ -121,6 +121,32 @@ fn spawn(binary: &str, args: &[String]) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Whether an executable called `name` is on `PATH`.
+fn on_path(name: &str) -> bool {
+    std::env::var_os("PATH").is_some_and(|p| std::env::split_paths(&p).any(|d| d.join(name).is_file()))
+}
+
+/// Starts the app that owns control socket `id` when nothing answers there. The Yozora shell
+/// answers for the bar, launcher and Settings, so it is what starts. Only where no shell is
+/// installed does a separate app of the old kind (`standalone`) start, opened on its own, and
+/// `false` comes back. Otherwise waits for the socket, so the command that follows can reach it.
+fn start_owner(id: &str, standalone: &str, standalone_args: &[String]) -> anyhow::Result<bool> {
+    if !on_path("yozora-shell") && on_path(standalone) {
+        spawn(standalone, standalone_args)?;
+        return Ok(false);
+    }
+    if ping("bar").is_none() {
+        spawn("yozora-shell", &[])?;
+    }
+    for _ in 0..60 {
+        if ping(id).is_some() {
+            return Ok(true);
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    anyhow::bail!("started Yozora, but {} did not answer in time", name(id))
+}
+
 pub fn launcher(mut args: Vec<String>, out: &Out) -> anyhow::Result<()> {
     let cmd = if args.is_empty() { "toggle".to_string() } else { args.remove(0) };
     anyhow::ensure!(
@@ -130,11 +156,13 @@ pub fn launcher(mut args: Vec<String>, out: &Out) -> anyhow::Result<()> {
     match ask("launch", &cmd, &args) {
         Ok(data) if cmd == "status" => out.value(&data),
         Ok(_) => out.done(format!("launcher: {cmd}"), json!({ "launcher": cmd })),
-        // Not running: it starts opened.
+        // Not running: start whatever answers for it, opened.
         Err(_) if cmd == "open" || cmd == "toggle" => {
             let mut a = vec!["open".to_string()];
-            a.extend(args);
-            spawn("yozora-launch", &a)?;
+            a.extend(args.clone());
+            if start_owner("launch", "yozora-launch", &a)? {
+                ask("launch", "open", &args)?;
+            }
             out.done("launcher: open", json!({ "launcher": "open", "started": true }));
         }
         Err(_) if cmd == "status" => out.value(&json!({ "open": false, "running": false })),
@@ -150,8 +178,8 @@ pub fn settings(args: Vec<String>, out: &Out) -> anyhow::Result<()> {
     }
     if ping("settings").is_some() {
         ask("settings", "focus", &args)?;
-    } else {
-        spawn("yozora-settings", &a)?;
+    } else if start_owner("settings", "yozora-settings", &a)? {
+        ask("settings", "focus", &args)?;
     }
     out.done("opened Yozora Settings", json!({ "opened": "settings", "page": args.first() }));
     Ok(())
