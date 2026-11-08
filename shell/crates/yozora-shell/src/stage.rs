@@ -147,6 +147,24 @@ pub fn on_key(s: &mut Stage, e: &rune::KeyEvent, tx: &mut rune::Tx) -> bool {
     false
 }
 
+/// The other looks' typefaces at the sizes the shell sets them, drawn invisibly while the stage
+/// warms up, so the first change of look finds their glyphs ready instead of loading them in the
+/// frame that shows them.
+fn warm_fonts(current: yozora_style::Look) -> El {
+    const TEXT: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 .,:;!?-+/%()";
+    let mut out = col().pin(Some(0.0), Some(0.0), None, None).opacity(0.004);
+    for look in yozora_style::Look::ALL {
+        if look == current {
+            continue;
+        }
+        let t = yozora_style::tokens(look);
+        for (size, weight) in [(11.0, 600.0), (13.0, 400.0), (13.0, 600.0), (15.0, 600.0), (20.0, 400.0)] {
+            out = out.child(kit::label(&t, size, weight, TEXT, t.ink)).child(kit::fig(&t, size, weight, TEXT, t.ink)).child(kit::display(&t, size + 6.0, TEXT, t.ink));
+        }
+    }
+    out
+}
+
 pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
     let (look, fx) = s.sh.look();
     let t = s.sh.tokens(look);
@@ -207,6 +225,7 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
         if s.open != Some(Pop::Launcher) {
             root = root.child(launcher::warm_view(s, &t).pin(Some(0.0), Some(t.panel_top), None, None).opacity(0.004));
         }
+        root = root.child(warm_fonts(look));
     }
     if s.open.is_none() {
         let geo = s.sh.bar_conf().geo(&t);

@@ -3,7 +3,7 @@
 
 use std::rc::Rc;
 
-use rune::{Color, El, col, el, row};
+use rune::{Color, El, Tx, col, el, row};
 use yozora_style::{Look, Tokens};
 
 use crate::kit::{glyph_el, label};
@@ -73,7 +73,12 @@ pub fn toggle(t: &Tokens, key: String, name: &str, on: bool, f: impl Fn(&mut Sta
 
 /// Choices side by side in one capsule, the way Appearance lays out its time of day.
 pub fn segmented(t: &Tokens, key: &str, options: &[String], current: Option<usize>, width: f32, f: impl Fn(&mut Stage, usize) + 'static) -> El {
-    let f: Rc<dyn Fn(&mut Stage, usize)> = Rc::new(f);
+    segmented_tx(t, key, options, current, width, move |s, _, i| f(s, i))
+}
+
+/// `segmented`, for a choice that wants to say how its change lands (`Tx::instant`).
+pub fn segmented_tx(t: &Tokens, key: &str, options: &[String], current: Option<usize>, width: f32, f: impl Fn(&mut Stage, &mut Tx, usize) + 'static) -> El {
+    let f: Rc<dyn Fn(&mut Stage, &mut Tx, usize)> = Rc::new(f);
     let mut r = row().w(width).h(40.0).padding(3.0).radius(t.radii.pill).fill(t.fill);
     for (i, name) in options.iter().enumerate() {
         let on = current == Some(i);
@@ -83,7 +88,7 @@ pub fn segmented(t: &Tokens, key: &str, options: &[String], current: Option<usiz
             (if on { seg.border(1.0, t.rule) } else { seg })
                 .key(format!("{key}-{i}")).role("button").label(name.as_str()).hit()
                 .child(label(t, 13.0, if on { 600.0 } else { 500.0 }, name.as_str(), if on { t.ink } else { t.ink2 }).truncate())
-                .on_press(move |s: &mut Stage| f(s, i)),
+                .on_press_tx(move |s: &mut Stage, tx: &mut Tx| f(s, tx, i)),
         );
     }
     r

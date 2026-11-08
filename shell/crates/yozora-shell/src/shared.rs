@@ -70,10 +70,19 @@ impl Shared {
     }
 
     pub fn set_config(&self, config: ShellConfig) {
+        // The file watcher reports our own writes back; there is nothing new in them.
+        if *self.config.lock().unwrap() == config {
+            return;
+        }
+        let was = self.look().0;
         *self.config.lock().unwrap() = config;
         // A new look can mean a bar of another height.
         crate::bar_config::sync_surfaces(self);
-        self.redraw();
+        if self.look().0 != was {
+            self.redraw_instant();
+        } else {
+            self.redraw();
+        }
     }
 
     pub fn attach_stage(&self, output: &str, h: OverlayHandle<Stage>) {
@@ -132,6 +141,22 @@ impl Shared {
         }
         for (_, s) in self.stages.lock().unwrap().iter() {
             s.update(|st, _| st.sync());
+        }
+    }
+
+    /// `redraw` for a new look: every surface lands it at once. Gliding the bars' and panels'
+    /// layout between two looks keeps all of them drawing, one thread for all of them, for as
+    /// long as the glide lasts.
+    pub fn redraw_instant(&self) {
+        self.osd.observe(self);
+        for b in self.bars.lock().unwrap().iter() {
+            b.update(|_, tx| tx.instant());
+        }
+        for (_, s) in self.stages.lock().unwrap().iter() {
+            s.update(|st, tx| {
+                tx.instant();
+                st.sync();
+            });
         }
     }
 
