@@ -185,15 +185,15 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
             }))
             .child(
                 col().pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).center().child(
-                    settings::view(s, &t).key("settings").hit().transition(enter(&t, fx, settings::W / 2.0, settings::W)),
+                    settings::view(s, &t).key("settings").hit().on_press(|_: &mut Stage| {}).transition(enter(&t, fx, settings::W / 2.0, settings::W)),
                 ),
             );
     } else if s.open == Some(Pop::Launcher) {
         root = root
-            .child(el().key("scrim").pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).hit().fill(rune::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.25 }).on_press(|s: &mut Stage| s.open = None))
+            .child(el().key("scrim").pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).hit().fill(rune::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.25 }).on_press(launcher::dismiss))
             .child(
                 col().pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).items_center().pt(150.0).child(
-                    launcher::view(s, &t).key("launcher").hit().transition(enter(&t, fx, launcher::W / 2.0, launcher::W)),
+                    launcher::view(s, &t).key("launcher").hit().on_press(|_: &mut Stage| {}).transition(enter(&t, fx, launcher::W / 2.0, launcher::W)),
                 ),
             );
     } else if let Some(pop) = s.open {
@@ -216,7 +216,7 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
         root = root
             .child(el().key("scrim").pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).hit().on_press(|s: &mut Stage| s.open = None))
             .child(
-                kit::stagger(&t, fx, body).key("panel").hit().pin(Some(left), Some(t.panel_top), None, None)
+                kit::stagger(&t, fx, body).key("panel").hit().on_press(|_: &mut Stage| {}).pin(Some(left), Some(t.panel_top), None, None)
                     .transition(enter(&t, fx, s.anchor_x - left, w)),
             );
     }

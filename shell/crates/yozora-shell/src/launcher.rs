@@ -48,6 +48,8 @@ pub struct Launcher {
     generation: u64,
     /// When it opened, for the rows' staggered arrival.
     pub opened: Option<Instant>,
+    /// Closed by a click outside: the next opening keeps what was typed and selected.
+    kept: bool,
 }
 
 impl Launcher {
@@ -174,10 +176,21 @@ fn requery(s: &mut Stage, reset: bool) {
 }
 
 pub fn open(s: &mut Stage) {
-    s.launcher = Launcher { opened: Some(Instant::now()), ..Default::default() };
+    let kept = std::mem::take(&mut s.launcher.kept);
+    if kept {
+        s.launcher.opened = Some(Instant::now());
+    } else {
+        s.launcher = Launcher { opened: Some(Instant::now()), ..Default::default() };
+    }
     // The windows, scripts and hosts change between opens; this returns at once.
     s.sh.engine().refresh();
-    requery(s, true);
+    requery(s, !kept);
+}
+
+/// A click outside closes the launcher but leaves it as it was, for the next opening.
+pub fn dismiss(s: &mut Stage) {
+    s.launcher.kept = true;
+    s.open = None;
 }
 
 /// Sets what is typed, from `open QUERY` or a prefix chip: a finished prefix becomes the chip.
