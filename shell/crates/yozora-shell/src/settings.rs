@@ -5,13 +5,13 @@
 
 use std::sync::Arc;
 
-use rune::{Color, El, ScrollSpec, Spring, SpringPair, Transition, col, el, row};
+use rune::{Color, El, ScrollSpec, Spring, SpringPair, Transition, Tx, col, el, row};
 use yozora_style::{Fx, Look, Motion, Tokens, tokens};
 
 use crate::kit::{glyph_el, label};
 use crate::settings_apps::{self, AppEntry, Status};
 use crate::settings_pages as pages;
-use crate::settings_ui::{self as ui, button, group, segmented, status_pill};
+use crate::settings_ui::{self as ui, button, group, segmented, segmented_tx, status_pill};
 use crate::stage::Stage;
 use crate::{settings_bar as bar, settings_form as form};
 
@@ -197,11 +197,13 @@ fn style_card(t: &Tokens, look: Look, on: bool, tag: &str) -> El {
                 .child(label(t, 15.0, 600.0, look.name(), t.ink))
                 .child(label(t, 13.0, 400.0, tag, t.ink2)),
         )
-        .on_press(move |s: &mut Stage| {
+        .on_press_tx(move |s: &mut Stage, tx: &mut Tx| {
+            // A new look lands whole: fonts, radii and sizes gliding between two looks cost every
+            // surface a frame for as long as they glide.
+            tx.instant();
             // Daybreak is Surface tension in its day sky.
             if look == Look::Daybreak {
-                crate::config::set(&s.sh, "time", "day");
-                crate::config::set(&s.sh, "look", "tension");
+                crate::config::set_many(&s.sh, &[("time", "day"), ("look", "tension")]);
             } else {
                 crate::config::set(&s.sh, "look", slug);
             }
@@ -213,7 +215,13 @@ fn choice(t: &Tokens, key: &'static str, options: &[(&'static str, &'static str)
     let names: Vec<String> = options.iter().map(|(_, n)| n.to_string()).collect();
     let values: Vec<&'static str> = options.iter().map(|(v, _)| *v).collect();
     let at = values.iter().position(|v| *v == current);
-    segmented(t, key, &names, at, width, move |s, i| crate::config::set(&s.sh, key, values[i]))
+    segmented_tx(t, key, &names, at, width, move |s, tx, i| {
+        // The time of day swaps the look; the effects level only changes how it moves.
+        if key == "time" {
+            tx.instant();
+        }
+        crate::config::set(&s.sh, key, values[i]);
+    })
 }
 
 fn appearance(s: &Stage, t: &Tokens) -> Vec<El> {
@@ -361,6 +369,10 @@ pub fn view(s: &Stage, t: &Tokens) -> El {
     if let Some(a) = app {
         head = head.child(app_status(t, a));
     }
+    head = head.child(ui::tool(t, "settings-close".into(), "x", "Close Settings", true, |s: &mut Stage| {
+        s.settings.commit();
+        s.open = None;
+    }));
 
     // The tabs, and "Restore defaults" for the one in view.
     let mut strip = None;
