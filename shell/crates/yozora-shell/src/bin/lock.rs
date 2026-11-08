@@ -81,6 +81,10 @@ fn on_key(s: &mut Lock, e: &KeyEvent, _: &mut Tx) -> bool {
 }
 
 /// How big the clock is for each look, out of a 900 point tall screen.
+/// The form's height (avatar, name, field and hint) and its distance from the bottom edge.
+const FORM_H: f32 = 200.0;
+const FORM_BOTTOM: f32 = 100.0;
+
 fn clock_size(look: Look) -> f32 {
     match look {
         Look::Tension | Look::Daybreak => 240.0,
@@ -157,7 +161,10 @@ fn view(s: &Lock, _: &mut Cx<Lock>) -> El {
     let t = tokens(s.look);
     let (time, date) = s.engine.lock().unwrap().clock();
     let (w, h) = s.size;
-    let k = (h / 900.0).clamp(0.6, 1.3);
+    // The clock takes what the form leaves: the form is a fixed height at the foot of the screen,
+    // so the clock scales to the room between, and never runs into it.
+    let room = h - FORM_H - FORM_BOTTOM - 40.0 - 30.0;
+    let k = (room / (el_top(s.look) + 1.35 * clock_size(s.look))).clamp(0.4, 1.25);
     let size = clock_size(s.look) * k;
     let top = el_top(s.look) * k;
     let mut root = el().w_full().h_full().child(backdrop(s, &t));
@@ -167,7 +174,7 @@ fn view(s: &Lock, _: &mut Cx<Lock>) -> El {
             .child(text(time).font(TextStyle::new(size, 400.0).family(t.fonts.display).features("'tnum' 1")).color(t.ink));
         let left = if s.look == Look::Phosphor { Some(w * 436.0 / 1440.0) } else { Some(0.0) };
         let right = if s.look == Look::Phosphor { None } else { Some(0.0) };
-        let form = col().pin(left, None, right, Some(120.0 * k)).items_center().justify_end().child(form(s, &t));
+        let form = col().pin(left, None, right, Some(FORM_BOTTOM)).items_center().justify_end().child(form(s, &t));
         root = root.child(clock.transition(Transition::opacity())).child(form.transition(Transition::opacity()));
     }
     root

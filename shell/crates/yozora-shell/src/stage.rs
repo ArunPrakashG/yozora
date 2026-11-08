@@ -29,6 +29,8 @@ pub enum Pop {
 
 pub struct Stage {
     pub sh: Arc<Shared>,
+    /// When the stage came up, for the warm-up frame.
+    born: Instant,
     pub open: Option<Pop>,
     /// The bar icon the open panel grows from, in screen points.
     pub anchor_x: f32,
@@ -49,7 +51,10 @@ pub struct Stage {
 impl Stage {
     pub fn new(sh: Arc<Shared>, output: &str, screen_w: f32) -> Stage {
         let today = chrono::Local::now().date_naive();
-        Stage { sh, open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), settings_page: 0, launcher: Default::default(), toasts: Vec::new(), known: HashSet::new(), primed: false, osd: None, last_volume: None }
+        // One frame of the busiest panel, drawn nearly invisible, so the first real opening doesn't
+        // pay for the pipelines, glyphs and icons it needs.
+        sh.redraw_after(Duration::from_millis(1600));
+        Stage { sh, born: Instant::now(), open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), settings_page: 0, launcher: Default::default(), toasts: Vec::new(), known: HashSet::new(), primed: false, osd: None, last_volume: None }
     }
 
     pub fn toggle(&mut self, pop: Pop, anchor_x: f32) {
@@ -165,6 +170,9 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
                 kit::stagger(&t, fx, body).key("panel").hit().pin(Some(left), Some(t.panel_top), None, None)
                     .transition(enter(&t, fx, s.anchor_x - left, w)),
             );
+    }
+    if s.born.elapsed() < Duration::from_millis(1500) {
+        root = root.child(control::view(s, &t).pin(Some(0.0), Some(t.panel_top), None, None).opacity(0.004));
     }
     if s.open.is_none() {
         let toasts: Vec<_> = {
