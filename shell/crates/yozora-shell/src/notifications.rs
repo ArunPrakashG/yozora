@@ -192,6 +192,15 @@ pub(crate) fn tile(sh: &Arc<Shared>, t: &Tokens, n: &Notification, size: f32, hi
     };
     let glyph_color = if critical && !square { t.alert } else { ik.main };
     let inner = size * 0.55;
+    // An app's progress fills the tile from the bottom, under its icon.
+    let base = match n.progress.filter(|_| !hidden) {
+        Some(p) => {
+            let rise = size * f32::from(p.min(100)) / 100.0;
+            let fill = if square { Color { a: 0.28, ..t.ink } } else { Color { a: 0.4, ..t.acc } };
+            base.clip_rounded(radius).child(el().pin(Some(0.0), None, Some(0.0), Some(0.0)).h(rise).fill(fill).key("rise"))
+        }
+        None => base,
+    };
     match (&n.icon_path, hidden) {
         (Some(path), false) => {
             let icon = picture(sh, el().size(inner, inner), path, inner, 2.0, SurfaceFit::Fit);
@@ -408,7 +417,10 @@ fn card(s: &Stage, t: &Tokens, n: &Notification, mode: &Mode, more: Option<(Stri
     let square = matches!(t.look, Look::Folio | Look::Phosphor);
 
     let when_text = if mode.snoozed { format!("until {}", clock(n.snoozed_until)) } else { when(n.seen) };
-    let time = label(t, 12.0, 500.0, when_text, if mode.snoozed { t.acc } else { ik.dim });
+    let time = match n.progress.filter(|_| !hidden && !mode.snoozed) {
+        Some(p) => crate::kit::fig(t, 12.0, 600.0, format!("{p}%"), t.acc),
+        None => label(t, 12.0, 500.0, when_text, if mode.snoozed { t.acc } else { ik.dim }),
+    };
 
     let summary = if hidden {
         HIDDEN.to_string()
@@ -440,9 +452,6 @@ fn card(s: &Stage, t: &Tokens, n: &Notification, mode: &Mode, more: Option<(Stri
     let mut text = col().grow(1.0).min_w(0.0).gap(5.0).child(top);
     if !hidden && !mode.snoozed && !n.body.is_empty() {
         text = text.child(label(t, 14.0, 400.0, n.body.clone(), ik.dim).wrap().max_lines(2));
-    }
-    if let Some(p) = n.progress.filter(|_| !hidden && !mode.snoozed) {
-        text = text.child(toasts::progress(t, p, ik));
     }
     if !hidden && !mode.snoozed && let Some(a) = actions(s, t, n, 32.0) {
         text = text.child(el().h(4.0)).child(a);
