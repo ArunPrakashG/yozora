@@ -9,11 +9,17 @@ use yozora_style::tokens;
 
 use crate::kit::enter;
 use crate::shared::Shared;
-use crate::{bar, calendar};
+use crate::{bar, bluetooth, calendar, control, media, sound, tray, wifi};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pop {
     Calendar,
+    Media,
+    Wifi,
+    Bluetooth,
+    Sound,
+    Control,
+    Tray,
 }
 
 pub struct Stage {
@@ -64,6 +70,12 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
     if let Some(pop) = s.open {
         let (w, body) = match pop {
             Pop::Calendar => (calendar::W, calendar::view(s, &t)),
+            Pop::Media => (media::W, media::view(s, &t)),
+            Pop::Wifi => (wifi::W, wifi::view(s, &t)),
+            Pop::Bluetooth => (bluetooth::W, bluetooth::view(s, &t)),
+            Pop::Sound => (sound::W, sound::view(s, &t)),
+            Pop::Control => (control::W, control::view(s, &t)),
+            Pop::Tray => (tray::W, tray::view(s, &t)),
         };
         let left = (s.anchor_x - w / 2.0).clamp(bar::SIDE, s.screen_w - w - bar::SIDE);
         // A hit-catching scrim closes the panel on a click anywhere else.

@@ -1,8 +1,14 @@
 mod bar;
+mod bluetooth;
 mod calendar;
+mod control;
 mod kit;
+mod media;
 mod shared;
+mod sound;
 mod stage;
+mod tray;
+mod wifi;
 
 use std::time::Duration;
 
@@ -41,7 +47,7 @@ fn main() {
                     display: target.clone(),
                     ..Default::default()
                 }),
-                Bar { sh: sh.clone(), output: name.clone(), screen_w: w },
+                Bar { sh: sh.clone(), output: name.clone(), screen_w: w, anchors: Default::default() },
             );
             let stage = app.overlay(
                 OverlaySpec::new("yozora-stage", (w, 10.0), stage::view)
