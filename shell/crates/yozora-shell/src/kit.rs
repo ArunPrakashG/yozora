@@ -2,7 +2,7 @@
 //! a screen is written once and wears every look.
 
 use rune::tok::TextStyle;
-use rune::{Color, Edge, El, Transition, Vec2, col, el, icon, row, text};
+use rune::{Color, Edge, El, Spring, SpringPair, Transition, Vec2, col, el, icon, row, text};
 use yozora_style::{Entrance, Fx, Motion, Tokens, glyph};
 
 pub fn label(t: &Tokens, size: f32, weight: f32, s: impl Into<String>, color: Color) -> El {
@@ -39,7 +39,19 @@ pub fn enter(t: &Tokens, fx: Fx, anchor_x: f32, panel_w: f32) -> Transition {
         Entrance::Scan => Transition::reveal(Edge::Top),
         Entrance::Iris => Transition::scale_anchor(0.6, Vec2 { x: ax, y: 0.0 }).allow_small_scale().combined(Transition::blur(6.0)),
     };
-    base.combined(Transition::opacity())
+    base.combined(Transition::opacity()).springs(springs(&m))
+}
+
+/// The look's `Motion` as an enter/exit spring pair. Durations are the perceived time to settle;
+/// the look's stiffness and damping set how much it overshoots, capped so a scaling panel never
+/// swells past its neighbours. Phosphor's frame-stepped scan has no step control in the spring
+/// model, so it takes a short critically damped spring instead.
+fn springs(m: &Motion) -> SpringPair {
+    let bounce = match m.spring {
+        Some((k, c)) => Spring::from_stiffness_damping(k, c, 1.0).bounce.clamp(0.0, 0.22),
+        None => 0.0,
+    };
+    SpringPair::new(Spring::new(m.open * 0.7, bounce), Spring::new(m.close * 0.6, 0.0))
 }
 
 /// The panel surface. Content goes in as children.
