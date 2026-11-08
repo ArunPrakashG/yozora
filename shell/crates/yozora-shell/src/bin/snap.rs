@@ -24,6 +24,8 @@ fn init() -> Stage {
         _ => Pop::Calendar,
     };
     st.toggle(pop, 1100.0);
+    if let Ok(p) = std::env::var("YZ_PAGE") { st.settings_page = p.parse().unwrap_or(0);
+    }
     st.anchor_x = 1100.0;
     if pop == Pop::Launcher {
         st.sh.engine().refresh_blocking();
