@@ -1,0 +1,19 @@
+# The Rune shell. It lives in its own workspace beside the GPUI apps until it replaces them:
+# Rune and GPUI pull different graphics stacks, and the running apps stay untouched meanwhile.
+[workspace]
+resolver = "3"
+members = ["crates/yozora-style", "crates/yozora-shell"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/ArunPrakashG/yozora"
+
+[workspace.dependencies]
+rune = { path = "/mnt/workspace/Projects/forks/rune/crates/rune" }
+yozora-style = { path = "crates/yozora-style" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+debug = "line-tables-only"
