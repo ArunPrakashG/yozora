@@ -185,7 +185,7 @@ fn transport(t: &Tokens, p: &Player) -> El {
     let playing = p.status == Status::Playing;
     let (bg, fg) = match t.look {
         Look::Prism => (t.acc, t.on_acc),
-        Look::Tension | Look::Daybreak => (t.ink, t.surf),
+        Look::Tension | Look::Daybreak => (t.ink, Color { a: 1.0, ..t.surf }),
         _ => (t.ink, t.on_ink),
     };
     let mut big = cell(56.0, 56.0, glyph_el(t, if playing { "pause" } else { "play" }, 22.0, fg))
