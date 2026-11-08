@@ -1,10 +1,13 @@
 pub mod bar;
 pub mod bluetooth;
 pub mod calendar;
+pub mod config;
 pub mod control;
 pub mod kit;
 pub mod media;
 pub mod notifications;
+pub mod settings;
+pub mod settings_pages;
 pub mod shared;
 pub mod sound;
 pub mod stage;

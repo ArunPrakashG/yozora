@@ -9,3 +9,6 @@ rune.workspace = true
 yozora-style.workspace = true
 yozora-services = { path = "../yozora-services" }
 chrono = "0.4"
+yozora-config = { path = "../../../crates/yozora-config" }
+futures-lite = "2"
+tracing = "0.1"

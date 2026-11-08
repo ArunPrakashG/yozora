@@ -6,7 +6,7 @@ use rune::{
     WindowSpec, col,
 };
 use yozora_services::Fakes;
-use yozora_style::{FONTS, Fx, Look};
+use yozora_style::FONTS;
 
 use yozora_shell::bar::{self, Bar};
 use yozora_shell::shared::Shared;
@@ -17,11 +17,11 @@ fn host(_: &(), _: &mut Cx<()>) -> El {
 }
 
 fn main() {
-    let look = std::env::var("YZ_LOOK").ok().and_then(|s| Look::from_slug(&s)).unwrap_or_default();
+    let config = yozora_shell::config::load();
     let only = std::env::var("YZ_OUT").ok();
     let fakes = Fakes(std::env::var("YZ_FAKE").ok().map(|s| s.split(',').map(str::to_owned).collect()).unwrap_or_default());
     rune::run_windows_with(RunOptions { accessory: true }, move |displays| {
-        let sh = Shared::new(look, Fx::Full, fakes);
+        let sh = Shared::new(config, fakes);
         let mut app = App::new(AppSpec { fonts: FONTS, ..AppSpec::new("Yozora shell", (10.0, 10.0), || (), host) }).windowless();
         let height = Bar::height(&sh);
         for d in displays.iter().filter(|d| only.is_none() || d.name == only) {
@@ -60,6 +60,7 @@ fn main() {
         // Redraw when a service changes, and every few seconds so the clock keeps time.
         let wake = sh.clone();
         yozora_services::set_waker(move || wake.redraw());
+        yozora_shell::config::watch(sh.clone());
         let tick = sh.clone();
         std::thread::Builder::new().name("clock".into()).spawn(move || loop {
             std::thread::sleep(Duration::from_secs(15));

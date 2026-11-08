@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use rune::OverlayHandle;
 use yozora_services::{Fakes, Kind, Services};
+use yozora_config::shell::ShellConfig;
 use yozora_style::{Fx, Look};
 
 use crate::bar::Bar;
@@ -14,28 +15,45 @@ use crate::stage::{Pop, Stage};
 
 pub struct Shared {
     pub services: Mutex<Services>,
-    look: Mutex<(Look, Fx)>,
+    config: Mutex<ShellConfig>,
     stages: Mutex<Vec<(String, OverlayHandle<Stage>)>>,
     bars: Mutex<Vec<OverlayHandle<Bar>>>,
     anchors: Mutex<HashMap<String, f32>>,
 }
 
 impl Shared {
-    pub fn new(look: Look, fx: Fx, fakes: Fakes) -> Arc<Shared> {
+    pub fn new(config: ShellConfig, fakes: Fakes) -> Arc<Shared> {
         let mut services = Services::new(fakes);
         services.ensure(
             [Kind::Audio, Kind::Bluetooth, Kind::Hyprland, Kind::Media, Kind::Network, Kind::Notifications, Kind::Power, Kind::Tray],
             &Default::default(),
         );
-        Arc::new(Shared { services: Mutex::new(services), look: Mutex::new((look, fx)), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()) })
+        Arc::new(Shared { services: Mutex::new(services), config: Mutex::new(config), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()) })
     }
 
+    /// The look and effects in force now. Surface tension turns to Daybreak by day.
     pub fn look(&self) -> (Look, Fx) {
-        *self.look.lock().unwrap()
+        let c = self.config.lock().unwrap();
+        let fx = Fx::from_slug(&c.fx).unwrap_or(Fx::Full);
+        let look = Look::from_slug(&c.look).unwrap_or_default();
+        let day = match c.time.as_str() {
+            "day" => true,
+            "follow" => {
+                use chrono::Timelike;
+                let now = chrono::Local::now();
+                c.is_day(now.hour() * 60 + now.minute())
+            }
+            _ => false,
+        };
+        (if look == Look::Tension && day { Look::Daybreak } else { look }, fx)
     }
 
-    pub fn set_look(&self, look: Look, fx: Fx) {
-        *self.look.lock().unwrap() = (look, fx);
+    pub fn config(&self) -> ShellConfig {
+        self.config.lock().unwrap().clone()
+    }
+
+    pub fn set_config(&self, config: ShellConfig) {
+        *self.config.lock().unwrap() = config;
         self.redraw();
     }
 

@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Yozora foundations</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;family=Newsreader:ital,opsz,wght@1,6..72,400&amp;family=IBM+Plex+Mono:wght@500&amp;family=VT323&amp;family=JetBrains+Mono:wght@400;600&amp;family=Geist:wght@200;400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#05060B}
+:root{--yz-ground:#05060B;--yz-obsidian:rgba(13,14,24,.9);--yz-obsidian-solid:#11121D;--yz-raised:rgba(255,255,255,.06);--yz-fill-on:rgba(255,255,255,.13);--yz-hairline:rgba(255,255,255,.09);--yz-text:#EEF0FA;--yz-text-2:rgba(238,240,250,.64);--yz-lantern:#FFB86B;--yz-on-lantern:#1B1206;--yz-lantern-glow:rgba(255,184,107,.42);--yz-alert:#FF7A7A;--yz-font:Inter,system-ui,sans-serif;--yz-display:'Instrument Serif',Georgia,serif;--yz-tap:cubic-bezier(.25,1,.5,1);--yz-bud:cubic-bezier(.34,1.42,.64,1);--yz-settle:cubic-bezier(.16,1,.3,1)}
+.yz-metal{background:linear-gradient(110deg,#5d6072 0%,#e9ebf5 18%,#8d90a3 34%,#fff 48%,#6f7286 64%,#d5d8e6 82%,#5d6072 100%);background-size:250% 100%;animation:yz-metal 7s linear infinite}
+@keyframes yz-metal{to{background-position:-250% 0}}
+@keyframes yz-drift-a{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(70px,36px) scale(1.18)}}
+@keyframes yz-drift-b{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-60px,50px) scale(.95)}}
+@keyframes yz-twinkle{0%,100%{opacity:.3}50%{opacity:.85}}
+@keyframes yz-mark-bud{0%,100%{transform:translate(0,0)}45%,55%{transform:translate(-2.6px,2.6px)}}
+@keyframes bud-drop{0%,10%{transform:translateY(-36px) scale(.1,.08)}13%{transform:translateY(-26px) scale(.16,.2);animation-timing-function:cubic-bezier(.34,1.42,.64,1)}26%,70%{transform:translateY(0) scale(1);animation-timing-function:cubic-bezier(.16,1,.3,1)}82%,100%{transform:translateY(-36px) scale(.1,.08)}}
+@keyframes bud-icon{0%,9%{transform:scale(1);background:transparent}11%{transform:scale(.9);background:rgba(255,255,255,.13)}15%,72%{transform:scale(1);background:rgba(255,255,255,.13)}78%,100%{transform:scale(1);background:transparent}}
+@keyframes bud-row{0%,21%{opacity:0;transform:translateY(6px)}25%,68%{opacity:1;transform:translateY(0)}71%,100%{opacity:0;transform:translateY(0)}}
+@keyframes ease-dot{0%,12%{transform:translateX(0)}50%,62%{transform:translateX(216px)}100%{transform:translateX(0)}}
+@keyframes goo-a{0%,100%{transform:translateX(0)}50%{transform:translateX(64px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,184,107,0),0 0 12px 2px rgba(255,184,107,.35)}50%{box-shadow:0 0 0 0 rgba(255,184,107,0),0 0 28px 8px rgba(255,184,107,.55)}}
+@keyframes pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(3.2);opacity:0}}
+@keyframes shimmer{0%{background-position:150% 0}100%{background-position:-50% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes flicker{0%,100%{opacity:1}42%{opacity:.55}44%{opacity:1}71%{opacity:.7}73%{opacity:1}}
+@keyframes ghost{0%,15%{transform:translateX(0) scaleX(1)}35%{transform:translateX(70px) scaleX(2.2)}55%,70%{transform:translateX(140px) scaleX(1)}90%{transform:translateX(70px) scaleX(2.2)}100%{transform:translateX(0) scaleX(1)}}
+@keyframes ripple{0%{transform:scale(.2);opacity:.8}100%{transform:scale(2.4);opacity:0}}
+@keyframes spark{0%,100%{transform:scale(0) rotate(0);opacity:0}50%{transform:scale(1) rotate(45deg);opacity:1}}
+@keyframes swapw{0%,30%{clip-path:inset(0 0 100% 0)}48%{clip-path:inset(0 0 0 0)}66%,100%{clip-path:inset(100% 0 0 0)}}
+@keyframes swapc{0%,47%{opacity:1}48%,100%{opacity:0}}
+@keyframes swapd{0%,47%{opacity:0}48%,100%{opacity:1}}
+@keyframes rise{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:0s!important;animation-iteration-count:1!important}}
+</style>
+</helmet>
+<div style="width:1440px;min-height:7720px;box-sizing:border-box;background:var(--yz-ground);color:var(--yz-text);font-family:var(--yz-font);position:relative;overflow:hidden">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<filter id="goo"><feGaussianBlur in="SourceGraphic" stdDeviation="7" result="b"></feGaussianBlur><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" result="g"></feColorMatrix><feComposite in="SourceGraphic" in2="g" operator="atop"></feComposite></filter>
+<filter id="goo-mark"><feGaussianBlur stdDeviation="1.1"></feGaussianBlur><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"></feColorMatrix></filter>
+<filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter>
+<linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"></stop><stop offset=".42" stop-color="#9ea1b5"></stop><stop offset=".68" stop-color="#eef0fa"></stop><stop offset="1" stop-color="#6c6f83"></stop></linearGradient>
+</defs>
+</svg>
+
+<div aria-hidden="true" style="position:absolute;left:-200px;top:-260px;width:1100px;height:900px;background:radial-gradient(closest-side,rgba(40,120,140,.32),transparent);filter:blur(30px);animation:yz-drift-a 40s ease-in-out infinite"></div>
+<div aria-hidden="true" style="position:absolute;right:-260px;top:-120px;width:1000px;height:800px;background:radial-gradient(closest-side,rgba(92,64,170,.3),transparent);filter:blur(30px);animation:yz-drift-b 48s ease-in-out infinite"></div>
+
+<main style="position:relative;padding:112px 120px 120px;display:flex;flex-direction:column;gap:136px">
+
+<section aria-labelledby="h-brand" style="display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;align-items:center;gap:36px">
+<svg width="132" height="132" viewBox="0 0 24 24" role="img" aria-label="Yozora mark"><g filter="url(#goo-mark)" fill="url(#chrome)"><circle cx="10.5" cy="13.5" r="7"></circle><circle cx="18.6" cy="5.4" r="3" style="animation:yz-mark-bud 5s cubic-bezier(.34,1.42,.64,1) infinite;transform-box:fill-box"></circle></g></svg>
+<h1 id="h-brand" style="margin:0;font:400 152px/0.9 var(--yz-display);letter-spacing:-0.02em">Yozora</h1>
+</div>
+<p style="margin:0;max-width:900px;font:400 30px/1.35 var(--yz-font);letter-spacing:-0.01em">Every surface grows out of the bar and goes back into it, <span style="color:var(--yz-text-2)">so you always know where things came from.</span></p>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px">
+<div style="border-top:1px solid var(--yz-hairline);padding-top:20px;display:flex;flex-direction:column;gap:8px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-text-2)">Voice</span><span style="font:400 28px/1.2 var(--yz-display)">Quiet. Exact. Alive.</span></div>
+<div style="border-top:1px solid var(--yz-hairline);padding-top:20px;display:flex;flex-direction:column;gap:8px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-text-2)">Signature</span><span style="font:400 28px/1.2 var(--yz-display)">Surface tension</span></div>
+<div style="border-top:1px solid var(--yz-hairline);padding-top:20px;display:flex;flex-direction:column;gap:8px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-text-2)">Built with</span><span style="font:400 28px/1.2 var(--yz-display)">Rune, rune-motion, rune-fx</span></div>
+</div>
+</section>
+
+<section aria-labelledby="h-sig" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">01 · Signature</span><h2 id="h-sig" style="margin:0;font:400 56px/1 var(--yz-display)">Surface tension</h2><p style="margin:0;max-width:720px;font:400 17px/1.5 var(--yz-font);color:var(--yz-text-2)">The bar is a pool of liquid obsidian. Press anything on it and a drop swells out of the bar, springs to size and stays joined by a soft neck. Close it and the drop is drawn back in.</p></div>
+
+<div style="position:relative;height:460px;border-radius:28px;overflow:hidden;background:radial-gradient(120% 90% at 30% 120%,#2a1530 0%,#0b0a1a 50%,#06070D 100%);box-shadow:inset 0 0 0 1px var(--yz-hairline)">
+<div aria-hidden="true" style="position:absolute;left:-10%;top:-30%;width:70%;height:100%;background:radial-gradient(closest-side,rgba(40,130,150,.5),transparent);filter:blur(30px);animation:yz-drift-a 30s ease-in-out infinite"></div>
+<div aria-hidden="true" style="position:absolute;right:-10%;top:0;width:60%;height:100%;background:radial-gradient(closest-side,rgba(100,70,180,.45),transparent);filter:blur(30px);animation:yz-drift-b 36s ease-in-out infinite"></div>
+<div aria-hidden="true" style="position:absolute;inset:0;filter:url(#goo)">
+<div style="position:absolute;left:16px;right:16px;top:16px;height:36px;border-radius:999px;background:var(--yz-obsidian-solid)"></div>
+<div style="position:absolute;right:24px;top:60px;width:340px;height:316px;border-radius:24px;background:var(--yz-obsidian-solid);transform-origin:270px 0;animation:bud-drop 6s infinite"></div>
+</div>
+<div style="position:absolute;left:16px;right:16px;top:16px;height:36px;display:flex;align-items:center;padding:0 8px;gap:8px;font:500 13px/1 var(--yz-font)">
+<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><g filter="url(#goo-mark)" fill="url(#chrome)"><circle cx="10.5" cy="13.5" r="7"></circle><circle cx="18.6" cy="5.4" r="3"></circle></g></svg>
+<span style="flex:1"></span>
+<span style="display:flex;align-items:center;gap:2px;height:28px;padding:0 10px;border-radius:999px;animation:bud-icon 6s infinite">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 9.5a12 12 0 0 1 17 0"></path><path d="M6.6 12.9a7.6 7.6 0 0 1 10.8 0"></path><path d="M9.6 16.2a3.4 3.4 0 0 1 4.8 0"></path><circle cx="12" cy="19.2" r=".6"></circle></svg>
+<span style="width:8px"></span>
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"></path><path d="M15.5 9.2a4 4 0 0 1 0 5.6"></path><path d="M18.3 6.5a7.8 7.8 0 0 1 0 11"></path></svg>
+</span>
+<span style="font-variant-numeric:tabular-nums;padding:0 8px">21:42</span>
+</div>
+<div style="position:absolute;right:24px;top:60px;width:340px;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;gap:8px">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;animation:bud-row 6s infinite">
+<div style="height:60px;border-radius:16px;background:var(--yz-raised);display:flex;align-items:center;gap:10px;padding:0 12px"><span style="width:32px;height:32px;border-radius:50%;background:var(--yz-lantern);color:var(--yz-on-lantern);display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3.5 9.5a12 12 0 0 1 17 0"></path><path d="M6.6 12.9a7.6 7.6 0 0 1 10.8 0"></path><path d="M9.6 16.2a3.4 3.4 0 0 1 4.8 0"></path></svg></span><span style="font:500 13px/1.25 var(--yz-font)">Wi‑Fi<br><span style="color:var(--yz-text-2);font-weight:400">Home-5G</span></span></div>
+<div style="height:60px;border-radius:16px;background:var(--yz-raised);display:flex;align-items:center;gap:10px;padding:0 12px"><span style="width:32px;height:32px;border-radius:50%;background:var(--yz-fill-on);display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"></path></svg></span><span style="font:500 13px/1.25 var(--yz-font)">Focus<br><span style="color:var(--yz-text-2);font-weight:400">Off</span></span></div>
+</div>
+<div style="height:44px;border-radius:12px;background:var(--yz-raised);position:relative;overflow:hidden;animation:bud-row 6s infinite;animation-delay:.028s"><div style="position:absolute;inset:0 38% 0 0;background:rgba(238,240,250,.88)"></div></div>
+<div style="height:44px;border-radius:12px;background:var(--yz-raised);position:relative;overflow:hidden;animation:bud-row 6s infinite;animation-delay:.056s"><div style="position:absolute;inset:0 62% 0 0;background:rgba(238,240,250,.88)"></div></div>
+<div style="height:92px;border-radius:16px;background:var(--yz-raised);animation:bud-row 6s infinite;animation-delay:.084s"></div>
+</div>
+<div style="position:absolute;left:32px;bottom:28px;display:flex;gap:10px;font:500 13px/1 var(--yz-font);color:var(--yz-text-2)"><span>Loop · 6 s</span></div>
+</div>
+
+<ol style="list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px">
+<li style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--yz-hairline);padding-top:16px"><span style="font:500 13px/1 var(--yz-font);color:var(--yz-lantern);font-variant-numeric:tabular-nums">0 ms</span><span style="font:600 15px/1.2 var(--yz-font)">Press</span><span style="font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">The icon dips to 0.9 and lifts. tap, 220 ms.</span></li>
+<li style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--yz-hairline);padding-top:16px"><span style="font:500 13px/1 var(--yz-font);color:var(--yz-lantern);font-variant-numeric:tabular-nums">40 ms</span><span style="font:600 15px/1.2 var(--yz-font)">Neck</span><span style="font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">A bead pulls down out of the bar under the icon.</span></li>
+<li style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--yz-hairline);padding-top:16px"><span style="font:500 13px/1 var(--yz-font);color:var(--yz-lantern);font-variant-numeric:tabular-nums">90 ms</span><span style="font:600 15px/1.2 var(--yz-font)">Swell</span><span style="font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">The drop springs to size from the icon. bud, 480 ms, bounce 0.22.</span></li>
+<li style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--yz-hairline);padding-top:16px"><span style="font:500 13px/1 var(--yz-font);color:var(--yz-lantern);font-variant-numeric:tabular-nums">210 ms</span><span style="font:600 15px/1.2 var(--yz-font)">Fill</span><span style="font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">Rows rise 6 px into place, 28 ms apart, before the drop settles.</span></li>
+<li style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--yz-hairline);padding-top:16px"><span style="font:500 13px/1 var(--yz-font);color:var(--yz-lantern)">Close</span><span style="font:600 15px/1.2 var(--yz-font)">Reabsorb</span><span style="font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">Content fades first, 120 ms. The drop retracts on settle and the neck goes last.</span></li>
+</ol>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+<div style="border-radius:20px;background:var(--yz-raised);padding:20px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font)">Panel</span><span style="font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">Stays joined to the bar by its neck. Control center, notifications, launcher, calendar.</span></div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:20px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font)">Toast</span><span style="font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">Swells, then the neck thins and snaps. It floats free 12 px below the bar.</span></div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:20px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font)">Level</span><span style="font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">Volume and brightness. A bead that stretches under its icon and sinks back after 1.2 s.</span></div>
+</div>
+</section>
+
+<section aria-labelledby="h-color" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">02 · Colour</span><h2 id="h-color" style="margin:0;font:400 56px/1 var(--yz-display)">One lantern in the night</h2><p style="margin:0;max-width:720px;font:400 17px/1.5 var(--yz-font);color:var(--yz-text-2)">Everything is ink and light. The single accent, Lantern, marks the one thing that needs you: unread, focused or on.</p></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+<div style="border-radius:24px;background:#0D0E18;box-shadow:inset 0 0 0 1px var(--yz-hairline);padding:28px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:400 32px/1 var(--yz-display)">Night</span><span style="font:500 13px/1 var(--yz-font);color:var(--yz-text-2)">Surface tension</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;font:500 12px/1.4 var(--yz-font)">
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#05060B;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></span><span>ground</span><span style="color:var(--yz-text-2)">#05060B</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#11121D;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></span><span>obsidian</span><span style="color:var(--yz-text-2)">#0D0E18 · 90%</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#1C1D28;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></span><span>raised</span><span style="color:var(--yz-text-2)">#FFFFFF · 6%</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#2A2B36;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></span><span>fill-on</span><span style="color:var(--yz-text-2)">#FFFFFF · 13%</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#EEF0FA"></span><span>text</span><span style="color:var(--yz-text-2)">#EEF0FA · 16.9:1</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#9C9EA8"></span><span>text-2</span><span style="color:var(--yz-text-2)">64% · 7.1:1</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#FFB86B;box-shadow:0 0 24px rgba(255,184,107,.45)"></span><span>lantern</span><span style="color:var(--yz-text-2)">#FFB86B · 11.2:1</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#FF7A7A"></span><span>alert</span><span style="color:var(--yz-text-2)">#FF7A7A · 7.6:1</span></div>
+</div>
+</div>
+<div style="border-radius:24px;background:#F6F4FA;color:#14131C;padding:28px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:400 32px/1 var(--yz-display)">Daybreak</span><span style="font:500 13px/1 var(--yz-font);color:rgba(20,19,28,.66)">Surface tension by day</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;font:500 12px/1.4 var(--yz-font)">
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#E8E5F0;box-shadow:inset 0 0 0 1px rgba(20,19,28,.1)"></span><span>ground</span><span style="color:rgba(20,19,28,.66)">#E8E5F0</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#FBFAFE;box-shadow:inset 0 0 0 1px rgba(20,19,28,.1)"></span><span>obsidian</span><span style="color:rgba(20,19,28,.66)">#FBFAFE · 88%</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#EFEDF3;box-shadow:inset 0 0 0 1px rgba(20,19,28,.1)"></span><span>raised</span><span style="color:rgba(20,19,28,.66)">#14131C · 5%</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#DEDCE4;box-shadow:inset 0 0 0 1px rgba(20,19,28,.1)"></span><span>fill-on</span><span style="color:rgba(20,19,28,.66)">#14131C · 11%</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#14131C"></span><span>text</span><span style="color:rgba(20,19,28,.66)">#14131C · 17.4:1</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#5E5D66"></span><span>text-2</span><span style="color:rgba(20,19,28,.66)">66% · 6.3:1</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#A35407"></span><span>lantern</span><span style="color:rgba(20,19,28,.66)">#A35407 · 5.4:1</span></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="height:64px;border-radius:12px;background:#C0362C"></span><span>alert</span><span style="color:rgba(20,19,28,.66)">#C0362C · 5.2:1</span></div>
+</div>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="h-type" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">03 · Type</span><h2 id="h-type" style="margin:0;font:400 56px/1 var(--yz-display)">Two voices</h2></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:48px;align-items:end">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:400 220px/0.8 var(--yz-display);letter-spacing:-0.03em;font-variant-numeric:tabular-nums">21:42</span><span style="font:500 13px/1 var(--yz-font);color:var(--yz-text-2)">Instrument Serif · display · moments only: the lock clock, page titles, empty states</span></div>
+<div style="display:flex;flex-direction:column;gap:0">
+<div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid var(--yz-hairline);padding:14px 0"><span style="font:600 22px/1.2 var(--yz-font);letter-spacing:-0.01em">Notifications</span><span style="font:500 12px/1 var(--yz-font);color:var(--yz-text-2)">title · 22 / 600</span></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid var(--yz-hairline);padding:14px 0"><span style="font:600 15px/1.3 var(--yz-font)">Priya Raman</span><span style="font:500 12px/1 var(--yz-font);color:var(--yz-text-2)">heading · 15 / 600</span></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid var(--yz-hairline);padding:14px 0"><span style="font:400 15px/1.4 var(--yz-font)">The bar reserves its space now.</span><span style="font:500 12px/1 var(--yz-font);color:var(--yz-text-2)">body · 15 / 400</span></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid var(--yz-hairline);padding:14px 0"><span style="font:500 13px/1.3 var(--yz-font)">Sun 8 Nov  21:42</span><span style="font:500 12px/1 var(--yz-font);color:var(--yz-text-2)">bar · 13 / 500 · tabular</span></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid var(--yz-hairline);border-bottom:1px solid var(--yz-hairline);padding:14px 0"><span style="font:500 12px/1.3 var(--yz-font);color:var(--yz-text-2)">2 min ago</span><span style="font:500 12px/1 var(--yz-font);color:var(--yz-text-2)">caption · 12 / 500 · smallest</span></div>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="h-shape" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">04 · Shape and space</span><h2 id="h-shape" style="margin:0;font:400 56px/1 var(--yz-display)">Concentric, always</h2><p style="margin:0;max-width:720px;font:400 17px/1.5 var(--yz-font);color:var(--yz-text-2)">An inner corner is the outer corner minus the inset. Nothing nests on a mismatched curve.</p></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px">
+<div style="border-radius:24px;background:var(--yz-raised);padding:32px;display:flex;align-items:center;gap:32px">
+<div style="width:260px;height:220px;border-radius:24px;background:#11121D;box-shadow:inset 0 0 0 1px var(--yz-hairline);padding:8px;box-sizing:border-box;flex:none"><div style="height:100%;border-radius:16px;background:rgba(255,255,255,.06);padding:4px;box-sizing:border-box"><div style="height:56px;border-radius:12px;background:rgba(255,255,255,.1);padding:4px;box-sizing:border-box"><div style="width:72px;height:48px;border-radius:8px;background:var(--yz-lantern)"></div></div></div></div>
+<div style="display:flex;flex-direction:column;gap:10px;font:500 13px/1.3 var(--yz-font);font-variant-numeric:tabular-nums"><span>panel 24 <span style="color:var(--yz-text-2)">− 8 →</span> card 16</span><span>card 16 <span style="color:var(--yz-text-2)">− 4 →</span> control 12</span><span>control 12 <span style="color:var(--yz-text-2)">− 4 →</span> chip 8</span><span>bar, pills, beads <span style="color:var(--yz-text-2)">→</span> 999</span></div>
+</div>
+<div style="border-radius:24px;background:var(--yz-raised);padding:32px;display:flex;flex-direction:column;gap:20px;justify-content:center">
+<div style="display:flex;align-items:flex-end;gap:16px;font:500 12px/1 var(--yz-font);color:var(--yz-text-2);font-variant-numeric:tabular-nums">
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="width:4px;height:4px;background:var(--yz-text)"></span>4</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="width:8px;height:8px;background:var(--yz-text)"></span>8</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="width:12px;height:12px;background:var(--yz-text)"></span>12</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="width:16px;height:16px;background:var(--yz-text)"></span>16</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="width:24px;height:24px;background:var(--yz-text)"></span>24</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="width:32px;height:32px;background:var(--yz-text)"></span>32</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="width:48px;height:48px;background:var(--yz-text)"></span>48</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)"><span><span style="color:var(--yz-text)">Bar</span> 36 tall, floats 8 from the top edge. Its hit area runs to the edge, so targets are 44.</span><span><span style="color:var(--yz-text)">Elevation</span> two levels only: the bar sits on the wallpaper, drops cast <span style="font-family:ui-monospace,monospace;font-size:13px">0 24 64 / 50%</span>.</span></div>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="h-motion" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">05 · Motion</span><h2 id="h-motion" style="margin:0;font:400 56px/1 var(--yz-display)">Springs, never timers</h2><p style="margin:0;max-width:760px;font:400 17px/1.5 var(--yz-font);color:var(--yz-text-2)">Four rune-motion springs. Retargets keep their velocity, so a panel closed mid-swell turns around instead of restarting. Small things move fast, drops move with weight, and nothing ever holds perfectly still.</p></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+<div style="border-radius:20px;background:var(--yz-raised);padding:20px;display:flex;flex-direction:column;gap:14px">
+<svg width="100%" height="96" viewBox="-4 -30 108 134" preserveAspectRatio="none" aria-hidden="true"><path d="M0 100 C25 0,50 0,100 0" fill="none" stroke="#FFB86B" stroke-width="2" vector-effect="non-scaling-stroke"></path><path d="M0 0H100" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></path></svg>
+<div style="height:12px;position:relative"><span style="position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;background:var(--yz-text);animation:ease-dot 1.6s cubic-bezier(.25,1,.5,1) infinite"></span></div>
+<span style="font:600 15px/1 var(--yz-font)">tap</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2);font-variant-numeric:tabular-nums">0.22 s · bounce 0<br>presses, toggles, hovers</span>
+</div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:20px;display:flex;flex-direction:column;gap:14px">
+<svg width="100%" height="96" viewBox="-4 -30 108 134" preserveAspectRatio="none" aria-hidden="true"><path d="M0 100 C34 -42,64 0,100 0" fill="none" stroke="#FFB86B" stroke-width="2" vector-effect="non-scaling-stroke"></path><path d="M0 0H100" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></path></svg>
+<div style="height:12px;position:relative"><span style="position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;background:var(--yz-text);animation:ease-dot 2s cubic-bezier(.34,1.42,.64,1) infinite"></span></div>
+<span style="font:600 15px/1 var(--yz-font)">bud</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2);font-variant-numeric:tabular-nums">0.48 s · bounce 0.22<br>a drop swelling to size</span>
+</div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:20px;display:flex;flex-direction:column;gap:14px">
+<svg width="100%" height="96" viewBox="-4 -30 108 134" preserveAspectRatio="none" aria-hidden="true"><path d="M0 100 C16 0,30 0,100 0" fill="none" stroke="#FFB86B" stroke-width="2" vector-effect="non-scaling-stroke"></path><path d="M0 0H100" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></path></svg>
+<div style="height:12px;position:relative"><span style="position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;background:var(--yz-text);animation:ease-dot 2.4s cubic-bezier(.16,1,.3,1) infinite"></span></div>
+<span style="font:600 15px/1 var(--yz-font)">settle</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2);font-variant-numeric:tabular-nums">0.60 s · bounce 0<br>retracts, layout, the bead</span>
+</div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:20px;display:flex;flex-direction:column;gap:14px">
+<svg width="100%" height="96" viewBox="-4 -30 108 134" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60 C20 40,30 30,50 50 S80 70,100 40" fill="none" stroke="#FFB86B" stroke-width="2" vector-effect="non-scaling-stroke"></path></svg>
+<div style="height:12px;position:relative"><span style="position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;background:var(--yz-text);animation:ease-dot 9s ease-in-out infinite"></span></div>
+<span style="font:600 15px/1 var(--yz-font)">drift</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2);font-variant-numeric:tabular-nums">40 s loop · fx time 0.03<br>wallpaper, metal, stars</span>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;font:400 14px/1.45 var(--yz-font);color:var(--yz-text-2)">
+<div style="border-top:1px solid var(--yz-hairline);padding-top:16px"><span style="color:var(--yz-text);font-weight:600">Lead</span> · the thing you look at moves first, then its container. A row's text leads its background by 0.2.</div>
+<div style="border-top:1px solid var(--yz-hairline);padding-top:16px"><span style="color:var(--yz-text);font-weight:600">Stagger</span> · 28 ms between siblings, at most 8 of them, so a full panel lands in under 420 ms.</div>
+<div style="border-top:1px solid var(--yz-hairline);padding-top:16px"><span style="color:var(--yz-text);font-weight:600">Reduced motion</span> · no travel, no necks. Opacity and colour take 150 ms, shaders hold their first frame.</div>
+</div>
+</section>
+
+<section aria-labelledby="h-fx" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">06 · Effects</span><h2 id="h-fx" style="margin:0;font:400 56px/1 var(--yz-display)">Shaders with a job</h2><p style="margin:0;max-width:760px;font:400 17px/1.5 var(--yz-font);color:var(--yz-text-2)">Every rune-fx layer below has exactly one place it appears. If an effect has no job, it is not shipped.</p></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;position:relative;overflow:hidden;background:#090A16"><div style="position:absolute;left:-30%;top:-40%;width:100%;height:140%;background:radial-gradient(closest-side,rgba(40,140,160,.8),transparent);filter:blur(16px);animation:yz-drift-a 9s ease-in-out infinite"></div><div style="position:absolute;right:-30%;top:-10%;width:90%;height:130%;background:radial-gradient(closest-side,rgba(110,76,200,.75),transparent);filter:blur(16px);animation:yz-drift-b 11s ease-in-out infinite"></div><div style="position:absolute;left:10%;bottom:-60%;width:90%;height:100%;background:radial-gradient(closest-side,rgba(255,150,90,.4),transparent);filter:blur(16px);animation:yz-drift-a 13s ease-in-out infinite reverse"></div></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Aurora</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.aurora · mesh gradient · the wallpaper</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;display:grid;place-items:center;background:#0B0C15"><div class="yz-metal" style="width:140px;height:44px;border-radius:999px"></div></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Liquid metal</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.metal · the workspace bead and the mark</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;position:relative;background:#0B0C15"><div style="position:absolute;inset:0;filter:url(#goo)"><span style="position:absolute;left:70px;top:55px;width:60px;height:60px;border-radius:50%;background:#EEF0FA"></span><span style="position:absolute;left:96px;top:67px;width:36px;height:36px;border-radius:50%;background:#EEF0FA;animation:goo-a 3s cubic-bezier(.34,1.42,.64,1) infinite"></span></div></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Metaballs</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.goo · every neck between bar and drop</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;display:grid;place-items:center;background:#0B0C15"><span style="width:14px;height:14px;border-radius:50%;background:var(--yz-lantern);animation:glow 2.4s ease-in-out infinite"></span></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Glow</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.glow · lantern: unread dot, focused caret</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;display:grid;place-items:center;background:#0B0C15;position:relative"><span style="position:absolute;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--yz-lantern);animation:pulse 2.2s cubic-bezier(.16,1,.3,1) infinite"></span><span style="position:absolute;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--yz-lantern);animation:pulse 2.2s cubic-bezier(.16,1,.3,1) infinite;animation-delay:.35s"></span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"></path><path d="M10 21h4"></path></svg></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Pulse</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.pulse · a toast arriving at the bell</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;position:relative;overflow:hidden;background:#090A16"><div style="position:absolute;left:-20%;top:-30%;width:90%;height:150%;background:radial-gradient(closest-side,rgba(40,140,160,.9),transparent);animation:yz-drift-a 8s ease-in-out infinite"></div><div style="position:absolute;right:-20%;top:-10%;width:80%;height:130%;background:radial-gradient(closest-side,rgba(110,76,200,.85),transparent);animation:yz-drift-b 10s ease-in-out infinite"></div><div style="position:absolute;inset:0;backdrop-filter:blur(10px);background:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0,rgba(255,255,255,0) 7px,rgba(0,0,0,.18) 13px,rgba(255,255,255,.07) 14px)"></div></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Fluted glass</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.fluted · the lock screen</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;display:flex"><div style="flex:1;background:linear-gradient(180deg,#1b1640,#06070D)"></div><div style="flex:1;position:relative;background:linear-gradient(180deg,#1b1640,#06070D)"><svg width="100%" height="100%" style="position:absolute;inset:0;opacity:.22;mix-blend-mode:overlay"><rect width="100%" height="100%" filter="url(#grain)"></rect></svg></div></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Grain</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.grain · 4% on every surface, no banding</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;position:relative;background:#0B0C15"><span class="yz-metal" style="position:absolute;left:52px;top:80px;width:22px;height:10px;border-radius:999px;animation:ghost 2.6s cubic-bezier(.16,1,.3,1) infinite,yz-metal 7s linear infinite;transform-origin:left center;filter:blur(.6px)"></span><span style="position:absolute;left:52px;top:80px;width:22px;height:10px;border-radius:999px;background:rgba(238,240,250,.25);animation:ghost 2.6s cubic-bezier(.16,1,.3,1) infinite;animation-delay:.05s;filter:blur(2px)"></span></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Motion blur</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.motion · the bead on a workspace jump</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;background:#0B0C15;padding:36px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px"><span style="height:14px;width:80%;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.06) 0%,rgba(255,255,255,.16) 50%,rgba(255,255,255,.06) 100%);background-size:200% 100%;animation:shimmer 1.6s linear infinite"></span><span style="height:14px;width:60%;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.06) 0%,rgba(255,255,255,.16) 50%,rgba(255,255,255,.06) 100%);background-size:200% 100%;animation:shimmer 1.6s linear infinite;animation-delay:.1s"></span><span style="height:14px;width:70%;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.06) 0%,rgba(255,255,255,.16) 50%,rgba(255,255,255,.06) 100%);background-size:200% 100%;animation:shimmer 1.6s linear infinite;animation-delay:.2s"></span></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Shimmer</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.shimmer · loading, never a spinner</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;position:relative;background:#0B0C15;overflow:hidden"><div style="position:absolute;inset:0;background:#05060B;animation:swapc 3s infinite"><span style="position:absolute;left:24px;top:62px;font:400 40px/1 'Instrument Serif',serif;color:#EEF0FA">Aa</span><span style="position:absolute;left:24px;right:24px;top:16px;height:12px;border-radius:999px;background:#11121D"></span></div><div style="position:absolute;inset:0;background:#E9E3D6;animation:swapd 3s infinite"><span style="position:absolute;left:24px;top:62px;font:italic 400 40px/1 Newsreader,serif;color:#1B1915">Aa</span><span style="position:absolute;left:0;right:0;top:0;height:28px;background:#F8F4EB;border-bottom:1px solid #1B1915"></span></div><div style="position:absolute;inset:0;background:#EEF0FA;animation:swapw 3s cubic-bezier(.2,0,0,1) infinite"></div></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Style swap</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.swap · one curtain from the bar, 0.62 s</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;display:grid;place-items:center;background:#0B0C15;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(135deg,#3a2c7a,#0e5a6b)"></div><span style="position:absolute;width:60px;height:60px;border-radius:50%;border:1px solid rgba(255,255,255,.7);animation:ripple 2.4s cubic-bezier(.16,1,.3,1) infinite"></span><span style="position:absolute;width:60px;height:60px;border-radius:50%;border:1px solid rgba(255,255,255,.5);animation:ripple 2.4s cubic-bezier(.16,1,.3,1) infinite;animation-delay:.2s"></span></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Distortion</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.distort · the unlock ripple</span></figcaption></figure>
+
+<figure style="margin:0;border-radius:20px;background:var(--yz-raised);overflow:hidden;display:flex;flex-direction:column">
+<div aria-hidden="true" style="height:170px;display:grid;place-items:center;background:#0B0C15;position:relative"><span style="font:400 30px/1 var(--yz-display)">All clear</span><svg width="14" height="14" viewBox="0 0 10 10" style="position:absolute;left:62px;top:52px;animation:spark 2.2s ease-in-out infinite"><path d="M5 0L6 4 10 5 6 6 5 10 4 6 0 5 4 4z" fill="#FFB86B"></path></svg><svg width="10" height="10" viewBox="0 0 10 10" style="position:absolute;right:66px;top:60px;animation:spark 2.2s ease-in-out infinite;animation-delay:.5s"><path d="M5 0L6 4 10 5 6 6 5 10 4 6 0 5 4 4z" fill="#EEF0FA"></path></svg><svg width="12" height="12" viewBox="0 0 10 10" style="position:absolute;right:88px;bottom:46px;animation:spark 2.2s ease-in-out infinite;animation-delay:1s"><path d="M5 0L6 4 10 5 6 6 5 10 4 6 0 5 4 4z" fill="#FFB86B"></path></svg></div>
+<figcaption style="padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px/1.2 var(--yz-font)">Sparkles</span><span style="font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2)">fx.sparkles · the inbox empties, once</span></figcaption></figure>
+</div>
+</section>
+
+<section aria-labelledby="h-icons" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">07 · Glyphs</span><h2 id="h-icons" style="margin:0;font:400 56px/1 var(--yz-display)">One set, owned by the system</h2><p style="margin:0;max-width:760px;font:400 17px/1.5 var(--yz-font);color:var(--yz-text-2)">Every system glyph is drawn here and nowhere else. No icon fonts, no themes. App icons are masked to one squircle size so they line up too.</p></div>
+<div style="display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px">
+<div style="border-radius:24px;background:var(--yz-raised);padding:28px;display:flex;flex-direction:column;gap:20px">
+<div style="position:relative;width:240px;height:240px;align-self:center">
+<svg width="240" height="240" viewBox="0 0 24 24" aria-hidden="true" style="position:absolute;inset:0"><rect x="0" y="0" width="24" height="24" fill="none" stroke="rgba(255,255,255,.16)" stroke-width=".06"></rect><rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="rgba(255,184,107,.5)" stroke-width=".06" stroke-dasharray=".3 .3"></rect><circle cx="12" cy="12" r="10" fill="none" stroke="rgba(255,255,255,.12)" stroke-width=".06"></circle><path d="M12 0V24M0 12H24" stroke="rgba(255,255,255,.08)" stroke-width=".06"></path></svg>
+<svg width="240" height="240" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Wi‑Fi glyph on its keyline grid" style="position:absolute;inset:0"><path d="M3.5 9.5a12 12 0 0 1 17 0"></path><path d="M6.6 12.9a7.6 7.6 0 0 1 10.8 0"></path><path d="M9.6 16.2a3.4 3.4 0 0 1 4.8 0"></path><circle cx="12" cy="19.2" r=".6"></circle></svg>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;font:500 13px/1.4 var(--yz-font);color:var(--yz-text-2);font-variant-numeric:tabular-nums"><span><span style="color:var(--yz-text)">24</span> box · <span style="color:var(--yz-text)">20</span> live area</span><span><span style="color:var(--yz-text)">1.75</span> stroke · round caps and joins</span><span>Drawn at 17 in the bar, 20 in panels</span><span>Apps: <span style="color:var(--yz-text)">40</span> squircle, 6 inset</span></div>
+</div>
+<div style="border-radius:24px;background:var(--yz-raised);padding:28px;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px 0;font:500 12px/1 var(--yz-font);color:var(--yz-text-2)">
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>search</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 9.5a12 12 0 0 1 17 0"></path><path d="M6.6 12.9a7.6 7.6 0 0 1 10.8 0"></path><path d="M9.6 16.2a3.4 3.4 0 0 1 4.8 0"></path><circle cx="12" cy="19.2" r=".6"></circle></svg>wifi</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7.5l10 9-5 4.5V3l5 4.5-10 9"></path></svg>bluetooth</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"></path><path d="M15.5 9.2a4 4 0 0 1 0 5.6"></path><path d="M18.3 6.5a7.8 7.8 0 0 1 0 11"></path></svg>volume</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"></path><path d="M16 9.5l5 5M21 9.5l-5 5"></path></svg>mute</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3.5" width="6" height="11" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"></path><path d="M12 18v2.5"></path></svg>mic</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.75"></circle><path d="M12 3v1.8M12 19.2V21M3 12h1.8M19.2 12H21M5.6 5.6l1.3 1.3M17.1 17.1l1.3 1.3M5.6 18.4l1.3-1.3M17.1 6.9l1.3-1.3"></path></svg>brightness</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"></path></svg>focus</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"></path><path d="M10 21h4"></path></svg>bell</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5v8"></path><path d="M7.2 6.5a7.5 7.5 0 1 0 9.6 0"></path></svg>power</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"></rect><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"></path></svg>lock</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h8M16 7h4M4 17h4M12 17h8"></path><circle cx="14" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>settings</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="2"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"></rect></svg>apps</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14.5" rx="3"></rect><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"></path></svg>calendar</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.8v12.4a.8.8 0 0 0 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2A.8.8 0 0 0 8 5.8z"></path></svg>play</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="5" width="3.5" height="14" rx="1.2"></rect><rect x="14" y="5" width="3.5" height="14" rx="1.2"></rect></svg>pause</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 6.5v11l8-5.5z"></path><path d="M17.5 6v12"></path></svg>next</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.5 6.5v11l-8-5.5z"></path><path d="M6.5 6v12"></path></svg>previous</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="2.5"></rect><path d="M9 20h6M12 16.5V20"></path></svg>display</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7.5" width="16" height="9" rx="2.8"></rect><path d="M21.5 10.5v3"></path><rect x="5.5" y="10" width="7" height="4" rx="1" fill="#EEF0FA" stroke="none"></rect></svg>battery</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5a8 8 0 1 1 15 0"></path><path d="M12 13l3.5-4"></path></svg>profile</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M3.5 12h17"></path><path d="M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.4-3.6-8.5S9.5 6.1 12 3.5z"></path></svg>web</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"></path></svg>project</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"></rect><path d="M7.5 9.5l3 2.5-3 2.5M12.5 15h4"></path></svg>terminal</div>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="h-states" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">08 · States</span><h2 id="h-states" style="margin:0;font:400 56px/1 var(--yz-display)">Empty, loading, wrong</h2></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+<div style="border-radius:24px;background:#11121D;box-shadow:inset 0 0 0 1px var(--yz-hairline);height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative">
+<svg width="12" height="12" viewBox="0 0 10 10" aria-hidden="true" style="position:absolute;left:120px;top:78px;animation:spark 2.2s ease-in-out infinite"><path d="M5 0L6 4 10 5 6 6 5 10 4 6 0 5 4 4z" fill="#FFB86B"></path></svg>
+<span style="font:400 34px/1 var(--yz-display)">All clear</span><span style="font:500 13px/1 var(--yz-font);color:var(--yz-text-2)">Notifications · empty</span></div>
+<div style="border-radius:24px;background:#11121D;box-shadow:inset 0 0 0 1px var(--yz-hairline);height:240px;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="height:40px;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;gap:10px;padding:0 12px;font:400 15px/1 var(--yz-font)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EEF0FA" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>pass</div>
+<span style="height:36px;border-radius:12px;background:linear-gradient(90deg,rgba(255,255,255,.05) 0%,rgba(255,255,255,.13) 50%,rgba(255,255,255,.05) 100%);background-size:200% 100%;animation:shimmer 1.6s linear infinite"></span>
+<span style="height:36px;width:80%;border-radius:12px;background:linear-gradient(90deg,rgba(255,255,255,.05) 0%,rgba(255,255,255,.13) 50%,rgba(255,255,255,.05) 100%);background-size:200% 100%;animation:shimmer 1.6s linear infinite;animation-delay:.12s"></span>
+<span style="font:500 13px/1 var(--yz-font);color:var(--yz-text-2)">Launcher · indexing</span></div>
+<div style="border-radius:24px;background:#11121D;box-shadow:inset 0 0 0 1px var(--yz-hairline);height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+<div style="width:260px;height:44px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1.5px var(--yz-alert);display:flex;align-items:center;padding:0 18px;box-sizing:border-box;gap:6px;font:400 15px/1 var(--yz-font);letter-spacing:.2em">•••••••</div>
+<span style="font:500 14px/1 var(--yz-font);color:var(--yz-alert)">Wrong password</span><span style="font:500 13px/1 var(--yz-font);color:var(--yz-text-2)">Lock · the field shakes on tap, 3 beats</span></div>
+</div>
+</section>
+
+<section aria-labelledby="h-handoff" style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">09 · Handoff</span><h2 id="h-handoff" style="margin:0;font:400 56px/1 var(--yz-display)">For the build</h2></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;font:400 14px/1.55 var(--yz-font);color:var(--yz-text-2)">
+<div style="border-radius:20px;background:var(--yz-raised);padding:22px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font);color:var(--yz-text)">Tokens</span><span>Every <span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text)">--yz-*</span> name maps one to one to <span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text)">yozora_ui::tok</span>. Colours in OKLCH as Rune stores them; springs as <span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text)">Spring::new(duration, bounce)</span>.</span></div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:22px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font);color:var(--yz-text)">Surfaces</span>Bar: layer Top, exclusive zone 44. Drops: one overlay layer per output that draws its own neck over the bar edge. Lock: ext-session-lock. Rune has layer-shell overlays but neither of these yet, so they go in a fork patch.</div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:22px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font);color:var(--yz-text)">Budget</span>One draw call per frame, shaders culled at intensity 0. Wallpaper fx ticks at 30 Hz, UI at the output rate: 144 and 75 here. GPU released when a drop is closed.</div>
+</div>
+</section>
+
+<section aria-labelledby="h-styles" style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:500 12px/1 var(--yz-font);letter-spacing:.08em;text-transform:uppercase;color:var(--yz-lantern)">10 · Styles</span><h2 id="h-styles" style="margin:0;font:400 56px/1 var(--yz-display)">Four worlds, one desktop</h2><p style="margin:0;max-width:760px;font:400 18px/1.5 var(--yz-font);color:var(--yz-text-2)">A style is not a theme. It replaces everything you see and how it moves, and nothing you use. Switch in Settings, Appearance; the change lands in one curtain.</p></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px"><figure style="margin:0;border-radius:24px;overflow:hidden;background:radial-gradient(120% 90% at 20% 0%,rgba(38,128,148,.5),transparent 60%),radial-gradient(100% 90% at 100% 100%,rgba(98,68,180,.5),transparent 60%),#0B0A1A;display:flex;flex-direction:column;justify-content:space-between;height:200px;padding:22px;box-sizing:border-box"><span style="font:400 44px/1 'Instrument Serif',serif;color:#EEF0FA">Surface tension</span><figcaption style="font:500 13px/1.4 var(--yz-font);color:rgba(238,240,250,.72)"><span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text);color:inherit">tension</span> · Buds from the bar like a drop. By day it is <span style="font-family:ui-monospace,monospace;font-size:13px">daybreak</span>.</figcaption></figure><figure style="margin:0;border-radius:2px;overflow:hidden;background:#E9E3D6;box-shadow:inset 0 0 0 1px #1B1915;display:flex;flex-direction:column;justify-content:space-between;height:200px;padding:22px;box-sizing:border-box"><span style="font:italic 400 46px/1 Newsreader,serif;color:#1B1915">Folio</span><figcaption style="font:500 13px/1.4 var(--yz-font);color:#1B1915"><span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text);color:inherit">folio</span> · Unfolds from the rule like paper.</figcaption></figure><figure style="margin:0;border-radius:0;overflow:hidden;background:#020503;box-shadow:inset 0 0 0 1px #8CFFB4;display:flex;flex-direction:column;justify-content:space-between;height:200px;padding:22px;box-sizing:border-box"><span style="font:400 50px/.8 VT323,monospace;color:#8CFFB4;text-shadow:0 0 12px rgba(140,255,180,.6)">phosphor</span><figcaption style="font:500 13px/1.4 var(--yz-font);color:#8CFFB4"><span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text);color:inherit">phosphor</span> · Scans down, switches off like a tube.</figcaption></figure><figure style="margin:0;border-radius:28px;overflow:hidden;background:linear-gradient(135deg,#ffe0d4,#e2d8ff 50%,#d4efff);display:flex;flex-direction:column;justify-content:space-between;height:200px;padding:22px;box-sizing:border-box"><span style="font:200 44px/1 Geist,sans-serif;letter-spacing:-.04em;color:#11131F">Prism</span><figcaption style="font:500 13px/1.4 var(--yz-font);color:#1B1915"><span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text);color:inherit">prism</span> · Irises open; light sweeps the glass.</figcaption></figure></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;font:400 14px/1.55 var(--yz-font);color:var(--yz-text-2)">
+<div style="border-radius:20px;background:var(--yz-raised);padding:22px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font);color:var(--yz-text)">A style owns</span>Tokens, type, shape, the bar's form, the signature entrance and exit, springs, effects, wallpaper, the lock and its unlock. Each ships its own accent; there is no accent picker.</div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:22px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font);color:var(--yz-text)">Never changes</span>Where everything is: bar slots, popover anchors, the glyph set, the information in every panel, keyboard paths and labels. Muscle memory survives a style change.</div>
+<div style="border-radius:20px;background:var(--yz-raised);padding:22px;display:flex;flex-direction:column;gap:8px"><span style="font:600 15px/1.2 var(--yz-font);color:var(--yz-text)">For agents and scripts</span><span><span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text)">yozora style set folio</span>, <span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text)">yozora style get</span>, <span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text)">yozora fx set calm</span>, <span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--yz-text)">yozora style set tension --follow-sun</span>. Effects Full, Calm and Still apply to every style; reduced motion forces Still.</span></div>
+</div>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":7720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

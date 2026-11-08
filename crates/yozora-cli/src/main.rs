@@ -27,6 +27,7 @@ mod desktop;
 mod module;
 mod notify;
 mod out;
+mod style;
 
 use std::process::ExitCode;
 
@@ -50,6 +51,11 @@ Desktop
   bar close | bar reload
   launcher [open [QUERY]|close|toggle]
   settings [PAGE]                 Open Yozora Settings, on PAGE (appearance, motion, bar, notify, ...)
+  style [get|list]                The look the shell wears
+  style set NAME [--follow-sun|--day|--night]
+                                  tension, folio, phosphor, prism (or daybreak). --follow-sun
+                                  switches tension between night and Daybreak by the clock
+  fx [get|set full|calm|still]    How much the shell animates
   restart [APP...]                Restart Yozora's services (bar, notify, launch, idle); all if none named
   lock                            Lock the screen now
   idle                            What Yozora Idle is counting down to, and what holds the screen on
@@ -118,6 +124,8 @@ fn run(cmd: &str, args: Vec<String>, out: &out::Out) -> anyhow::Result<()> {
     match cmd {
         "status" => apps::status(out),
         "apps" => apps::list(out),
+        "style" | "look" => style::style(args, out),
+        "fx" => style::fx(args, out),
         "desktop" | "state" => desktop::state(args, out),
         "media" => desktop::simple("media", args, out),
         "volume" => desktop::simple("volume", args, out),

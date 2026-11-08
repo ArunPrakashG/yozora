@@ -11,7 +11,7 @@ use yozora_style::tokens;
 
 use crate::kit::enter;
 use crate::shared::Shared;
-use crate::{bar, bluetooth, calendar, control, media, notifications, sound, tray, wifi};
+use crate::{bar, bluetooth, calendar, control, media, notifications, settings, sound, tray, wifi};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pop {
@@ -23,6 +23,7 @@ pub enum Pop {
     Control,
     Tray,
     Notifications,
+    Settings,
 }
 
 pub struct Stage {
@@ -33,6 +34,7 @@ pub struct Stage {
     pub screen_w: f32,
     pub output: String,
     pub month: (i32, u32),
+    pub settings_page: usize,
     /// Notifications on screen as toasts, and when each goes.
     pub toasts: Vec<(u32, Instant)>,
     known: HashSet<u32>,
@@ -45,7 +47,7 @@ pub struct Stage {
 impl Stage {
     pub fn new(sh: Arc<Shared>, output: &str, screen_w: f32) -> Stage {
         let today = chrono::Local::now().date_naive();
-        Stage { sh, open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), toasts: Vec::new(), known: HashSet::new(), primed: false, osd: None, last_volume: None }
+        Stage { sh, open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), settings_page: 0, toasts: Vec::new(), known: HashSet::new(), primed: false, osd: None, last_volume: None }
     }
 
     pub fn toggle(&mut self, pop: Pop, anchor_x: f32) {
@@ -114,8 +116,18 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
     let (look, fx) = s.sh.look();
     let t = tokens(look);
     let mut root = el().w_full().h_full();
-    if let Some(pop) = s.open {
+    if s.open == Some(Pop::Settings) {
+        // Settings is a modal in the middle of the screen, not a popover on the bar.
+        root = root
+            .child(el().key("scrim").pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).hit().fill(rune::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.35 }).on_press(|s: &mut Stage| s.open = None))
+            .child(
+                col().pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).center().child(
+                    settings::view(s, &t).key("settings").hit().transition(enter(&t, fx, settings::W / 2.0, settings::W)),
+                ),
+            );
+    } else if let Some(pop) = s.open {
         let (w, body) = match pop {
+            Pop::Settings => unreachable!(),
             Pop::Calendar => (calendar::W, calendar::view(s, &t)),
             Pop::Media => (media::W, media::view(s, &t)),
             Pop::Wifi => (wifi::W, wifi::view(s, &t)),
