@@ -10,7 +10,7 @@ license = "MIT"
 repository = "https://github.com/ArunPrakashG/yozora"
 
 [workspace.dependencies]
-rune = { path = "/mnt/workspace/Projects/forks/rune/crates/rune" }
+rune = { git = "https://github.com/ArunPrakashG/rune", branch = "yozora-shell" }
 yozora-style = { path = "crates/yozora-style" }
 
 [profile.release]
