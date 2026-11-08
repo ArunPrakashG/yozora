@@ -1,15 +1,17 @@
 //! The full-screen transparent surface popovers, toasts and the volume display live on. It is
 //! click-through except where something is drawn, so it costs nothing while the screen is idle.
 
+use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use chrono::Datelike;
-use rune::{Cx, El, el};
+use rune::{Cx, El, col, el};
 use yozora_style::tokens;
 
 use crate::kit::enter;
 use crate::shared::Shared;
-use crate::{bar, bluetooth, calendar, control, media, sound, tray, wifi};
+use crate::{bar, bluetooth, calendar, control, media, notifications, sound, tray, wifi};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pop {
@@ -20,6 +22,7 @@ pub enum Pop {
     Sound,
     Control,
     Tray,
+    Notifications,
 }
 
 pub struct Stage {
@@ -28,13 +31,21 @@ pub struct Stage {
     /// The bar icon the open panel grows from, in screen points.
     pub anchor_x: f32,
     pub screen_w: f32,
+    pub output: String,
     pub month: (i32, u32),
+    /// Notifications on screen as toasts, and when each goes.
+    pub toasts: Vec<(u32, Instant)>,
+    known: HashSet<u32>,
+    primed: bool,
+    /// The volume display: level, muted, and when it goes.
+    pub osd: Option<(f32, bool, Instant)>,
+    last_volume: Option<(f32, bool)>,
 }
 
 impl Stage {
-    pub fn new(sh: Arc<Shared>, screen_w: f32) -> Stage {
+    pub fn new(sh: Arc<Shared>, output: &str, screen_w: f32) -> Stage {
         let today = chrono::Local::now().date_naive();
-        Stage { sh, open: None, anchor_x: 0.0, screen_w, month: (today.year(), today.month()) }
+        Stage { sh, open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), toasts: Vec::new(), known: HashSet::new(), primed: false, osd: None, last_volume: None }
     }
 
     pub fn toggle(&mut self, pop: Pop, anchor_x: f32) {
@@ -45,6 +56,42 @@ impl Stage {
             self.anchor_x = anchor_x;
             let today = chrono::Local::now().date_naive();
             self.month = (today.year(), today.month());
+        }
+    }
+
+    /// Brings toasts and the volume display up to date with the services. Runs on every redraw.
+    pub fn sync(&mut self) {
+        let now = Instant::now();
+        self.toasts.retain(|(_, until)| *until > now);
+        if self.osd.is_some_and(|(_, _, until)| until <= now) {
+            self.osd = None;
+        }
+        let svc = self.sh.services.lock().unwrap();
+        if let Some(n) = &svc.notifications {
+            let g = n.read();
+            for item in g.state.items.iter().filter(|i| i.unread) {
+                if self.known.insert(item.id) && self.primed && !g.state.dnd && item.snoozed_until == 0 {
+                    // Critical ones stay until dealt with; the rest go after a few seconds.
+                    let life = if item.urgency >= 2 { Duration::from_secs(60) } else { Duration::from_secs(6) };
+                    self.toasts.push((item.id, now + life));
+                    self.sh.redraw_after(life + Duration::from_millis(50));
+                }
+            }
+            self.primed = self.primed || g.ready;
+            let live: HashSet<u32> = g.state.items.iter().map(|i| i.id).collect();
+            self.toasts.retain(|(id, _)| live.contains(id));
+        }
+        if let Some(a) = &svc.audio {
+            let g = a.read();
+            let sink = g.state.sinks.iter().find(|d| d.name == g.state.default_sink);
+            if let Some(d) = sink {
+                let now_v = (d.volume, d.muted);
+                if self.last_volume.is_some_and(|v| v != now_v) && self.open.is_none() {
+                    self.osd = Some((d.volume, d.muted, now + Duration::from_millis(1600)));
+                    self.sh.redraw_after(Duration::from_millis(1650));
+                }
+                self.last_volume = Some(now_v);
+            }
         }
     }
 
@@ -76,6 +123,7 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
             Pop::Sound => (sound::W, sound::view(s, &t)),
             Pop::Control => (control::W, control::view(s, &t)),
             Pop::Tray => (tray::W, tray::view(s, &t)),
+            Pop::Notifications => (notifications::W, notifications::view(s, &t)),
         };
         let left = (s.anchor_x - w / 2.0).clamp(bar::SIDE, s.screen_w - w - bar::SIDE);
         // A hit-catching scrim closes the panel on a click anywhere else.
@@ -85,6 +133,23 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
                 body.key("panel").hit().pin(Some(left), Some(t.panel_top), None, None)
                     .transition(enter(&t, fx, s.anchor_x - left, w)),
             );
+    }
+    if s.open.is_none() {
+        let toasts: Vec<_> = {
+            let svc = s.sh.services.lock().unwrap();
+            let items = svc.notifications.as_ref().map(|n| n.read().state.items.clone()).unwrap_or_default();
+            s.toasts.iter().filter_map(|(id, _)| items.iter().find(|i| i.id == *id).cloned()).collect()
+        };
+        let mut stack = col().key("toasts").pin(None, Some(t.panel_top), Some(bar::SIDE), None).gap(10.0);
+        for n in &toasts {
+            stack = stack.child(notifications::toast(&t, n).transition(enter(&t, fx, notifications::W / 2.0, notifications::W)));
+        }
+        root = root.child(stack);
+        if let Some((level, muted, _)) = s.osd {
+            let x = s.sh.anchor(&s.output, "vol").unwrap_or(s.screen_w - 120.0);
+            let left = (x - 120.0).clamp(bar::SIDE, s.screen_w - 240.0 - bar::SIDE);
+            root = root.child(notifications::osd(&t, level, muted).key("osd").pin(Some(left), Some(t.panel_top), None, None).transition(enter(&t, fx, 120.0, 240.0)));
+        }
     }
     root
 }

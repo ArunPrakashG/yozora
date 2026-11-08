@@ -50,7 +50,7 @@ fn main() {
                     })
                     .on_key(stage::on_key)
                     .animate_reveal(),
-                Stage::new(sh.clone(), w),
+                Stage::new(sh.clone(), &name, w),
             );
             bar.show();
             stage.show();

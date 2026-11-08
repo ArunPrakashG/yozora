@@ -4,6 +4,7 @@ pub mod calendar;
 pub mod control;
 pub mod kit;
 pub mod media;
+pub mod notifications;
 pub mod shared;
 pub mod sound;
 pub mod stage;

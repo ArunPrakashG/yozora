@@ -1,7 +1,9 @@
 //! What every surface of the shell shares: the services, the look, and the handles to push
 //! changes at the surfaces.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use rune::OverlayHandle;
 use yozora_services::{Fakes, Kind, Services};
@@ -15,6 +17,7 @@ pub struct Shared {
     look: Mutex<(Look, Fx)>,
     stages: Mutex<Vec<(String, OverlayHandle<Stage>)>>,
     bars: Mutex<Vec<OverlayHandle<Bar>>>,
+    anchors: Mutex<HashMap<String, f32>>,
 }
 
 impl Shared {
@@ -24,7 +27,7 @@ impl Shared {
             [Kind::Audio, Kind::Bluetooth, Kind::Hyprland, Kind::Media, Kind::Network, Kind::Notifications, Kind::Power, Kind::Tray],
             &Default::default(),
         );
-        Arc::new(Shared { services: Mutex::new(services), look: Mutex::new((look, fx)), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()) })
+        Arc::new(Shared { services: Mutex::new(services), look: Mutex::new((look, fx)), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()) })
     }
 
     pub fn look(&self) -> (Look, Fx) {
@@ -50,11 +53,31 @@ impl Shared {
             b.update(|_, _| {});
         }
         for (_, s) in self.stages.lock().unwrap().iter() {
-            s.update(|_, _| {});
+            s.update(|st, _| st.sync());
         }
     }
 
+    /// Redraws once `after` has passed, for things that end on a timer.
+    pub fn redraw_after(self: &Arc<Self>, after: Duration) {
+        let sh = self.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(after);
+            sh.redraw();
+        });
+    }
+
+    pub fn set_anchor(&self, output: &str, key: &str, x: f32) {
+        self.anchors.lock().unwrap().insert(format!("{output}/{key}"), x);
+    }
+
+    pub fn anchor(&self, output: &str, key: &str) -> Option<f32> {
+        self.anchors.lock().unwrap().get(&format!("{output}/{key}")).copied()
+    }
+
     pub fn open(&self, output: &str, pop: Pop, anchor_x: f32) {
+        if pop == Pop::Notifications && let Some(n) = &self.services.lock().unwrap().notifications {
+            n.send(yozora_services::notifications::Cmd::MarkRead);
+        }
         for (name, s) in self.stages.lock().unwrap().iter() {
             if name == output {
                 s.update(move |st, tx| {

@@ -12,7 +12,7 @@ fn init() -> Stage {
     let look = std::env::var("YZ_LOOK").ok().and_then(|s| Look::from_slug(&s)).unwrap_or_default();
     let fx = std::env::var("YZ_FX").ok().and_then(|s| Fx::from_slug(&s)).unwrap_or(Fx::Full);
     let sh = Shared::new(look, fx, Fakes(Fakes::ALL.iter().map(|s| s.to_string()).collect()));
-    let mut st = Stage::new(sh, 1280.0);
+    let mut st = Stage::new(sh, "snap", 1280.0);
     let pop = match std::env::var("YZ_POP").as_deref() {
         Ok("media") => Pop::Media,
         Ok("wifi") => Pop::Wifi,
@@ -20,6 +20,7 @@ fn init() -> Stage {
         Ok("sound") => Pop::Sound,
         Ok("control") => Pop::Control,
         Ok("tray") => Pop::Tray,
+        Ok("notifications") => Pop::Notifications,
         _ => Pop::Calendar,
     };
     st.toggle(pop, 1100.0);

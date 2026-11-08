@@ -86,6 +86,7 @@ fn button(e: El, key: impl Into<String>, pop: Pop) -> El {
     e.key(key.clone()).role("button").label(key).hit()
         .on_layout_tx(move |b: &mut Bar, [x, _, w, _], tx| {
             b.anchors.insert(k1.clone(), x + w / 2.0);
+            b.sh.set_anchor(&b.output, &k1, x + w / 2.0);
             tx.live_only();
         })
         .on_press(move |b: &mut Bar| b.open(pop, &k2))
@@ -104,12 +105,17 @@ pub fn view(b: &Bar, _: &mut Cx<Bar>) -> El {
     }));
 
     let bluetooth_present = b.sh.services.lock().unwrap().bluetooth.as_ref().is_some_and(|s| s.read().state.adapter.is_some());
+    let unread = b.sh.services.lock().unwrap().notifications.as_ref().is_some_and(|n| n.read().state.unread);
     let mut status = row().h(28.0).px(4.0);
-    for (name, pop) in [("bt", Pop::Bluetooth), ("wifi", Pop::Wifi), ("vol", Pop::Sound), ("cc", Pop::Control), ("bell", Pop::Control)] {
+    for (name, pop) in [("bt", Pop::Bluetooth), ("wifi", Pop::Wifi), ("vol", Pop::Sound), ("cc", Pop::Control), ("bell", Pop::Notifications)] {
         if name == "bt" && !bluetooth_present {
             continue;
         }
-        status = status.child(button(cell(34.0, 28.0, icon(glyph(look, name), 17.0).color(t.ink)).radius(t.radii.pill), name, pop));
+        let mut c = cell(34.0, 28.0, icon(glyph(look, name), 17.0).color(t.ink)).radius(t.radii.pill);
+        if name == "bell" && unread {
+            c = c.child(el().pin(Some(21.0), Some(4.0), None, None).size(7.0, 7.0).radius(t.radii.pill).fill(t.acc).border(1.5, t.surf));
+        }
+        status = status.child(button(c, name, pop));
     }
 
     let now = Local::now();
