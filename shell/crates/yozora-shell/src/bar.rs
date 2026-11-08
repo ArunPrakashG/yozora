@@ -94,7 +94,6 @@ struct DevView {
 struct NotifView {
     dnd: bool,
     dim: bool,
-    count: usize,
     unread: bool,
     tip: String,
 }
@@ -211,9 +210,9 @@ fn snap(sh: &Shared, layout: &Layout) -> Snap {
             } else {
                 "Notifications\nNo new notifications".to_owned()
             };
-            NotifView { dnd: g.state.dnd, dim: !up, count, unread: g.state.unread, tip }
+            NotifView { dnd: g.state.dnd, dim: !up, unread: g.state.unread, tip }
         }
-        None => NotifView { dnd: false, dim: true, count: 0, unread: false, tip: "Notifications are not available".into() },
+        None => NotifView { dnd: false, dim: true, unread: false, tip: "Notifications are not available".into() },
     };
 
     let media = svc.media.as_ref().and_then(|m| {
@@ -582,9 +581,6 @@ fn notifications(c: &Ctx) -> El {
     let p = c.pal(open);
     let n = &c.snap.notif;
     let mut e = status_item(c, open).child(c.glyph(if n.dnd { "moon" } else { "bell" }, 17.0, p, n.dim, false));
-    if n.count > 0 && !n.dnd {
-        e = e.child(small(c, p, n.count.to_string(), false));
-    }
     if n.unread && !n.dnd {
         let ring = if open && inverted(&c.t) { c.t.ink } else { c.t.surf };
         e = e.child(el().pin(Some(21.0), Some((c.geo.item_h - 17.0) / 2.0 - 4.0), None, None).size(7.0, 7.0).radius(c.t.radii.pill).fill(c.t.acc).border(1.5, ring));
