@@ -2,6 +2,7 @@
 //!
 //! - `yz-pointer move X Y`: moves the cursor to layout coordinates X, Y.
 //! - `yz-pointer click [hold-ms]`: clicks the left button where the cursor is (default 40 ms).
+//! - `yz-pointer scroll N X Y [hold-ms]`: moves to X, Y and turns the wheel N notches (positive scrolls down), then keeps the device for hold-ms.
 //! - `yz-pointer drag X Y [steps]`: presses where the cursor is, moves to X, Y in steps, and
 //!   releases there.
 //!
@@ -13,7 +14,10 @@ use std::{thread, time::Duration};
 use wayland_client::{
     Connection, Dispatch, EventQueue, QueueHandle, delegate_noop,
     globals::{GlobalListContents, registry_queue_init},
-    protocol::{wl_pointer::ButtonState, wl_registry},
+    protocol::{
+        wl_pointer::{Axis, AxisSource, ButtonState},
+        wl_registry,
+    },
 };
 use wayland_protocols_wlr::virtual_pointer::v1::client::{
     zwlr_virtual_pointer_manager_v1::ZwlrVirtualPointerManagerV1, zwlr_virtual_pointer_v1::ZwlrVirtualPointerV1,
@@ -78,6 +82,28 @@ fn main() {
             pointer.frame();
             sync(&mut queue);
         }
+        Some("scroll") => {
+            let arg = |i: usize| -> Option<i32> { args.get(i).and_then(|a| a.parse().ok()) };
+            let (Some(notches), Some(x), Some(y)) = (arg(1), arg(2), arg(3)) else {
+                eprintln!("usage: yz-pointer scroll N X Y [hold-ms]");
+                std::process::exit(2);
+            };
+            let (origin, extent) = layout();
+            pointer.motion_absolute(time(), (x - origin.0) as u32, (y - origin.1) as u32, extent.0, extent.1);
+            pointer.frame();
+            sync(&mut queue);
+            // The surface learns of the pointer on its next frame; scroll once it has.
+            thread::sleep(Duration::from_millis(400));
+            for _ in 0..notches.abs() {
+                pointer.axis_source(AxisSource::Wheel);
+                pointer.axis_discrete(time(), Axis::VerticalScroll, 15.0 * notches.signum() as f64, notches.signum());
+                pointer.frame();
+                sync(&mut queue);
+                thread::sleep(Duration::from_millis(30));
+            }
+            // Destroying the device drops the seat's pointer, so hold it for a screenshot.
+            thread::sleep(Duration::from_millis(arg(4).unwrap_or(0).max(0) as u64));
+        }
         Some("drag") => {
             let arg = |i: usize| -> Option<i32> { args.get(i).and_then(|a| a.parse().ok()) };
             let (Some(x), Some(y)) = (arg(1), arg(2)) else {
@@ -105,7 +131,7 @@ fn main() {
             sync(&mut queue);
         }
         _ => {
-            eprintln!("usage: yz-pointer move X Y | yz-pointer click [hold-ms] | yz-pointer drag X Y [steps]");
+            eprintln!("usage: yz-pointer move X Y | yz-pointer click [hold-ms] | yz-pointer scroll N X Y [hold-ms] | yz-pointer drag X Y [steps]");
             std::process::exit(2);
         }
     }
