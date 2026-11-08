@@ -7,3 +7,5 @@ license.workspace = true
 [dependencies]
 rune.workspace = true
 yozora-style.workspace = true
+yozora-services = { path = "../yozora-services" }
+chrono = "0.4"
