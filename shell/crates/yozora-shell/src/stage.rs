@@ -9,7 +9,7 @@ use chrono::Datelike;
 use rune::{Cx, El, col, el};
 use yozora_style::tokens;
 
-use crate::kit::enter;
+use crate::kit::{self, enter};
 use crate::shared::Shared;
 use crate::{bar, launcher, bluetooth, calendar, control, media, notifications, settings, sound, tray, wifi};
 
@@ -162,7 +162,7 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
         root = root
             .child(el().key("scrim").pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).hit().on_press(|s: &mut Stage| s.open = None))
             .child(
-                body.key("panel").hit().pin(Some(left), Some(t.panel_top), None, None)
+                kit::stagger(&t, fx, body).key("panel").hit().pin(Some(left), Some(t.panel_top), None, None)
                     .transition(enter(&t, fx, s.anchor_x - left, w)),
             );
     }

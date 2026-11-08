@@ -2,7 +2,7 @@
 //! a screen is written once and wears every look.
 
 use rune::tok::TextStyle;
-use rune::{Color, Edge, El, Spring, SpringPair, Transition, Vec2, col, el, icon, row, text};
+use rune::{Color, Edge, El, Spring, SpringPair, Transition, Vec2, col, icon, row, text};
 use yozora_style::{Entrance, Fx, Motion, Tokens, glyph};
 
 pub fn label(t: &Tokens, size: f32, weight: f32, s: impl Into<String>, color: Color) -> El {
@@ -52,6 +52,20 @@ fn springs(m: &Motion) -> SpringPair {
         None => 0.0,
     };
     SpringPair::new(Spring::new(m.open * 0.7, bounce), Spring::new(m.close * 0.6, 0.0))
+}
+
+/// Settles a panel's rows in one after another, the look's `row_stagger` apart. Rows keep their
+/// place in layout; each starts a little low and rises as it fades in.
+pub fn stagger(t: &Tokens, fx: Fx, panel: El) -> El {
+    let m = Motion::of(t.look, fx);
+    if m.row_stagger == 0.0 {
+        return panel;
+    }
+    let rise = if t.look == yozora_style::Look::Phosphor { 0.0 } else { 8.0 };
+    panel.map_children(|i, c| {
+        c.transition(Transition::offset(0.0, rise).combined(Transition::opacity()).springs(SpringPair::new(Spring::new(m.open * 0.6, 0.0), Spring::new(0.15, 0.0))))
+            .enter_delay(m.row_stagger * (i as f32 + 1.0))
+    })
 }
 
 /// The panel surface. Content goes in as children.
