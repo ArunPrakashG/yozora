@@ -17,8 +17,12 @@ pub fn config_dir() -> PathBuf {
         .unwrap_or_else(|| xdg("XDG_CONFIG_HOME", ".config").join("yozora"))
 }
 
-/// `$XDG_RUNTIME_DIR/yozora`, where control sockets live.
+/// `$XDG_RUNTIME_DIR/yozora`, where control sockets live, or `$YOZORA_RUNTIME_DIR` when set so a
+/// second instance can run beside the real one.
 pub fn runtime_dir() -> PathBuf {
+    if let Some(dir) = env::var_os("YOZORA_RUNTIME_DIR") {
+        return PathBuf::from(dir);
+    }
     let base = env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from).unwrap_or_else(env::temp_dir);
     base.join("yozora")
 }

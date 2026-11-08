@@ -36,19 +36,7 @@ impl Shared {
 
     /// The look and effects in force now. Surface tension turns to Daybreak by day.
     pub fn look(&self) -> (Look, Fx) {
-        let c = self.config.lock().unwrap();
-        let fx = Fx::from_slug(&c.fx).unwrap_or(Fx::Full);
-        let look = Look::from_slug(&c.look).unwrap_or_default();
-        let day = match c.time.as_str() {
-            "day" => true,
-            "follow" => {
-                use chrono::Timelike;
-                let now = chrono::Local::now();
-                c.is_day(now.hour() * 60 + now.minute())
-            }
-            _ => false,
-        };
-        (if look == Look::Tension && day { Look::Daybreak } else { look }, fx)
+        crate::config::resolve(&self.config.lock().unwrap())
     }
 
     pub fn config(&self) -> ShellConfig {

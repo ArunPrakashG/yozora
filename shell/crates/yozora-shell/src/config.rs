@@ -49,6 +49,23 @@ pub fn watch(sh: Arc<Shared>) {
     });
 }
 
+/// The look and effects a config means right now: Surface tension turns to Daybreak by day.
+pub fn resolve(c: &shell::ShellConfig) -> (yozora_style::Look, yozora_style::Fx) {
+    use yozora_style::{Fx, Look};
+    let fx = Fx::from_slug(&c.fx).unwrap_or(Fx::Full);
+    let look = Look::from_slug(&c.look).unwrap_or_default();
+    let day = match c.time.as_str() {
+        "day" => true,
+        "follow" => {
+            use chrono::Timelike;
+            let now = chrono::Local::now();
+            c.is_day(now.hour() * 60 + now.minute())
+        }
+        _ => false,
+    };
+    (if look == Look::Tension && day { Look::Daybreak } else { look }, fx)
+}
+
 /// Writes one key of `shell.toml`, keeping the file's comments, and applies it at once.
 pub fn set(sh: &Shared, key: &str, value: &str) {
     let path = paths::config_dir().join(shell::FILE);

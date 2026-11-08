@@ -4701,6 +4701,7 @@ dependencies = [
  "tracing",
  "yozora-config",
  "yozora-ipc",
+ "yozora-lockd",
  "yozora-search",
  "yozora-services",
  "yozora-style",
