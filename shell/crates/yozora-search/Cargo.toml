@@ -1,0 +1,21 @@
+[package]
+name = "yozora-search"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+description = "The launcher's search engine for the Yozora shell: sources, ranking, answers and actions, with no toolkit"
+
+[dependencies]
+anyhow = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+chrono-tz = "0.10"
+emojis = "0.9"
+inotify = { version = "0.11", default-features = false }
+nucleo-matcher = "0.3"
+rusqlite = "0.37"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+yozora-config = { path = "../../../crates/yozora-config" }
+yozora-ipc = { path = "../../../crates/yozora-ipc" }
+yozora-services = { path = "../yozora-services" }

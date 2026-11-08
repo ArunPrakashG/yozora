@@ -2,7 +2,7 @@
 # Rune and GPUI pull different graphics stacks, and the running apps stay untouched meanwhile.
 [workspace]
 resolver = "3"
-members = ["crates/yozora-style", "crates/yozora-shell", "crates/yozora-services"]
+members = ["crates/yozora-style", "crates/yozora-shell", "crates/yozora-services", "crates/yozora-search", "crates/yozora-notifyd", "crates/yozora-lockd"]
 
 [workspace.package]
 edition = "2024"
