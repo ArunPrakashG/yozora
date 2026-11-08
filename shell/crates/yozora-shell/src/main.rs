@@ -1,14 +1,3 @@
-mod bar;
-mod bluetooth;
-mod calendar;
-mod control;
-mod kit;
-mod media;
-mod shared;
-mod sound;
-mod stage;
-mod tray;
-mod wifi;
 
 use std::time::Duration;
 
@@ -19,9 +8,9 @@ use rune::{
 use yozora_services::Fakes;
 use yozora_style::{FONTS, Fx, Look};
 
-use bar::Bar;
-use shared::Shared;
-use stage::Stage;
+use yozora_shell::bar::{self, Bar};
+use yozora_shell::shared::Shared;
+use yozora_shell::stage::{self, Stage};
 
 fn host(_: &(), _: &mut Cx<()>) -> El {
     col()
