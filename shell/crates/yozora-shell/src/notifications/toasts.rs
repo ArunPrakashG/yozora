@@ -7,11 +7,11 @@
 
 use std::time::{Duration, Instant};
 
-use rune::{Color, El, Key, KeyEvent, SurfaceFit, Tween, col, el, row};
+use rune::{El, Key, KeyEvent, SurfaceFit, Tween, col, el, row};
 use yozora_services::notifications::{Cmd, Notification, Toast};
 use yozora_style::{Fx, Look, Tokens};
 
-use super::{HIDDEN, Ink, actions, ink, picture, read_state, reply_row, send, tile, when};
+use super::{HIDDEN, actions, ink, picture, read_state, reply_row, send, tile, when};
 use crate::bar;
 use crate::kit::{cell, enter, glyph_el, label, panel};
 use crate::stage::{Pop, Stage};
@@ -144,19 +144,6 @@ pub fn on_key(s: &mut Stage, e: &KeyEvent) -> bool {
     true
 }
 
-/// The app's progress as a bar and a percentage.
-pub(super) fn progress(t: &Tokens, p: u8, ik: Ink) -> El {
-    let square = matches!(t.look, Look::Folio | Look::Phosphor);
-    let w = 190.0;
-    let radius = if square { 0.0 } else { 2.0 };
-    row().w_full().gap(10.0).center_y().h(16.0)
-        .child(
-            el().grow(1.0).h(4.0).radius(radius).fill(Color { a: 0.18, ..ik.main })
-                .child(el().w(w * f32::from(p) / 100.0).h(4.0).radius(radius).fill(t.acc)),
-        )
-        .child(crate::kit::fig(t, 12.0, 500.0, format!("{p}%"), ik.dim))
-}
-
 /// The stack of visible toasts, with a chip for the ones waiting, or none on this stage.
 pub fn toasts(s: &Stage, t: &Tokens, fx: Fx) -> Option<El> {
     if s.open == Some(Pop::Notifications) {
@@ -215,7 +202,10 @@ fn card(s: &Stage, t: &Tokens, n: &Notification, tw: Toast, sharing: bool) -> El
         .on_press(move |s: &mut Stage| send(s, Cmd::Dismiss(id)));
     let head = row().w_full().h(24.0).gap(6.0).center_y()
         .child(label(t, 12.0, 500.0, app.clone(), if critical && !square { t.alert } else { ik.dim }).truncate().min_w(0.0))
-        .child(label(t, 12.0, 500.0, format!("\u{b7} {}", when(n.seen)), ik.faint).max_lines(1))
+        .child(match n.progress.filter(|_| !hidden) {
+            Some(p) => crate::kit::fig(t, 12.0, 600.0, format!("\u{b7} {p}%"), t.acc),
+            None => label(t, 12.0, 500.0, format!("\u{b7} {}", when(n.seen)), ik.faint).max_lines(1),
+        })
         .child(el().grow(1.0))
         .child(close);
 
@@ -235,9 +225,6 @@ fn card(s: &Stage, t: &Tokens, n: &Notification, tw: Toast, sharing: bool) -> El
             let base = el().w(TOAST_W - 2.0 * PAD - 40.0 - 16.0).h(132.0).radius(if square { 0.0 } else { t.radii.chip }).mt(6.0);
             text = text.child(picture(&s.sh, base, path, 132.0, 1.0, SurfaceFit::Fill));
         }
-    }
-    if let Some(p) = n.progress {
-        text = text.child(el().h(4.0)).child(progress(t, p, ik));
     }
     if !hidden {
         match &s.notes.reply {
