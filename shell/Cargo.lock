@@ -4692,11 +4692,16 @@ dependencies = [
 name = "yozora-shell"
 version = "0.0.0"
 dependencies = [
+ "async-channel",
+ "async-io",
  "chrono",
  "futures-lite",
  "rune",
+ "serde_json",
  "tracing",
  "yozora-config",
+ "yozora-ipc",
+ "yozora-search",
  "yozora-services",
  "yozora-style",
 ]

@@ -2,7 +2,7 @@
 //! changes at the surfaces.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use rune::OverlayHandle;
@@ -19,6 +19,9 @@ pub struct Shared {
     stages: Mutex<Vec<(String, OverlayHandle<Stage>)>>,
     bars: Mutex<Vec<OverlayHandle<Bar>>>,
     anchors: Mutex<HashMap<String, f32>>,
+    engine: OnceLock<yozora_search::Engine>,
+    /// What the stages last drew as open, for the control sockets to report.
+    shown: Mutex<Option<Pop>>,
 }
 
 impl Shared {
@@ -28,7 +31,7 @@ impl Shared {
             [Kind::Audio, Kind::Bluetooth, Kind::Hyprland, Kind::Media, Kind::Network, Kind::Notifications, Kind::Power, Kind::Tray],
             &Default::default(),
         );
-        Arc::new(Shared { services: Mutex::new(services), config: Mutex::new(config), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()) })
+        Arc::new(Shared { services: Mutex::new(services), config: Mutex::new(config), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()), engine: OnceLock::new(), shown: Mutex::new(None) })
     }
 
     /// The look and effects in force now. Surface tension turns to Daybreak by day.
@@ -107,6 +110,42 @@ impl Shared {
                 s.update(|st, _| st.open = None);
             }
         }
+    }
+
+    /// The launcher's search engine, started on first use.
+    pub fn engine(self: &Arc<Self>) -> &yozora_search::Engine {
+        self.engine.get_or_init(|| {
+            let weak = Arc::downgrade(self);
+            let engine = yozora_search::Engine::new(yozora_search::load_settings(&yozora_config::paths::config_dir()), move || {
+                if let Some(sh) = weak.upgrade() {
+                    sh.redraw();
+                }
+            });
+            engine.start();
+            engine
+        })
+    }
+
+    pub fn note_open(&self, pop: Option<Pop>) {
+        *self.shown.lock().unwrap() = pop;
+    }
+
+    pub fn shown(&self) -> Option<Pop> {
+        *self.shown.lock().unwrap()
+    }
+
+    pub fn outputs(&self) -> Vec<String> {
+        self.stages.lock().unwrap().iter().map(|(n, _)| n.clone()).collect()
+    }
+
+    /// Runs `f` on the stage of `output`, or the first one when there is no such output, and
+    /// gives it the keys.
+    pub fn on_stage(&self, output: Option<&str>, f: impl FnOnce(&mut Stage) + Send + 'static) -> bool {
+        let stages = self.stages.lock().unwrap();
+        let Some((_, s)) = stages.iter().find(|(n, _)| Some(n.as_str()) == output).or_else(|| stages.first()) else { return false };
+        s.update(move |st, _| f(st));
+        s.request_keys();
+        true
     }
 
     pub fn close(&self) {

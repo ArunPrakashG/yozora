@@ -61,6 +61,7 @@ fn main() {
         let wake = sh.clone();
         yozora_services::set_waker(move || wake.redraw());
         yozora_shell::config::watch(sh.clone());
+        yozora_shell::ipc::start(&sh);
         let tick = sh.clone();
         std::thread::Builder::new().name("clock".into()).spawn(move || loop {
             std::thread::sleep(Duration::from_secs(15));

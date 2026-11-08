@@ -4,6 +4,8 @@ pub mod calendar;
 pub mod config;
 pub mod control;
 pub mod kit;
+pub mod launcher;
+pub mod ipc;
 pub mod media;
 pub mod notifications;
 pub mod settings;

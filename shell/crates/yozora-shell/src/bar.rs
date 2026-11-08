@@ -99,9 +99,31 @@ pub fn view(b: &Bar, _: &mut Cx<Bar>) -> El {
     let hypr = hypr_state.unwrap_or_default();
     let title = hypr.window_on(&b.output).map(|w| w.title.clone()).unwrap_or_default();
 
-    let tray_count = b.sh.services.lock().unwrap().tray.as_ref().map_or(0, |t| t.read().state.items.len()).min(4);
-    let tray = row().h(28.0).children((0..tray_count).map(|i| {
-        button(cell(30.0, 28.0, icon(glyph(look, "sync"), 17.0).color(t.ink)), format!("tray{i}"), Pop::Tray)
+    let tray_items: Vec<_> = b.sh.services.lock().unwrap().tray.as_ref().map(|t| t.read().state.items.iter().take(4).cloned().collect()).unwrap_or_default();
+    let tray = row().h(28.0).children(tray_items.iter().enumerate().map(|(i, item)| {
+        let key = item.key.clone();
+        let menu = item.has_menu || item.item_is_menu;
+        let icon = cell(30.0, 28.0, crate::tray::app_icon(&t, &b.sh, item));
+        let k = format!("tray{i}");
+        let kk = k.clone();
+        icon.key(k.clone()).role("button").label(item.title.clone()).hit()
+            .on_layout_tx(move |b: &mut Bar, [x, _, w, _], tx| {
+                b.sh.set_anchor(&b.output, &kk, x + w / 2.0);
+                tx.live_only();
+            })
+            .on_press(move |b: &mut Bar| {
+                let send = |c: yozora_services::tray::Cmd| {
+                    if let Some(t) = &b.sh.services.lock().unwrap().tray {
+                        t.send(c);
+                    }
+                };
+                if menu {
+                    send(yozora_services::tray::Cmd::LoadMenu(key.clone()));
+                    b.open(Pop::Tray, &k);
+                } else {
+                    send(yozora_services::tray::Cmd::Activate(key.clone()));
+                }
+            })
     }));
 
     let bluetooth_present = b.sh.services.lock().unwrap().bluetooth.as_ref().is_some_and(|s| s.read().state.adapter.is_some());

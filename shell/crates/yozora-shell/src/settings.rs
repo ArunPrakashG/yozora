@@ -22,6 +22,23 @@ const PAGES: [(&str, &str); 8] = [
     ("About Yozora", "globe"),
 ];
 
+/// The page a name on the command line stands for.
+pub fn page_named(name: &str) -> Option<usize> {
+    let n = name.to_lowercase();
+    let alias = |keys: &[&str]| keys.contains(&n.as_str());
+    Some(match () {
+        _ if alias(&["appearance", "style", "look", "theme"]) => 0,
+        _ if alias(&["bar"]) => 1,
+        _ if alias(&["notify", "notifications"]) => 2,
+        _ if alias(&["launcher", "launch"]) => 3,
+        _ if alias(&["lock", "idle"]) => 4,
+        _ if alias(&["display", "displays", "monitors"]) => 5,
+        _ if alias(&["motion", "effects"]) => 6,
+        _ if alias(&["about"]) => 7,
+        _ => return None,
+    })
+}
+
 fn sidebar(t: &Tokens, page: usize) -> El {
     let mut list = col().w_full().gap(4.0).padding(12.0).child(label(t, 13.0, 600.0, "Settings", t.ink2).padding(12.0));
     for (i, (name, glyph)) in PAGES.iter().enumerate() {

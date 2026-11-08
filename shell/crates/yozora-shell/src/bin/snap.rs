@@ -20,10 +20,16 @@ fn init() -> Stage {
         Ok("tray") => Pop::Tray,
         Ok("notifications") => Pop::Notifications,
         Ok("settings") => Pop::Settings,
+        Ok("launcher") => Pop::Launcher,
         _ => Pop::Calendar,
     };
     st.toggle(pop, 1100.0);
     st.anchor_x = 1100.0;
+    if pop == Pop::Launcher {
+        st.sh.engine().refresh_blocking();
+        st.launcher.query = std::env::var("YZ_QUERY").unwrap_or_default();
+        yozora_shell::launcher::search(&mut st);
+    }
     st
 }
 

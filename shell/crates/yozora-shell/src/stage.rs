@@ -11,7 +11,7 @@ use yozora_style::tokens;
 
 use crate::kit::enter;
 use crate::shared::Shared;
-use crate::{bar, bluetooth, calendar, control, media, notifications, settings, sound, tray, wifi};
+use crate::{bar, launcher, bluetooth, calendar, control, media, notifications, settings, sound, tray, wifi};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pop {
@@ -24,6 +24,7 @@ pub enum Pop {
     Tray,
     Notifications,
     Settings,
+    Launcher,
 }
 
 pub struct Stage {
@@ -35,6 +36,7 @@ pub struct Stage {
     pub output: String,
     pub month: (i32, u32),
     pub settings_page: usize,
+    pub launcher: crate::launcher::Launcher,
     /// Notifications on screen as toasts, and when each goes.
     pub toasts: Vec<(u32, Instant)>,
     known: HashSet<u32>,
@@ -47,7 +49,7 @@ pub struct Stage {
 impl Stage {
     pub fn new(sh: Arc<Shared>, output: &str, screen_w: f32) -> Stage {
         let today = chrono::Local::now().date_naive();
-        Stage { sh, open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), settings_page: 0, toasts: Vec::new(), known: HashSet::new(), primed: false, osd: None, last_volume: None }
+        Stage { sh, open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), settings_page: 0, launcher: Default::default(), toasts: Vec::new(), known: HashSet::new(), primed: false, osd: None, last_volume: None }
     }
 
     pub fn toggle(&mut self, pop: Pop, anchor_x: f32) {
@@ -55,6 +57,9 @@ impl Stage {
             self.open = None;
         } else {
             self.open = Some(pop);
+            if pop == Pop::Launcher {
+                launcher::open(self);
+            }
             self.anchor_x = anchor_x;
             let today = chrono::Local::now().date_naive();
             self.month = (today.year(), today.month());
@@ -63,6 +68,9 @@ impl Stage {
 
     /// Brings toasts and the volume display up to date with the services. Runs on every redraw.
     pub fn sync(&mut self) {
+        if self.open == Some(Pop::Launcher) {
+            launcher::sync(self);
+        }
         let now = Instant::now();
         self.toasts.retain(|(_, until)| *until > now);
         if self.osd.is_some_and(|(_, _, until)| until <= now) {
@@ -105,6 +113,9 @@ impl Stage {
 }
 
 pub fn on_key(s: &mut Stage, e: &rune::KeyEvent, _: &mut rune::Tx) -> bool {
+    if s.open == Some(Pop::Launcher) {
+        return launcher::on_key(s, e);
+    }
     if s.open.is_some() && e.key == rune::Key::Escape {
         s.open = None;
         return true;
@@ -115,6 +126,7 @@ pub fn on_key(s: &mut Stage, e: &rune::KeyEvent, _: &mut rune::Tx) -> bool {
 pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
     let (look, fx) = s.sh.look();
     let t = tokens(look);
+    s.sh.note_open(s.open);
     let mut root = el().w_full().h_full();
     if s.open == Some(Pop::Settings) {
         // Settings is a modal in the middle of the screen, not a popover on the bar.
@@ -125,9 +137,17 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
                     settings::view(s, &t).key("settings").hit().transition(enter(&t, fx, settings::W / 2.0, settings::W)),
                 ),
             );
+    } else if s.open == Some(Pop::Launcher) {
+        root = root
+            .child(el().key("scrim").pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).hit().fill(rune::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.25 }).on_press(|s: &mut Stage| s.open = None))
+            .child(
+                col().pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).items_center().pt(150.0).child(
+                    launcher::view(s, &t).key("launcher").hit().transition(enter(&t, fx, launcher::W / 2.0, launcher::W)),
+                ),
+            );
     } else if let Some(pop) = s.open {
         let (w, body) = match pop {
-            Pop::Settings => unreachable!(),
+            Pop::Settings | Pop::Launcher => unreachable!(),
             Pop::Calendar => (calendar::W, calendar::view(s, &t)),
             Pop::Media => (media::W, media::view(s, &t)),
             Pop::Wifi => (wifi::W, wifi::view(s, &t)),
