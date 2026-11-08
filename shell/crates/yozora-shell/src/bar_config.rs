@@ -77,9 +77,14 @@ impl Conf {
         Geo { flush, side: if flush { 0.0 } else { crate::bar::SIDE }, top, h, radius: if flush { 0.0 } else { t.radii.pill }, item_h: h.min(28.0) }
     }
 
-    /// The tokens with the panel row moved to follow a bar that isn't the look's own height.
+    /// The tokens with the panel row moved to follow a bar that isn't the look's own height, and
+    /// translucent surfaces for the glass looks while blur is on.
     pub fn tokens(&self, look: Look) -> Tokens {
         let mut t = tokens(look);
+        // Glass looks let the compositor's blur show through; the rest stay solid.
+        if self.bar.bar.blur && matches!(look, Look::Tension | Look::Daybreak | Look::Prism) {
+            t.surf.a = GLASS_ALPHA;
+        }
         let g = self.geo(&t);
         t.panel_top += g.surface_h() - (t.bar_top + t.bar_h);
         t
@@ -89,6 +94,9 @@ impl Conf {
         if self.bar.bar.reserve_space { g.surface_h().ceil() as i32 } else { 0 }
     }
 }
+
+/// How much of the compositor's blur shows through a glass surface.
+const GLASS_ALPHA: f32 = 0.72;
 
 /// Everything `bar.toml` means, put to work: services for the modules placed, blur rules, and the
 /// size, place and visibility of each bar.
@@ -111,8 +119,10 @@ pub fn apply(sh: &Arc<Shared>) {
     sh.redraw();
 }
 
-/// Tells Hyprland to blur our surfaces. Rules added at runtime last until Hyprland reloads its
-/// config, so they go in on every start and whenever the setting turns on.
+/// Tells Hyprland to blur our surfaces. Hyprland matches the namespace regex against the whole
+/// name, and only pixels more opaque than `ignore_alpha` are blurred, so the dim scrim is not.
+/// Rules added at runtime last until Hyprland reloads its config, so they go in on every start
+/// and whenever the setting turns on.
 fn blur(on: bool) {
     static LAST: Mutex<Option<bool>> = Mutex::new(None);
     let mut last = LAST.lock().unwrap();
@@ -124,12 +134,12 @@ fn blur(on: bool) {
         return;
     }
     let _ = std::thread::Builder::new().name("blur-rules".into()).spawn(|| {
-        let lua = r#"eval hl.layer_rule({ match = { namespace = "^yozora-" }, blur = true, blur_popups = true, ignore_alpha = 0.2, no_anim = true })"#;
+        let lua = r#"eval hl.layer_rule({ match = { namespace = "^(yozora-.*)$" }, blur = true, blur_popups = true, ignore_alpha = 0.5, no_anim = true })"#;
         match hyprland::request(lua) {
             Ok(r) if r.trim() == "ok" => tracing::debug!("applied blur layer rules"),
             Ok(_) => {
                 // Hyprland from before Lua config.
-                for rule in ["blur,^(yozora-.*)$", "blurpopups,^(yozora-.*)$", "ignorealpha 0.2,^(yozora-.*)$", "noanim,^(yozora-.*)$"] {
+                for rule in ["blur,^(yozora-.*)$", "blurpopups,^(yozora-.*)$", "ignorealpha 0.5,^(yozora-.*)$", "noanim,^(yozora-.*)$"] {
                     let _ = hyprland::request(&format!("keyword layerrule {rule}"));
                 }
             }
