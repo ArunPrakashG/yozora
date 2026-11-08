@@ -22,7 +22,7 @@ enable)
     TMP=$(mktemp) || exit 1
     echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" > "$TMP"
     chmod 0440 "$TMP"
-    if pkexec sh -c "visudo -c -f '$TMP' && install -m 0440 -o root -g root '$TMP' '$FILE'"; then
+    if pkexec sh -c 'visudo -c -f "$1" && install -m 0440 -o root -g root "$1" "$2"' sh "$TMP" "$FILE"; then
         notify-send -a Sudo -u critical "Passwordless sudo ENABLED" "Every command as $USERNAME can run sudo with no password. Turn it off when you're done." 2>/dev/null
     else
         notify-send -a Sudo -u critical "Could not enable passwordless sudo" "$NO_AGENT" 2>/dev/null
