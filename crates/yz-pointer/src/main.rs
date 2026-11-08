@@ -24,6 +24,14 @@ const BTN_LEFT: u32 = 0x110;
 const LAYOUT_ORIGIN: (i32, i32) = (-1080, 0);
 const LAYOUT_EXTENT: (u32, u32) = (3000, 2560);
 
+/// `YZ_LAYOUT=x,y,w,h` replaces the box, for a layout with an extra (headless) output.
+fn layout() -> ((i32, i32), (u32, u32)) {
+    let Ok(v) = std::env::var("YZ_LAYOUT") else { return (LAYOUT_ORIGIN, LAYOUT_EXTENT) };
+    let n: Vec<i64> = v.split(',').filter_map(|p| p.trim().parse().ok()).collect();
+    if n.len() != 4 { return (LAYOUT_ORIGIN, LAYOUT_EXTENT) }
+    ((n[0] as i32, n[1] as i32), (n[2] as u32, n[3] as u32))
+}
+
 struct State;
 
 impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for State {
@@ -53,8 +61,9 @@ fn main() {
         Some("move") => {
             let coord =
                 |i: usize| -> i32 { args.get(i).and_then(|a| a.parse().ok()).expect("usage: yz-pointer move X Y") };
-            let (x, y) = (coord(1) - LAYOUT_ORIGIN.0, coord(2) - LAYOUT_ORIGIN.1);
-            pointer.motion_absolute(time(), x as u32, y as u32, LAYOUT_EXTENT.0, LAYOUT_EXTENT.1);
+            let (origin, extent) = layout();
+            let (x, y) = (coord(1) - origin.0, coord(2) - origin.1);
+            pointer.motion_absolute(time(), x as u32, y as u32, extent.0, extent.1);
             pointer.frame();
             sync(&mut queue);
         }
@@ -75,6 +84,7 @@ fn main() {
                 eprintln!("usage: yz-pointer drag X Y [steps]");
                 std::process::exit(2);
             };
+            let (origin, extent) = layout();
             let steps = arg(3).unwrap_or(20).max(1);
             let (from_x, from_y) = cursor().expect("hyprctl cursorpos");
             pointer.button(time(), BTN_LEFT, ButtonState::Pressed);
@@ -82,9 +92,9 @@ fn main() {
             sync(&mut queue);
             for i in 1..=steps {
                 let t = i as f32 / steps as f32;
-                let px = from_x + ((x - from_x) as f32 * t).round() as i32 - LAYOUT_ORIGIN.0;
-                let py = from_y + ((y - from_y) as f32 * t).round() as i32 - LAYOUT_ORIGIN.1;
-                pointer.motion_absolute(time(), px as u32, py as u32, LAYOUT_EXTENT.0, LAYOUT_EXTENT.1);
+                let px = from_x + ((x - from_x) as f32 * t).round() as i32 - origin.0;
+                let py = from_y + ((y - from_y) as f32 * t).round() as i32 - origin.1;
+                pointer.motion_absolute(time(), px as u32, py as u32, extent.0, extent.1);
                 pointer.frame();
                 sync(&mut queue);
                 thread::sleep(Duration::from_millis(16));

@@ -1,0 +1,4 @@
+#!/bin/sh
+# The launcher lives inside yozora-shell now. This keeps the old command, and the key binds that call it, working.
+[ "$#" -gt 0 ] || set -- toggle
+exec yozora launcher "$@"

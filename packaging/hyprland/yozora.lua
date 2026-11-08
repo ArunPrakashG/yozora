@@ -2,10 +2,10 @@
 -- Copy into ~/.config/hypr/ and add `require("yozora")` to hyprland.lua, or paste the parts you want.
 
 -- Start the bar and the notification server. Skip this if you use the systemd units
--- (`systemctl --user enable --now yozora-bar yozora-notify`). Stop mako or dunst first: only one
+-- (`systemctl --user enable --now yozora-shell yozora-notify`). Stop mako or dunst first: only one
 -- notification server can run.
 hl.on("hyprland.start", function()
-    hl.exec_cmd("yozora-bar")
+    hl.exec_cmd("yozora-shell")
     hl.exec_cmd("yozora-notify")
 end)
 
@@ -29,8 +29,8 @@ hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_SINK@ -5%"), { repeating = true, locked = true })
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("pactl set-sink-mute @DEFAULT_SINK@ toggle"), { locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("pactl set-source-mute @DEFAULT_SOURCE@ toggle"), { locked = true })
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("yozora-bar osd brightness +5%"), { repeating = true, locked = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("yozora-bar osd brightness -5%"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("yozora-shell osd brightness +5%"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("yozora-shell osd brightness -5%"), { repeating = true, locked = true })
 
 -- Yozora Idle locks when you're away, on `loginctl lock-session` and before sleep:
 -- `systemctl --user enable --now yozora-idle.service`, with hypridle stopped. Then this key locks too:
@@ -42,5 +42,5 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("yozora-bar osd brightness -5%"
 -- hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("yozora-launch toggle"))
 
 -- Optional keys for the bar's popovers.
--- hl.bind("SUPER + N", hl.dsp.exec_cmd("yozora-bar msg toggle notifications"))
--- hl.bind("SUPER + A", hl.dsp.exec_cmd("yozora-bar msg toggle control-center"))
+-- hl.bind("SUPER + N", hl.dsp.exec_cmd("yozora-shell msg toggle notifications"))
+-- hl.bind("SUPER + A", hl.dsp.exec_cmd("yozora-shell msg toggle control-center"))

@@ -1,13 +1,14 @@
 [Unit]
-Description=Yozora Bar, a top panel for Hyprland
+Description=Yozora, the bar, popovers, launcher, settings and on-screen display
 Documentation=https://github.com/ArunPrakashG/yozora
 PartOf=graphical-session.target
 After=graphical-session.target
 Requisite=graphical-session.target
+Conflicts=yozora-bar.service yozora-launch.service
 
 [Service]
 Type=exec
-ExecStart=/usr/bin/yozora-bar
+ExecStart=/usr/bin/yozora-shell
 Restart=on-failure
 RestartSec=2
 Slice=app-graphical.slice

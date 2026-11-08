@@ -14,6 +14,7 @@ pub mod manifest;
 pub mod notify;
 pub mod paths;
 pub mod schema;
+pub mod shell;
 pub mod theme;
 pub mod watch;
 

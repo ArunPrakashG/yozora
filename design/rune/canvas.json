@@ -1,0 +1,684 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-08T10:00:00Z"
+ },
+ "title": "Yozora Rune",
+ "launch": {
+  "view": "canvas",
+  "page": "tension"
+ },
+ "pages": [
+  {
+   "id": "tension",
+   "name": "Surface tension"
+  },
+  {
+   "id": "daybreak",
+   "name": "Daybreak"
+  },
+  {
+   "id": "folio",
+   "name": "Folio"
+  },
+  {
+   "id": "phosphor",
+   "name": "Phosphor"
+  },
+  {
+   "id": "prism",
+   "name": "Prism"
+  }
+ ],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 7720,
+   "title": "Foundations",
+   "page": "tension"
+  },
+  "Style.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Style sheet",
+   "page": "tension"
+  },
+  "Desktop.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Desktop · toast arrives",
+   "page": "tension"
+  },
+  "Launcher.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Launcher",
+   "page": "tension"
+  },
+  "Control.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Control center",
+   "page": "tension"
+  },
+  "Notifications.dc.html": {
+   "x": 3040,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Notifications",
+   "page": "tension"
+  },
+  "Calendar.dc.html": {
+   "x": 4560,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Calendar",
+   "page": "tension"
+  },
+  "Media.dc.html": {
+   "x": 1520,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Now playing",
+   "page": "tension"
+  },
+  "Wifi.dc.html": {
+   "x": 3040,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Wi‑Fi",
+   "page": "tension"
+  },
+  "Bluetooth.dc.html": {
+   "x": 4560,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Bluetooth and power",
+   "page": "tension"
+  },
+  "Sound.dc.html": {
+   "x": 1520,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Sound",
+   "page": "tension"
+  },
+  "Level.dc.html": {
+   "x": 3040,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Volume key",
+   "page": "tension"
+  },
+  "Tray.dc.html": {
+   "x": 4560,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Tray · tooltip, then menu",
+   "page": "tension"
+  },
+  "Lock.dc.html": {
+   "x": 1520,
+   "y": 4080,
+   "w": 1440,
+   "h": 900,
+   "title": "Lock · unlock",
+   "page": "tension"
+  },
+  "Settings.dc.html": {
+   "x": 3040,
+   "y": 4080,
+   "w": 1440,
+   "h": 900,
+   "title": "Settings · pick a style",
+   "page": "tension",
+   "is_interactive": true
+  },
+  "Daybreak-Style.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Style sheet",
+   "page": "daybreak"
+  },
+  "Daybreak-Desktop.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Desktop · toast arrives",
+   "page": "daybreak"
+  },
+  "Daybreak-Launcher.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Launcher",
+   "page": "daybreak"
+  },
+  "Daybreak-Control.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Control center",
+   "page": "daybreak"
+  },
+  "Daybreak-Notifications.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Notifications",
+   "page": "daybreak"
+  },
+  "Daybreak-Calendar.dc.html": {
+   "x": 3040,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Calendar",
+   "page": "daybreak"
+  },
+  "Daybreak-Media.dc.html": {
+   "x": 4560,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Now playing",
+   "page": "daybreak"
+  },
+  "Daybreak-Wifi.dc.html": {
+   "x": 1520,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Wi‑Fi",
+   "page": "daybreak"
+  },
+  "Daybreak-Bluetooth.dc.html": {
+   "x": 3040,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Bluetooth and power",
+   "page": "daybreak"
+  },
+  "Daybreak-Sound.dc.html": {
+   "x": 4560,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Sound",
+   "page": "daybreak"
+  },
+  "Daybreak-Level.dc.html": {
+   "x": 1520,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Volume key",
+   "page": "daybreak"
+  },
+  "Daybreak-Tray.dc.html": {
+   "x": 3040,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Tray · tooltip, then menu",
+   "page": "daybreak"
+  },
+  "Daybreak-Lock.dc.html": {
+   "x": 4560,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Lock · unlock",
+   "page": "daybreak"
+  },
+  "Daybreak-Settings.dc.html": {
+   "x": 1520,
+   "y": 4080,
+   "w": 1440,
+   "h": 900,
+   "title": "Daybreak · Settings · pick a style",
+   "page": "daybreak",
+   "is_interactive": true
+  },
+  "Folio-Style.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Style sheet",
+   "page": "folio"
+  },
+  "Folio-Desktop.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Desktop · toast arrives",
+   "page": "folio"
+  },
+  "Folio-Launcher.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Launcher",
+   "page": "folio"
+  },
+  "Folio-Control.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Control center",
+   "page": "folio"
+  },
+  "Folio-Notifications.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Notifications",
+   "page": "folio"
+  },
+  "Folio-Calendar.dc.html": {
+   "x": 3040,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Calendar",
+   "page": "folio"
+  },
+  "Folio-Media.dc.html": {
+   "x": 4560,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Now playing",
+   "page": "folio"
+  },
+  "Folio-Wifi.dc.html": {
+   "x": 1520,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Wi‑Fi",
+   "page": "folio"
+  },
+  "Folio-Bluetooth.dc.html": {
+   "x": 3040,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Bluetooth and power",
+   "page": "folio"
+  },
+  "Folio-Sound.dc.html": {
+   "x": 4560,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Sound",
+   "page": "folio"
+  },
+  "Folio-Level.dc.html": {
+   "x": 1520,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Volume key",
+   "page": "folio"
+  },
+  "Folio-Tray.dc.html": {
+   "x": 3040,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Tray · tooltip, then menu",
+   "page": "folio"
+  },
+  "Folio-Lock.dc.html": {
+   "x": 4560,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Lock · unlock",
+   "page": "folio"
+  },
+  "Folio-Settings.dc.html": {
+   "x": 1520,
+   "y": 4080,
+   "w": 1440,
+   "h": 900,
+   "title": "Folio · Settings · pick a style",
+   "page": "folio",
+   "is_interactive": true
+  },
+  "Phosphor-Style.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Style sheet",
+   "page": "phosphor"
+  },
+  "Phosphor-Desktop.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Desktop · toast arrives",
+   "page": "phosphor"
+  },
+  "Phosphor-Launcher.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Launcher",
+   "page": "phosphor"
+  },
+  "Phosphor-Control.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Control center",
+   "page": "phosphor"
+  },
+  "Phosphor-Notifications.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Notifications",
+   "page": "phosphor"
+  },
+  "Phosphor-Calendar.dc.html": {
+   "x": 3040,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Calendar",
+   "page": "phosphor"
+  },
+  "Phosphor-Media.dc.html": {
+   "x": 4560,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Now playing",
+   "page": "phosphor"
+  },
+  "Phosphor-Wifi.dc.html": {
+   "x": 1520,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Wi‑Fi",
+   "page": "phosphor"
+  },
+  "Phosphor-Bluetooth.dc.html": {
+   "x": 3040,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Bluetooth and power",
+   "page": "phosphor"
+  },
+  "Phosphor-Sound.dc.html": {
+   "x": 4560,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Sound",
+   "page": "phosphor"
+  },
+  "Phosphor-Level.dc.html": {
+   "x": 1520,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Volume key",
+   "page": "phosphor"
+  },
+  "Phosphor-Tray.dc.html": {
+   "x": 3040,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Tray · tooltip, then menu",
+   "page": "phosphor"
+  },
+  "Phosphor-Lock.dc.html": {
+   "x": 4560,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Lock · unlock",
+   "page": "phosphor"
+  },
+  "Phosphor-Settings.dc.html": {
+   "x": 1520,
+   "y": 4080,
+   "w": 1440,
+   "h": 900,
+   "title": "Phosphor · Settings · pick a style",
+   "page": "phosphor",
+   "is_interactive": true
+  },
+  "Prism-Style.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Style sheet",
+   "page": "prism"
+  },
+  "Prism-Desktop.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Desktop · toast arrives",
+   "page": "prism"
+  },
+  "Prism-Launcher.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Launcher",
+   "page": "prism"
+  },
+  "Prism-Control.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Control center",
+   "page": "prism"
+  },
+  "Prism-Notifications.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Notifications",
+   "page": "prism"
+  },
+  "Prism-Calendar.dc.html": {
+   "x": 3040,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Calendar",
+   "page": "prism"
+  },
+  "Prism-Media.dc.html": {
+   "x": 4560,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Now playing",
+   "page": "prism"
+  },
+  "Prism-Wifi.dc.html": {
+   "x": 1520,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Wi‑Fi",
+   "page": "prism"
+  },
+  "Prism-Bluetooth.dc.html": {
+   "x": 3040,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Bluetooth and power",
+   "page": "prism"
+  },
+  "Prism-Sound.dc.html": {
+   "x": 4560,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Sound",
+   "page": "prism"
+  },
+  "Prism-Level.dc.html": {
+   "x": 1520,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Volume key",
+   "page": "prism"
+  },
+  "Prism-Tray.dc.html": {
+   "x": 3040,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Tray · tooltip, then menu",
+   "page": "prism"
+  },
+  "Prism-Lock.dc.html": {
+   "x": 4560,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Lock · unlock",
+   "page": "prism"
+  },
+  "Prism-Settings.dc.html": {
+   "x": 1520,
+   "y": 4080,
+   "w": 1440,
+   "h": 900,
+   "title": "Prism · Settings · pick a style",
+   "page": "prism",
+   "is_interactive": true
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Style.dc.html",
+  "Desktop.dc.html",
+  "Launcher.dc.html",
+  "Control.dc.html",
+  "Notifications.dc.html",
+  "Calendar.dc.html",
+  "Media.dc.html",
+  "Wifi.dc.html",
+  "Bluetooth.dc.html",
+  "Sound.dc.html",
+  "Level.dc.html",
+  "Tray.dc.html",
+  "Lock.dc.html",
+  "Settings.dc.html",
+  "Daybreak-Style.dc.html",
+  "Daybreak-Desktop.dc.html",
+  "Daybreak-Launcher.dc.html",
+  "Daybreak-Control.dc.html",
+  "Daybreak-Notifications.dc.html",
+  "Daybreak-Calendar.dc.html",
+  "Daybreak-Media.dc.html",
+  "Daybreak-Wifi.dc.html",
+  "Daybreak-Bluetooth.dc.html",
+  "Daybreak-Sound.dc.html",
+  "Daybreak-Level.dc.html",
+  "Daybreak-Tray.dc.html",
+  "Daybreak-Lock.dc.html",
+  "Daybreak-Settings.dc.html",
+  "Folio-Style.dc.html",
+  "Folio-Desktop.dc.html",
+  "Folio-Launcher.dc.html",
+  "Folio-Control.dc.html",
+  "Folio-Notifications.dc.html",
+  "Folio-Calendar.dc.html",
+  "Folio-Media.dc.html",
+  "Folio-Wifi.dc.html",
+  "Folio-Bluetooth.dc.html",
+  "Folio-Sound.dc.html",
+  "Folio-Level.dc.html",
+  "Folio-Tray.dc.html",
+  "Folio-Lock.dc.html",
+  "Folio-Settings.dc.html",
+  "Phosphor-Style.dc.html",
+  "Phosphor-Desktop.dc.html",
+  "Phosphor-Launcher.dc.html",
+  "Phosphor-Control.dc.html",
+  "Phosphor-Notifications.dc.html",
+  "Phosphor-Calendar.dc.html",
+  "Phosphor-Media.dc.html",
+  "Phosphor-Wifi.dc.html",
+  "Phosphor-Bluetooth.dc.html",
+  "Phosphor-Sound.dc.html",
+  "Phosphor-Level.dc.html",
+  "Phosphor-Tray.dc.html",
+  "Phosphor-Lock.dc.html",
+  "Phosphor-Settings.dc.html",
+  "Prism-Style.dc.html",
+  "Prism-Desktop.dc.html",
+  "Prism-Launcher.dc.html",
+  "Prism-Control.dc.html",
+  "Prism-Notifications.dc.html",
+  "Prism-Calendar.dc.html",
+  "Prism-Media.dc.html",
+  "Prism-Wifi.dc.html",
+  "Prism-Bluetooth.dc.html",
+  "Prism-Sound.dc.html",
+  "Prism-Level.dc.html",
+  "Prism-Tray.dc.html",
+  "Prism-Lock.dc.html",
+  "Prism-Settings.dc.html"
+ ],
+ "notes": {},
+ "designSystems": []
+}

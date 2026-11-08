@@ -1,9 +1,17 @@
-<p align="center"><img src="docs/brand/banner.png" alt="Yozora: a desktop for Hyprland, written in Rust with GPUI"></p>
+<p align="center"><img src="docs/brand/banner.png" alt="Yozora: a desktop for Hyprland, written in Rust with Rune"></p>
 
 # Yozora
 
 Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in Rust with
-[GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui).
+[Rune](https://github.com/ArunPrakashG/rune), a GPU UI library on winit and wgpu.
+
+The bar, popovers, toasts, launcher and Settings run as one process, `yozora-shell`. The lock
+screen (`yozora-lock`), the notification server (`yozora-notify`) and the idle manager
+(`yozora-idle`) stay separate, so a crash in one never takes the others down.
+
+It ships five looks (Surface tension and Daybreak, Folio, Phosphor, Prism) and three effect
+levels (Full, Calm, Still). Every surface enters with motion that belongs to the look; Still
+turns all of it off.
 
 - **Yozora Bar** is a top panel and Waybar alternative. It has spring-based motion, glass
   popovers and near-zero cost when idle.
@@ -16,15 +24,16 @@ Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in 
 - **Yozora Idle** locks, turns the screens off and suspends when you're away, and locks before
   sleep. It replaces hypridle.
 - **Yozora Launch** is the launcher: apps, open windows, files, clipboard history, emoji, math
-  and unit conversion, shell commands and web search, from one field. It stays running with a
-  window ready on each monitor, so it shows on the next frame. It replaces rofi, wofi or fuzzel.
+  and unit conversion, shell commands and web search, from one field. It lives inside the shell,
+  so it opens on the next frame. It replaces rofi, wofi or fuzzel.
 - **Yozora Settings** edits every Yozora app's configuration. It finds installed apps on its
   own, so a new tool shows up without Settings being rebuilt.
 
 ## Status
 
-Alpha. The bar and Settings work day to day on the author's machine (Hyprland 0.56, NVIDIA).
-Expect rough edges; see [Known limitations](#known-limitations).
+Alpha. The Rune shell replaces the earlier GPUI apps and has been tested on headless
+compositors and Hyprland 0.56 (NVIDIA). Expect rough edges; see
+[Known limitations](#known-limitations).
 
 ## What the bar has
 
@@ -70,16 +79,21 @@ cd yozora/packaging/arch && makepkg -si
 ### From source
 
 You need Rust (the toolchain is pinned in `rust-toolchain.toml`), clang, cmake and the Wayland,
-xkbcommon, fontconfig and Vulkan development files.
+xkbcommon, fontconfig and Vulkan development files, plus an emoji font such as `noto-fonts-emoji`.
+The shell is its own cargo workspace in `shell/`.
 
 ```bash
-cargo build --release -p yozora-bar -p yozora-notify -p yozora-lock -p yozora-launch -p yozora-settings -p yozora-cli
+cargo build --release -p yozora-cli -p yozora-idle
+```
+
+```bash
+cd shell && cargo build --release -p yozora-shell -p yozora-notifyd
 ```
 
 Then install the binaries and the app manifests, so Settings can find the apps:
 
 ```bash
-install -Dm755 target/release/yozora-bar target/release/yozora-notify target/release/yozora-lock target/release/yozora-launch target/release/yozora-settings target/release/yozora -t ~/.local/bin
+install -Dm755 shell/target/release/yozora-shell shell/target/release/yozora-notify shell/target/release/yozora-lock target/release/yozora-idle target/release/yozora -t ~/.local/bin
 ```
 
 ```bash
@@ -101,7 +115,7 @@ Only one notification server can run at a time, so stop mako or dunst first (rem
 - **systemd** (the PKGBUILD installs the units):
 
   ```bash
-  systemctl --user enable --now yozora-bar.service yozora-notify.service
+  systemctl --user enable --now yozora-shell.service yozora-notify.service
   ```
 
 - **Hyprland autostart.** Copy [`packaging/hyprland/yozora.lua`](packaging/hyprland/yozora.lua)
@@ -112,7 +126,7 @@ Only one notification server can run at a time, so stop mako or dunst first (rem
 To bind a key to a popover:
 
 ```lua
-hl.bind("SUPER + A", hl.dsp.exec_cmd("yozora-bar msg toggle control-center"))
+hl.bind("SUPER + A", hl.dsp.exec_cmd("yozora bar toggle control-center"))
 ```
 
 ## Volume and brightness keys
@@ -129,8 +143,8 @@ The kernel doesn't announce brightness changes, so brightness keys go through th
 changes it through logind (no udev rule or `video` group needed) and shows the result:
 
 ```lua
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("yozora-bar osd brightness +5%"), { repeating = true, locked = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("yozora-bar osd brightness -5%"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("yozora-shell osd brightness +5%"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("yozora-shell osd brightness -5%"), { repeating = true, locked = true })
 ```
 
 The full set is in [`packaging/hyprland/yozora.lua`](packaging/hyprland/yozora.lua). Stop wob or
@@ -183,11 +197,10 @@ notification pill only counts what arrived, never what it says.
 
 ## Open the launcher
 
-Start `yozora-launch` with the session (`systemctl --user enable --now yozora-launch.service`,
-or the commented lines in the Hyprland snippets), then bind a key:
+The launcher runs inside `yozora-shell`, so there is nothing else to start. Bind a key:
 
 ```lua
-hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("yozora-launch toggle"))
+hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("yozora launcher toggle"))
 ```
 
 Type to search apps, then open windows, commands and script commands, projects, SSH hosts, files
@@ -232,11 +245,9 @@ your mako config says so:
 invisible=1
 ```
 
-`yozora-bar check` reports whether this is set up.
-
 ## Configure
 
-Open **Yozora Settings** from your launcher, from the bar's menu, or with `yozora-settings`.
+Open **Yozora Settings** from the bar's menu or with `yozora settings`.
 Every change is written to `~/.config/yozora/` and applies live. You can also edit the files
 by hand. Comments and formatting survive edits from Settings.
 
@@ -249,13 +260,6 @@ by hand. Comments and formatting survive edits from Settings.
   behind Lock, Log out, Suspend, Restart and Shut down.
 
 The full reference is [docs/configuration.md](docs/configuration.md).
-
-```bash
-yozora-bar check
-```
-
-`check` validates the files, with line numbers for anything it doesn't understand, and probes
-each system service the enabled modules need.
 
 ## For scripts and AI agents
 
@@ -296,56 +300,49 @@ pass keys on stdin.
 ## Known limitations
 
 - **Clicking outside a popover closes it, and that click is used up.** The compositor owns the
-  dismissal while a popover holds a grab. So switching from one open popover to another takes
-  two clicks, and a popover the compositor dismisses closes without its animation. Popovers
-  opened with `yozora-bar msg toggle` don't grab, so they close with the animation.
-- **The popover animation is a fade and a short drop**, not the design's scale-in. GPUI can't
-  scale a whole element tree.
-- **Blur is Hyprland's.** A Wayland app can't see the pixels behind it, so the bar paints a tint
-  and asks Hyprland to blur through a layer rule. Whether popovers get blurred on Hyprland
-  0.56.2 hasn't been confirmed.
+  dismissal while a popover holds a grab, so switching from one open popover to another takes
+  two clicks. Popovers opened with `yozora bar toggle` don't grab.
+- **Blur is Hyprland's.** A Wayland app can't see the pixels behind it, so the shell paints a
+  tint and asks Hyprland to blur through the `^yozora-` layer rule in the Hyprland snippets.
+- **Workspaces, the window title and the launcher's window list need Hyprland.** On other
+  compositors those stay empty.
 - **Notifications are plain text.** Bold and links in a body are removed, and only the first
   three lines show on a toast.
 - **The calendar has no events.** No calendar backend is chosen yet.
-- **The control center's dark mode tile lasts for the session.** To change the theme for good,
-  use Settings → Appearance.
-- **The first start after installing takes about 2 s to the first frame** on the test machine
-  (NVIDIA, Vulkan), while the files load from disk. Later starts take 0.2 to 0.3 s.
-- **The Vulkan driver dominates memory.** The bar's own memory is about 23 MB, but total RSS is
-  about 110 MB on NVIDIA, mostly the driver's shared libraries. See
-  [docs/benchmarks.md](docs/benchmarks.md).
-- **Yozora apps skip OpenGL when a Vulkan driver is installed**, which saves about 40 MB. If
-  Vulkan doesn't work, an app restarts itself with GL allowed. Set `YOZORA_GL=1` to always
-  allow GL.
-- **The lock screen takes about 2.4 s to appear** (release build, 2,752 installed font faces):
-  1.6 s of that is GPUI reading every system font. Yozora Idle holds a suspend until the screen is
-  locked (hypridle needs `inhibit_sleep = 3` for that).
-- **The lock screen needs a GPUI fork.** Upstream GPUI has no `ext-session-lock-v1` yet; Yozora
-  pins a fork with [zed#65055](https://github.com/zed-industries/zed/pull/65055) applied. See
-  [docs/architecture.md](docs/architecture.md#the-gpui-fork).
-- **The launcher keeps about 120 MB resident**, most of it the Vulkan driver, so that it never
-  starts cold. Each monitor's window waits under everything, empty and taking no input, so it
-  doesn't block a fullscreen game's direct scanout.
-- **Tested on one machine:** Hyprland 0.56.2, a GTX 1650 Super, a 144 Hz and a 75 Hz rotated
-  monitor. Battery and Bluetooth were tested against fake backends (`--fake`), because that
-  machine has neither.
+- **The on-screen display can cover the header of the Sound and Calendar popovers** while it is
+  showing at the top of the screen.
+- **Phosphor and Prism have not got every signature effect yet.** Phosphor's stepped scan and
+  tube-off and Prism's light sweep and frosted edge are not done; their entrances use the
+  shared motion instead.
+- **Settings covers the options but not every control the GPUI version had.** Missing: the
+  start toggle, drag and drop module reordering, accent, glass and font pickers, search and the
+  TOML preview. Edit `theme.toml` and `bar.toml` for those.
+- **Follow the sun uses fixed times** (07:00 and 19:00), not your location.
+- **Needs an emoji font** (`noto-fonts-emoji` on Arch), or emoji draw as empty boxes.
+- **Tested on one machine and a software-rendered VM:** Hyprland 0.56.2, a GTX 1650 Super, a
+  144 Hz and a 75 Hz rotated monitor. Battery and Bluetooth were tested against fake backends
+  (`YZ_FAKE`), because that machine has neither.
 
 ## Develop
 
-```bash
-cargo test --workspace
-```
-
-CI runs the tests along with `cargo fmt --check` and clippy with warnings as errors, so run
-`cargo fmt` before pushing.
+The shell is a separate cargo workspace; the CLI, idle manager, config and IPC crates are in the
+root workspace.
 
 ```bash
-./target/release/yozora-bar --config /tmp/yozora-test --fake=all
+cd shell && cargo build -p yozora-shell --bins
 ```
 
-`--fake` runs the whole UI on scripted backends, for hardware you don't have. Settings takes
-`--config DIR` and `--apps DIR` for the same reason. `scripts/bench.sh` measures a running bar
-against ironbar.
+`YZ_FAKE=network,bluetooth,power,media,audio,notifications` runs the services on scripted
+backends, `YZ_LOOK=tension|daybreak|folio|phosphor|prism` and `YZ_FX=full|calm|still` pick the
+look and effects, and `YOZORA_CONFIG_DIR` points the shell at a scratch config. The `snap`
+binary renders one screen without a compositor:
+
+```bash
+YZ_POP=wifi YZ_LOOK=phosphor target/debug/snap --snap /tmp/wifi.png --scale 2
+```
+
+Run the shell on a spare compositor, not the one you work in. `scripts/bench.sh` measures a
+running bar against ironbar.
 
 ## Docs
 

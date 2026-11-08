@@ -1,0 +1,3 @@
+#!/bin/sh
+# Settings live inside yozora-shell now. This keeps the old command and the desktop entry working.
+exec yozora settings "$@"
