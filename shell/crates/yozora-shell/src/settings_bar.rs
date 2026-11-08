@@ -67,6 +67,7 @@ const CATALOG: &[(&str, &str, &str, &str, Zone)] = &[
     ("notifications", "Notifications", "History, Do Not Disturb", "bell", Zone::Right),
     ("clock", "Clock", "Time and calendar", "clock", Zone::Right),
     ("control-center", "Control center", "Quick settings", "cc", Zone::Right),
+    ("module/sudo-toggle", "Passwordless sudo", "A lock that switches sudo's password prompt", "lock", Zone::Right),
 ];
 
 const MINIMAL: (&[&str], &[&str]) = (&["workspaces"], &["clock", "control-center"]);

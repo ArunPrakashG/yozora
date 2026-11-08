@@ -9,5 +9,5 @@ destructive, so Yozora asks you to confirm first. Disabling removes the file.
 
 State comes from `sudo -n -l`, because `/etc/sudoers.d` is not readable by your user.
 
-Needs `sudo`, `polkit` (`pkexec`) and optionally `notify-send`. This module is opt-in: add
-`module/sudo-toggle` to your bar config. Run `test.sh` for the offline checks.
+Needs `sudo`, `polkit` (`pkexec`) and optionally `notify-send`. This module is off until you turn it on in
+Settings, Bar, Modules (Passwordless sudo), or add `module/sudo-toggle` to your bar config. Run `test.sh` for the offline checks.
