@@ -140,7 +140,7 @@ function popover() {
   </div>`;
 }
 
-function toast({ app = 'Claude Code', summary = 'Agent: tests passed', body = '212 passed, 0 failed', ic = 'check', progress = 0.72 } = {}) {
+function toast({ app = 'Build', summary = 'Tests passed', body = '212 passed, 0 failed', ic = 'check', progress = 0.72 } = {}) {
   return `<div class="glass toast">
     <span class="tic">${icon(ic, 17)}</span>
     <div class="tb"><div class="th"><span>${app}</span><span>now</span></div><b>${summary}</b><i>${body}</i></div>

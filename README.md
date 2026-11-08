@@ -1,5 +1,7 @@
 <p align="center"><img src="docs/brand/banner.png" alt="Yozora: a desktop for Hyprland, written in Rust with Rune"></p>
 
+<p align="center"><img src="docs/screenshots/hero.png" alt="The Yozora bar and control center over a night wallpaper, with three terminals open" width="100%"></p>
+
 # Yozora
 
 Yozora (夜空, "night sky") is an open-source desktop for Hyprland, written in Rust with
@@ -9,9 +11,9 @@ The bar, popovers, toasts, launcher and Settings run as one process, `yozora-she
 screen (`yozora-lock`), the notification server (`yozora-notify`) and the idle manager
 (`yozora-idle`) stay separate, so a crash in one never takes the others down.
 
-It ships five looks (Surface tension and Daybreak, Folio, Phosphor, Prism) and three effect
-levels (Full, Calm, Still). Every surface enters with motion that belongs to the look; Still
-turns all of it off.
+It ships four looks (Surface tension, Folio, Phosphor and Prism), with Night and Daybreak
+variants, and three effect levels (Full, Calm, Still). Every surface enters with motion that
+belongs to the look; Still turns all of it off.
 
 - **Yozora Bar** is a top panel and Waybar alternative. It has spring-based motion, glass
   popovers and near-zero cost when idle.
@@ -28,6 +30,51 @@ turns all of it off.
   so it opens on the next frame. It replaces rofi, wofi or fuzzel.
 - **Yozora Settings** edits every Yozora app's configuration. It finds installed apps on its
   own, so a new tool shows up without Settings being rebuilt.
+
+## Looks
+
+Four looks, each with its own colors, type and motion. Time of day can be Night,
+Daybreak or follow the sun. Pick one in Settings or in the config.
+
+<p align="center"><img src="docs/screenshots/looks.png" alt="Surface tension at night and at daybreak, then Folio, Phosphor and Prism" width="100%"></p>
+
+| Look | What it is |
+|---|---|
+| Surface tension | The default. Liquid, quiet and alive: glass and soft springs, in Night or Daybreak. |
+| Folio | Printed, plain and considered: paper tones, serif type and red rules. |
+| Phosphor | Lit, terse and mechanical: mono type, green on black, square corners. |
+| Prism | Light, clear and precise: frosted glass with a blue accent. |
+
+<p align="center"><img src="docs/screenshots/look-tension.png" alt="Surface tension at night, with three toasts" width="49%"> <img src="docs/screenshots/look-daybreak.png" alt="Surface tension at daybreak on a dawn wallpaper" width="49%"></p>
+<p align="center"><img src="docs/screenshots/look-folio.png" alt="Folio on a dawn wallpaper" width="49%"> <img src="docs/screenshots/look-phosphor.png" alt="Phosphor on a night wallpaper" width="49%"></p>
+<p align="center"><img src="docs/screenshots/look-prism.png" alt="Prism on a dawn wallpaper" width="49%"></p>
+
+## Screens
+
+**Launcher.** Apps, windows, files, clipboard, emoji, math and web search from one field.
+
+<p align="center"><img src="docs/screenshots/launcher.png" alt="The launcher open with a short search and a list of matching apps and commands" width="100%"></p>
+
+**Control center.** Wi-Fi, Bluetooth, Focus, volume, media and the power profile.
+
+<p align="center"><img src="docs/screenshots/control-center.png" alt="The control center popover with toggles, sliders, a media player and power profile buttons" width="100%"></p>
+
+**Notifications.** Toasts on the left, the notification center on the right.
+
+<p align="center"><img src="docs/screenshots/notifications.png" alt="Three toasts with action buttons next to the notification center, grouped by app" width="100%"></p>
+
+**Settings.** One window for every Yozora app.
+
+<p align="center"><img src="docs/screenshots/settings.png" alt="The Settings window on the Appearance page" width="100%"></p>
+
+**Lock.** The lock screen with a clock and the password field.
+
+<p align="center"><img src="docs/screenshots/lock.png" alt="The lock screen with a clock and a password field" width="100%"></p>
+
+These were captured in a headless Sway session in a VM, from a debug build with software
+rendering. On Hyprland the glass is blurred, and the workspace pills and window title are filled
+in. Notifications and apps shown are sample data, and the wallpapers in
+[`docs/screenshots/wallpapers`](docs/screenshots/wallpapers) are generated.
 
 ## Status
 
