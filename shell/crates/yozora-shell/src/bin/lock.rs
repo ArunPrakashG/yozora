@@ -11,7 +11,7 @@ use std::time::Instant;
 use rune::tok::TextStyle;
 use rune::{
     App, AppSpec, Color, Cx, DisplayTarget, El, ImageCache, Key, KeyEvent, KeyPolicy, OverlayHandle, OverlayInput, OverlayOptions, OverlayPlacement, OverlaySpec,
-    RunOptions, SurfaceFit, Transition, Tx, WaylandLayer, WindowSpec, col, el, row, text,
+    RunOptions, Spring, SpringPair, SurfaceFit, Transition, Tx, WaylandLayer, WindowSpec, col, el, row, text,
 };
 use yozora_lockd::{Engine, Phase, Tone, cli};
 use yozora_shell::kit::{glyph_el, label};
@@ -24,6 +24,8 @@ struct Lock {
     size: (f32, f32),
     wallpaper: Arc<Mutex<Option<PathBuf>>>,
     leaving: bool,
+    /// Set for an instant after a wrong password: the pill is thrown aside and springs back.
+    kick: bool,
     preview: bool,
 }
 
@@ -104,7 +106,9 @@ fn backdrop(s: &Lock, t: &Tokens) -> El {
 fn dots(t: &Tokens, n: usize) -> El {
     let shown = n.min(14);
     let radius = if t.look == Look::Phosphor { 0.0 } else { 4.0 };
-    row().gap(8.0).center_y().children((0..shown).map(|_| el().size(7.0, 7.0).radius(radius).fill(t.ink)))
+    let pop = Transition::scale(0.4).allow_small_scale().combined(Transition::opacity())
+        .springs(SpringPair::new(Spring::new(0.28, 0.35), Spring::new(0.12, 0.0)));
+    row().gap(8.0).center_y().children((0..shown).map(|i| el().key(format!("dot{i}")).size(7.0, 7.0).radius(radius).fill(t.ink).transition(pop)))
 }
 
 fn form(s: &Lock, t: &Tokens) -> El {
@@ -135,7 +139,9 @@ fn form(s: &Lock, t: &Tokens) -> El {
     } else {
         dots(t, n)
     });
-    pill = pill.child(field).child(go);
+    pill = pill.child(field).child(go)
+        .offset(if s.kick { 18.0 } else { 0.0 }, 0.0)
+        .offset_motion(Spring::new(0.55, 0.72));
 
     let avatar = row().size(64.0, 64.0).center().radius(32.0).fill(t.raised).child(text(initial).font(TextStyle::new(32.0, 400.0).family(t.fonts.display)).color(t.ink));
     let who = label(t, 16.0, 600.0, name, t.ink);
@@ -235,7 +241,7 @@ fn main() {
                         ..Default::default()
                     })
                     .on_key(on_key),
-                Lock { engine: engine.clone(), look, output: name, size, wallpaper, leaving: false, preview },
+                Lock { engine: engine.clone(), look, output: name, size, wallpaper, leaving: false, kick: false, preview },
             );
             handle.show();
             handle.request_keys();
@@ -243,9 +249,27 @@ fn main() {
         }
         engine.lock().unwrap().mark_locked();
         let tick = engine.clone();
-        std::thread::Builder::new().name("lock-tick".into()).spawn(move || loop {
+        std::thread::Builder::new().name("lock-tick".into()).spawn(move || {
+            let mut seen = 0;
+            loop {
             std::thread::sleep(yozora_lockd::TICK);
-            let update = tick.lock().unwrap().poll(Instant::now());
+            let (update, shakes) = {
+                let mut e = tick.lock().unwrap();
+                let update = e.poll(Instant::now());
+                (update, e.auth.shakes)
+            };
+            if shakes != seen {
+                for h in handles().lock().unwrap().iter() {
+                    h.update(|s, _| s.kick = true);
+                }
+                std::thread::spawn(|| {
+                    std::thread::sleep(std::time::Duration::from_millis(90));
+                    for h in handles().lock().unwrap().iter() {
+                        h.update(|s, _| s.kick = false);
+                    }
+                });
+            }
+            seen = shakes;
             if update.changed {
                 redraw();
             }
@@ -259,6 +283,7 @@ fn main() {
                     rune::session_unlock();
                 }
                 std::process::exit(0);
+            }
             }
         }).ok();
         vec![WindowSpec::from_app("host", app)]
