@@ -296,7 +296,7 @@ fn launch(sh: &Arc<Shared>, i: &Incoming) -> Response {
             sh.close();
             Response::ok()
         }
-        "status" => Response::data(json!({ "open": sh.shown() == Some(Pop::Launcher) })),
+        "status" => Response::data(json!({ "open": sh.outputs().iter().any(|o| sh.open_on(o).is_some_and(|s| s.pop == Pop::Launcher)) })),
         other => Response::error(format!("unknown command {other:?}")),
     }
 }

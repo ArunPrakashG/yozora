@@ -22,7 +22,6 @@ pub struct Shared {
     anchors: Mutex<HashMap<String, f32>>,
     engine: OnceLock<yozora_search::Engine>,
     /// What the stages last drew as open, for the control sockets to report.
-    shown: Mutex<Option<Pop>>,
     /// Notices volume, microphone, output and layout changes and puts them on the focused monitor.
     pub osd: crate::osd::Hub,
     /// `bar.toml` as last loaded.
@@ -57,7 +56,7 @@ impl Shared {
             [Kind::Audio, Kind::Bluetooth, Kind::Hyprland, Kind::Media, Kind::Network, Kind::Notifications, Kind::Power, Kind::Tray],
             &Default::default(),
         );
-        Arc::new(Shared { services: Mutex::new(services), config: Mutex::new(config), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()), engine: OnceLock::new(), shown: Mutex::new(None), osd: Default::default(), bar_conf: Mutex::new(Arc::new(Conf::default())), slots: Mutex::new(Vec::new()), opened: Mutex::new(HashMap::new()) })
+        Arc::new(Shared { services: Mutex::new(services), config: Mutex::new(config), stages: Mutex::new(Vec::new()), bars: Mutex::new(Vec::new()), anchors: Mutex::new(HashMap::new()), engine: OnceLock::new(), osd: Default::default(), bar_conf: Mutex::new(Arc::new(Conf::default())), slots: Mutex::new(Vec::new()), opened: Mutex::new(HashMap::new()) })
     }
 
     /// The look and effects in force now. Surface tension turns to Daybreak by day.
@@ -240,14 +239,6 @@ impl Shared {
                 s.update(|st, _| st.open = None);
             }
         }
-    }
-
-    pub fn note_open(&self, pop: Option<Pop>) {
-        *self.shown.lock().unwrap() = pop;
-    }
-
-    pub fn shown(&self) -> Option<Pop> {
-        *self.shown.lock().unwrap()
     }
 
     pub fn outputs(&self) -> Vec<String> {

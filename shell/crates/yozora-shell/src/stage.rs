@@ -168,7 +168,6 @@ fn warm_fonts(current: yozora_style::Look) -> El {
 pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
     let (look, fx) = s.sh.look();
     let t = s.sh.tokens(look);
-    s.sh.note_open(s.open);
     s.sh.note_open_on(&s.output, s.open, s.anchor_x, &s.bar.module);
     s.sh.osd.note_popover(&s.output, s.open);
     let mut root = el().w_full().h_full();
