@@ -13,7 +13,7 @@ use yozora_style::{Fx, Look, Tokens};
 
 use super::{HIDDEN, actions, ink, picture, read_state, reply_row, send, tile, when};
 use crate::bar;
-use crate::kit::{cell, enter, glyph_el, label, panel};
+use crate::kit::{cell, enter, glyph_el, label};
 use crate::stage::{Pop, Stage};
 
 pub const TOAST_W: f32 = 384.0;
@@ -239,7 +239,7 @@ fn card(s: &Stage, t: &Tokens, n: &Notification, tw: Toast, sharing: bool) -> El
         }
     }
 
-    let mut c = panel(t, TOAST_W).padding(PAD).gap(0.0).child(row().w_full().gap(16.0).items_start().child(lead).child(text));
+    let mut c = crate::kit::card(t, TOAST_W).padding(PAD).gap(0.0).child(row().w_full().gap(16.0).items_start().child(lead).child(text));
     c = match (t.look, critical) {
         (Look::Folio, true) => c.fill(t.ink),
         (Look::Phosphor, true) => c.border(1.0, t.alert),
