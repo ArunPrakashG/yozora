@@ -2761,7 +2761,7 @@ dependencies = [
 [[package]]
 name = "rune"
 version = "0.0.1"
-source = "git+https://github.com/ArunPrakashG/rune?branch=yozora-shell#62fb3e7dbc5f60eb2ac535fc295a95c3dfca0282"
+source = "git+https://github.com/ArunPrakashG/rune?branch=yozora-shell#a9cf6b8c1828d04638f34e35acb648baed3e3917"
 dependencies = [
  "accesskit",
  "accesskit_macos",
@@ -2838,12 +2838,12 @@ dependencies = [
 [[package]]
 name = "rune-motion"
 version = "0.1.0"
-source = "git+https://github.com/ArunPrakashG/rune?branch=yozora-shell#62fb3e7dbc5f60eb2ac535fc295a95c3dfca0282"
+source = "git+https://github.com/ArunPrakashG/rune?branch=yozora-shell#a9cf6b8c1828d04638f34e35acb648baed3e3917"
 
 [[package]]
 name = "rune-staging"
 version = "0.0.1"
-source = "git+https://github.com/ArunPrakashG/rune?branch=yozora-shell#62fb3e7dbc5f60eb2ac535fc295a95c3dfca0282"
+source = "git+https://github.com/ArunPrakashG/rune?branch=yozora-shell#a9cf6b8c1828d04638f34e35acb648baed3e3917"
 dependencies = [
  "wgpu",
 ]
@@ -2851,7 +2851,7 @@ dependencies = [
 [[package]]
 name = "rune-taffy"
 version = "0.0.1"
-source = "git+https://github.com/ArunPrakashG/rune?branch=yozora-shell#62fb3e7dbc5f60eb2ac535fc295a95c3dfca0282"
+source = "git+https://github.com/ArunPrakashG/rune?branch=yozora-shell#a9cf6b8c1828d04638f34e35acb648baed3e3917"
 dependencies = [
  "taffy",
 ]

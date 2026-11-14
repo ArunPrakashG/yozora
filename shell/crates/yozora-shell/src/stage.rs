@@ -9,7 +9,7 @@ use rune::{Cx, El, col, el};
 
 use crate::kit::{self, enter};
 use crate::shared::Shared;
-use crate::{bar, battery, bluetooth, calendar, control, launcher, media, menu, module_pop, notifications, settings, sound, tooltip, tray, wifi};
+use crate::{bar, battery, liquid, bluetooth, calendar, control, launcher, media, menu, module_pop, notifications, settings, sound, tooltip, tray, wifi};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pop {
@@ -52,6 +52,8 @@ pub struct Stage {
     osd_wake: Option<Instant>,
     /// What the bar keeps here: its tooltip, the menu's question, a module's pending action.
     pub bar: menu::BarUi,
+    /// The liquid a popover buds out of the bar in, in the looks that have it.
+    liquid: crate::liquid::Liquid,
 }
 
 impl Stage {
@@ -61,7 +63,7 @@ impl Stage {
         // pay for the pipelines, glyphs and icons it needs.
         sh.redraw_after(Duration::from_millis(1600));
         launcher::warm(&sh);
-        Stage { sh, born: Instant::now(), open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), settings_page: 0, settings: Default::default(), launcher: Default::default(), notes: Default::default(), osd: None, osd_wake: None, bar: Default::default() }
+        Stage { sh, born: Instant::now(), open: None, anchor_x: 0.0, screen_w, output: output.to_owned(), month: (today.year(), today.month()), settings_page: 0, settings: Default::default(), launcher: Default::default(), notes: Default::default(), osd: None, osd_wake: None, bar: Default::default(), liquid: Default::default() }
     }
 
     pub fn toggle(&mut self, pop: Pop, anchor_x: f32) {
@@ -165,7 +167,7 @@ fn warm_fonts(current: yozora_style::Look) -> El {
     out
 }
 
-pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
+pub fn view(s: &Stage, cx: &mut Cx<Stage>) -> El {
     let (look, fx) = s.sh.look();
     let t = s.sh.tokens(look);
     s.sh.note_open_on(&s.output, s.open, s.anchor_x, &s.bar.module);
@@ -174,6 +176,16 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
     // Toasts sit under any panel that opens over them.
     if let Some(stack) = notifications::toasts(s, &t, fx) {
         root = root.child(stack);
+    }
+    if !matches!(s.open, Some(p) if p != Pop::Settings && p != Pop::Launcher) && liquid::applies(&t) {
+        // Nothing hangs from the bar now: run the drop back into it.
+        let geo = s.sh.bar_conf().geo(&t);
+        if let Some(after) = s.liquid.close(&t, fx, &geo) {
+            s.sh.redraw_after(after);
+        }
+        if let Some(drop) = s.liquid.view(&t, &geo) {
+            root = root.child(drop);
+        }
     }
     if s.open == Some(Pop::Settings) {
         // Settings is a modal in the middle of the screen, not a popover on the bar.
@@ -212,12 +224,21 @@ pub fn view(s: &Stage, _: &mut Cx<Stage>) -> El {
         };
         let left = (s.anchor_x - w / 2.0).clamp(bar::SIDE, s.screen_w - w - bar::SIDE);
         // A hit-catching scrim closes the panel on a click anywhere else.
-        root = root
-            .child(el().key("scrim").pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).hit().on_press(|s: &mut Stage| s.open = None))
-            .child(
-                kit::stagger(&t, fx, body).key("panel").hit().on_press(|_: &mut Stage| {}).pin(Some(left), Some(t.panel_top), None, None)
-                    .transition(enter(&t, fx, s.anchor_x - left, w)),
-            );
+        root = root.child(el().key("scrim").pin(Some(0.0), Some(0.0), Some(0.0), Some(0.0)).hit().on_press(|s: &mut Stage| s.open = None));
+        let panel = kit::stagger(&t, fx, body).key("panel").hit().on_press(|_: &mut Stage| {}).pin(Some(left), Some(t.panel_top), None, None);
+        if liquid::applies(&t) {
+            // The liquid draws the panel's body; the panel keeps only its content.
+            let geo = s.sh.bar_conf().geo(&t);
+            if let Some(rect) = cx.layout("panel") {
+                s.liquid.open(&t, fx, &geo, s.anchor_x, rect);
+            }
+            if let Some(drop) = s.liquid.view(&t, &geo) {
+                root = root.child(drop);
+            }
+            root = root.child(liquid::content(panel, &t, fx));
+        } else {
+            root = root.child(panel.transition(enter(&t, fx, s.anchor_x - left, w)));
+        }
     }
     if s.born.elapsed() < Duration::from_millis(1500) {
         root = root.child(control::view(s, &t).pin(Some(0.0), Some(t.panel_top), None, None).opacity(0.004));

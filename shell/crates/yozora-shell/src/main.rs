@@ -51,6 +51,9 @@ fn main() -> std::process::ExitCode {
                 OverlaySpec::new("yozora-stage", (w, 10.0), stage::view)
                     .options(OverlayOptions {
                         placement: Some(OverlayPlacement::FullScreen),
+                        // The whole output, under the bar's zone too: panels, tooltips and the drop
+                        // are placed in screen points from its top.
+                        exclusive_zone: -1,
                         wayland_layer: WaylandLayer::Top,
                         input: OverlayInput::Regions,
                         keys: KeyPolicy::OnDemand,
