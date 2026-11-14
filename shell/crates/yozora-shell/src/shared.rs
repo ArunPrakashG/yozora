@@ -211,12 +211,18 @@ impl Shared {
     /// so the item that opened it stays marked.
     pub fn note_open_on(&self, output: &str, pop: Option<Pop>, anchor: f32, module: &str) {
         let now = pop.map(|pop| OpenState { pop, anchor, module: if pop == Pop::Module { module.to_owned() } else { String::new() } });
+        let closed = now.is_none();
         {
             let mut map = self.opened.lock().unwrap();
             if map.get(output) == Some(&now) {
                 return;
             }
             map.insert(output.to_owned(), now);
+        }
+        // The stage holds the keyboard while a panel is open (`request_keys`); give it back to
+        // the window it came from once nothing is.
+        if closed && let Some((_, s)) = self.stages.lock().unwrap().iter().find(|(n, _)| n == output) {
+            s.release_keys();
         }
         let slots = self.slots.lock().unwrap();
         if let Some(s) = slots.iter().find(|s| s.output == output) {
