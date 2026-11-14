@@ -69,14 +69,19 @@ pub fn stagger(t: &Tokens, fx: Fx, panel: El) -> El {
     })
 }
 
-/// The panel surface. Content goes in as children.
+/// A bar popover's surface. In the liquid looks the drop under it is its body (`liquid`), so it
+/// only holds the content. Content goes in as children.
 pub fn panel(t: &Tokens, w: f32) -> El {
-    let p = col().w(w).padding(18.0).gap(10.0).radius(t.radii.panel);
     if crate::liquid::applies(t) {
-        // The drop under it is its body (`liquid`).
-        return p;
+        return col().w(w).padding(18.0).gap(10.0).radius(t.radii.panel);
     }
-    let p = p.fill(t.surf).border(1.0, t.rule);
+    card(t, w)
+}
+
+/// A surface that draws its own body in every look, for what doesn't hang from the bar: the
+/// launcher and toasts.
+pub fn card(t: &Tokens, w: f32) -> El {
+    let p = col().w(w).padding(18.0).gap(10.0).radius(t.radii.panel).fill(t.surf).border(1.0, t.rule);
     if t.look == yozora_style::Look::Phosphor || t.look == yozora_style::Look::Folio {
         p.border(1.0, t.ink)
     } else {

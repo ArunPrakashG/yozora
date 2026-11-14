@@ -14,7 +14,7 @@ use yozora_search::{Mode, Row, Section, Target, Visual};
 use yozora_style::{Fx, Look, Motion, Tokens};
 
 use super::{Actions, Launcher, W};
-use crate::kit::{cell, glyph_el, label, panel};
+use crate::kit::{cell, glyph_el, label, card};
 use crate::shared::Shared;
 use crate::sound::alpha;
 use crate::stage::Stage;
@@ -571,7 +571,7 @@ fn build(s: &Stage, t: &Tokens, live: bool) -> El {
 
     let body_h = geo.total.min(BODY_MAX);
     let body = col().key("lscroll").w_full().h(body_h).scroll(ScrollSpec { stick_bottom: false }).scroll_margin(HEAD_H).child(content);
-    panel(t, W).child(search_bar(s, t)).child(body).child(footer(s, t))
+    card(t, W).child(search_bar(s, t)).child(body).child(footer(s, t))
 }
 
 pub fn view(s: &Stage, t: &Tokens) -> El {
