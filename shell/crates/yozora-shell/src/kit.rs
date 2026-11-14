@@ -62,15 +62,21 @@ pub fn stagger(t: &Tokens, fx: Fx, panel: El) -> El {
         return panel;
     }
     let rise = if t.look == yozora_style::Look::Phosphor { 0.0 } else { 8.0 };
+    let first = m.row_stagger;
     panel.map_children(|i, c| {
         c.transition(Transition::offset(0.0, rise).combined(Transition::opacity()).springs(SpringPair::new(Spring::new(m.open * 0.6, 0.0), Spring::new(0.15, 0.0))))
-            .enter_delay(m.row_stagger * (i as f32 + 1.0))
+            .enter_delay(first + m.row_stagger * i as f32)
     })
 }
 
 /// The panel surface. Content goes in as children.
 pub fn panel(t: &Tokens, w: f32) -> El {
-    let p = col().w(w).padding(18.0).gap(10.0).radius(t.radii.panel).fill(t.surf).border(1.0, t.rule);
+    let p = col().w(w).padding(18.0).gap(10.0).radius(t.radii.panel);
+    if crate::liquid::applies(t) {
+        // The drop under it is its body (`liquid`).
+        return p;
+    }
+    let p = p.fill(t.surf).border(1.0, t.rule);
     if t.look == yozora_style::Look::Phosphor || t.look == yozora_style::Look::Folio {
         p.border(1.0, t.ink)
     } else {

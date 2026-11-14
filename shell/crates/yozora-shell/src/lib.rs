@@ -9,6 +9,7 @@ pub mod control;
 pub mod desktop;
 pub mod kit;
 pub mod launcher;
+pub mod liquid;
 pub mod ipc;
 pub mod media;
 pub mod menu;
